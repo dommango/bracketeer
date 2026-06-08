@@ -1,0 +1,71 @@
+﻿section,category,key,code,team_or_value,match_date
+contestant,info,name,,Tomás Šimmer,
+contestant,info,email,,tomas.s@example.com,
+contestant,info,tiebreaker_goals_in_final,,1,
+group_stage,Group A,1st,MEX,Mexico,
+group_stage,Group A,2nd,CZE,Czechia,
+group_stage,Group B,1st,CAN,Canada,
+group_stage,Group B,2nd,BIH,Bosnia & Herzegovina,
+group_stage,Group C,1st,MAR,Morocco,
+group_stage,Group C,2nd,HAI,Haiti,
+group_stage,Group D,1st,USA,USA,
+group_stage,Group D,2nd,PAR,Paraguay,
+group_stage,Group E,1st,ECU,Ecuador,
+group_stage,Group E,2nd,GER,Germany,
+group_stage,Group F,1st,NED,Netherlands,
+group_stage,Group F,2nd,TUN,Tunisia,
+group_stage,Group G,1st,BEL,Belgium,
+group_stage,Group G,2nd,EGY,Egypt,
+group_stage,Group H,1st,ESP,Spain,
+group_stage,Group H,2nd,CPV,Cabo Verde,
+group_stage,Group I,1st,SEN,Senegal,
+group_stage,Group I,2nd,NOR,Norway,
+group_stage,Group J,1st,ARG,Argentina,
+group_stage,Group J,2nd,JOR,Jordan,
+group_stage,Group K,1st,POR,Portugal,
+group_stage,Group K,2nd,COD,Congo DR,
+group_stage,Group L,1st,ENG,England,
+group_stage,Group L,2nd,CRO,Croatia,
+third_place_advancers,advancer,slot_1,FRA,France,
+third_place_advancers,advancer,slot_2,BRA,Brazil,
+third_place_advancers,advancer,slot_3,ALG,Algeria,
+third_place_advancers,advancer,slot_4,CUW,Curaçao,
+third_place_advancers,advancer,slot_5,IRQ,Iraq,
+third_place_advancers,advancer,slot_6,SWE,Sweden,
+third_place_advancers,advancer,slot_7,UZB,Uzbekistan,
+third_place_advancers,advancer,slot_8,GHA,Ghana,
+round_of_32,M73,winner_pick,PAR,Paraguay,Sat Jun 27
+round_of_32,M74,winner_pick,MEX,Mexico,Sat Jun 27
+round_of_32,M75,winner_pick,NED,Netherlands,Sun Jun 28
+round_of_32,M76,winner_pick,PAN,Panama,Sun Jun 28
+round_of_32,M77,winner_pick,CIV,Côte d'Ivoire,Mon Jun 29
+round_of_32,M78,winner_pick,NED,Netherlands,Mon Jun 29
+round_of_32,M79,winner_pick,NED,Netherlands,Tue Jun 30
+round_of_32,M80,winner_pick,ARG,Argentina,Tue Jun 30
+round_of_32,M81,winner_pick,ARG,Argentina,Tue Jun 30
+round_of_32,M82,winner_pick,GER,Germany,Tue Jun 30
+round_of_32,M83,winner_pick,SWE,Sweden,Wed Jul 1
+round_of_32,M84,winner_pick,NOR,Norway,Wed Jul 1
+round_of_32,M85,winner_pick,ESP,Spain,Wed Jul 1
+round_of_32,M86,winner_pick,SCO,Scotland,Thu Jul 2
+round_of_32,M87,winner_pick,ENG,England,Thu Jul 2
+round_of_32,M88,winner_pick,GER,Germany,Fri Jul 3
+round_of_16,M89,winner_pick,ALG,Algeria,Sat Jul 4
+round_of_16,M90,winner_pick,CUW,Curaçao,Sat Jul 4
+round_of_16,M91,winner_pick,GER,Germany,Sun Jul 5
+round_of_16,M92,winner_pick,ARG,Argentina,Sun Jul 5
+round_of_16,M93,winner_pick,POR,Portugal,Mon Jul 6
+round_of_16,M94,winner_pick,ESP,Spain,Mon Jul 6
+round_of_16,M95,winner_pick,QAT,Qatar,Tue Jul 7
+round_of_16,M96,winner_pick,FRA,France,Tue Jul 7
+quarterfinals,M97,winner_pick,COL,Colombia,Thu Jul 9
+quarterfinals,M98,winner_pick,BRA,Brazil,Thu Jul 9
+quarterfinals,M99,winner_pick,BEL,Belgium,Fri Jul 10
+quarterfinals,M100,winner_pick,CRO,Croatia,Fri Jul 10
+semifinals,M101,winner_pick,URU,Uruguay,Tue Jul 14
+semifinals,M102,winner_pick,ESP,Spain,Wed Jul 15
+final,M104,winner_pick,TUN,Tunisia,Sun Jul 19
+player_awards,award,player_of_the_tournament,,Jude Bellingham,
+player_awards,award,young_player_of_the_tournament,,Lamine Yamal,
+player_awards,award,golden_boot,,Kylian Mbappe,
+player_awards,award,goal_of_the_tournament,,,

@@ -1,0 +1,71 @@
+﻿section,category,key,code,team_or_value,match_date
+contestant,info,name,,Yuki Tanaka,
+contestant,info,email,,yuki@example.com,
+contestant,info,tiebreaker_goals_in_final,,3,
+group_stage,Group A,1st,RSA,South Africa,
+group_stage,Group A,2nd,KOR,Korea Republic,
+group_stage,Group B,1st,CAN,Canada,
+group_stage,Group B,2nd,QAT,Qatar,
+group_stage,Group C,1st,SCO,Scotland,
+group_stage,Group C,2nd,MAR,Morocco,
+group_stage,Group D,1st,USA,USA,
+group_stage,Group D,2nd,PAR,Paraguay,
+group_stage,Group E,1st,CIV,Côte d'Ivoire,
+group_stage,Group E,2nd,CUW,Curaçao,
+group_stage,Group F,1st,JPN,Japan,
+group_stage,Group F,2nd,SWE,Sweden,
+group_stage,Group G,1st,BEL,Belgium,
+group_stage,Group G,2nd,IRN,IR Iran,
+group_stage,Group H,1st,ESP,Spain,
+group_stage,Group H,2nd,URU,Uruguay,
+group_stage,Group I,1st,SEN,Senegal,
+group_stage,Group I,2nd,IRQ,Iraq,
+group_stage,Group J,1st,ARG,Argentina,
+group_stage,Group J,2nd,ALG,Algeria,
+group_stage,Group K,1st,POR,Portugal,
+group_stage,Group K,2nd,COL,Colombia,
+group_stage,Group L,1st,CRO,Croatia,
+group_stage,Group L,2nd,GHA,Ghana,
+third_place_advancers,advancer,slot_1,ENG,England,
+third_place_advancers,advancer,slot_2,GER,Germany,
+third_place_advancers,advancer,slot_3,NED,Netherlands,
+third_place_advancers,advancer,slot_4,BRA,Brazil,
+third_place_advancers,advancer,slot_5,EGY,Egypt,
+third_place_advancers,advancer,slot_6,CPV,Cabo Verde,
+third_place_advancers,advancer,slot_7,MEX,Mexico,
+third_place_advancers,advancer,slot_8,KSA,Saudi Arabia,
+round_of_32,M73,winner_pick,POR,Portugal,Sat Jun 27
+round_of_32,M74,winner_pick,GHA,Ghana,Sat Jun 27
+round_of_32,M75,winner_pick,SUI,Switzerland,Sun Jun 28
+round_of_32,M76,winner_pick,PAR,Paraguay,Sun Jun 28
+round_of_32,M77,winner_pick,BEL,Belgium,Mon Jun 29
+round_of_32,M78,winner_pick,BRA,Brazil,Mon Jun 29
+round_of_32,M79,winner_pick,USA,USA,Tue Jun 30
+round_of_32,M80,winner_pick,SWE,Sweden,Tue Jun 30
+round_of_32,M81,winner_pick,AUT,Austria,Tue Jun 30
+round_of_32,M82,winner_pick,ESP,Spain,Tue Jun 30
+round_of_32,M83,winner_pick,ECU,Ecuador,Wed Jul 1
+round_of_32,M84,winner_pick,GER,Germany,Wed Jul 1
+round_of_32,M85,winner_pick,ENG,England,Wed Jul 1
+round_of_32,M86,winner_pick,FRA,France,Thu Jul 2
+round_of_32,M87,winner_pick,JOR,Jordan,Thu Jul 2
+round_of_32,M88,winner_pick,ESP,Spain,Fri Jul 3
+round_of_16,M89,winner_pick,ENG,England,Sat Jul 4
+round_of_16,M90,winner_pick,AUS,Australia,Sat Jul 4
+round_of_16,M91,winner_pick,ARG,Argentina,Sun Jul 5
+round_of_16,M92,winner_pick,ENG,England,Sun Jul 5
+round_of_16,M93,winner_pick,NOR,Norway,Mon Jul 6
+round_of_16,M94,winner_pick,CUW,Curaçao,Mon Jul 6
+round_of_16,M95,winner_pick,NZL,New Zealand,Tue Jul 7
+round_of_16,M96,winner_pick,KSA,Saudi Arabia,Tue Jul 7
+quarterfinals,M97,winner_pick,GER,Germany,Thu Jul 9
+quarterfinals,M98,winner_pick,NED,Netherlands,Thu Jul 9
+quarterfinals,M99,winner_pick,NED,Netherlands,Fri Jul 10
+quarterfinals,M100,winner_pick,JPN,Japan,Fri Jul 10
+semifinals,M101,winner_pick,ARG,Argentina,Tue Jul 14
+semifinals,M102,winner_pick,NZL,New Zealand,Wed Jul 15
+final,M104,winner_pick,BRA,Brazil,Sun Jul 19
+player_awards,award,player_of_the_tournament,,Lamine Yamal,
+player_awards,award,young_player_of_the_tournament,,Lamine Yamal,
+player_awards,award,golden_boot,,Harry Kane,
+player_awards,award,goal_of_the_tournament,,,

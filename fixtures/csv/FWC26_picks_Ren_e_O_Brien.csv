@@ -1,0 +1,71 @@
+﻿section,category,key,code,team_or_value,match_date
+contestant,info,name,,Renée O'Brien,
+contestant,info,email,,renee.obrien@example.com,
+contestant,info,tiebreaker_goals_in_final,,2,
+group_stage,Group A,1st,CZE,Czechia,
+group_stage,Group A,2nd,RSA,South Africa,
+group_stage,Group B,1st,CAN,Canada,
+group_stage,Group B,2nd,BIH,Bosnia & Herzegovina,
+group_stage,Group C,1st,BRA,Brazil,
+group_stage,Group C,2nd,MAR,Morocco,
+group_stage,Group D,1st,USA,USA,
+group_stage,Group D,2nd,PAR,Paraguay,
+group_stage,Group E,1st,GER,Germany,
+group_stage,Group E,2nd,CUW,Curaçao,
+group_stage,Group F,1st,NED,Netherlands,
+group_stage,Group F,2nd,JPN,Japan,
+group_stage,Group G,1st,BEL,Belgium,
+group_stage,Group G,2nd,EGY,Egypt,
+group_stage,Group H,1st,CPV,Cabo Verde,
+group_stage,Group H,2nd,KSA,Saudi Arabia,
+group_stage,Group I,1st,FRA,France,
+group_stage,Group I,2nd,SEN,Senegal,
+group_stage,Group J,1st,ARG,Argentina,
+group_stage,Group J,2nd,ALG,Algeria,
+group_stage,Group K,1st,UZB,Uzbekistan,
+group_stage,Group K,2nd,POR,Portugal,
+group_stage,Group L,1st,ENG,England,
+group_stage,Group L,2nd,CRO,Croatia,
+third_place_advancers,advancer,slot_1,ESP,Spain,
+third_place_advancers,advancer,slot_2,MEX,Mexico,
+third_place_advancers,advancer,slot_3,AUS,Australia,
+third_place_advancers,advancer,slot_4,QAT,Qatar,
+third_place_advancers,advancer,slot_5,COD,Congo DR,
+third_place_advancers,advancer,slot_6,CIV,Côte d'Ivoire,
+third_place_advancers,advancer,slot_7,KOR,Korea Republic,
+third_place_advancers,advancer,slot_8,GHA,Ghana,
+round_of_32,M73,winner_pick,ENG,England,Sat Jun 27
+round_of_32,M74,winner_pick,GHA,Ghana,Sat Jun 27
+round_of_32,M75,winner_pick,FRA,France,Sun Jun 28
+round_of_32,M76,winner_pick,TUN,Tunisia,Sun Jun 28
+round_of_32,M77,winner_pick,ESP,Spain,Mon Jun 29
+round_of_32,M78,winner_pick,FRA,France,Mon Jun 29
+round_of_32,M79,winner_pick,FRA,France,Tue Jun 30
+round_of_32,M80,winner_pick,POR,Portugal,Tue Jun 30
+round_of_32,M81,winner_pick,URU,Uruguay,Tue Jun 30
+round_of_32,M82,winner_pick,POR,Portugal,Tue Jun 30
+round_of_32,M83,winner_pick,BRA,Brazil,Wed Jul 1
+round_of_32,M84,winner_pick,GHA,Ghana,Wed Jul 1
+round_of_32,M85,winner_pick,ENG,England,Wed Jul 1
+round_of_32,M86,winner_pick,ENG,England,Thu Jul 2
+round_of_32,M87,winner_pick,ESP,Spain,Thu Jul 2
+round_of_32,M88,winner_pick,POR,Portugal,Fri Jul 3
+round_of_16,M89,winner_pick,FRA,France,Sat Jul 4
+round_of_16,M90,winner_pick,NED,Netherlands,Sat Jul 4
+round_of_16,M91,winner_pick,POR,Portugal,Sun Jul 5
+round_of_16,M92,winner_pick,ARG,Argentina,Sun Jul 5
+round_of_16,M93,winner_pick,POR,Portugal,Mon Jul 6
+round_of_16,M94,winner_pick,CAN,Canada,Mon Jul 6
+round_of_16,M95,winner_pick,IRN,IR Iran,Tue Jul 7
+round_of_16,M96,winner_pick,FRA,France,Tue Jul 7
+quarterfinals,M97,winner_pick,POR,Portugal,Thu Jul 9
+quarterfinals,M98,winner_pick,FRA,France,Thu Jul 9
+quarterfinals,M99,winner_pick,BRA,Brazil,Fri Jul 10
+quarterfinals,M100,winner_pick,FRA,France,Fri Jul 10
+semifinals,M101,winner_pick,ARG,Argentina,Tue Jul 14
+semifinals,M102,winner_pick,CPV,Cabo Verde,Wed Jul 15
+final,M104,winner_pick,FRA,France,Sun Jul 19
+player_awards,award,player_of_the_tournament,,Pedri,
+player_awards,award,young_player_of_the_tournament,,Endrick,
+player_awards,award,golden_boot,,Julian Alvarez,
+player_awards,award,goal_of_the_tournament,,Some screamer from outside the box,

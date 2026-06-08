@@ -1,0 +1,71 @@
+﻿section,category,key,code,team_or_value,match_date
+contestant,info,name,,Chaos Carl,
+contestant,info,email,,carl@example.com,
+contestant,info,tiebreaker_goals_in_final,,6,
+group_stage,Group A,1st,RSA,South Africa,
+group_stage,Group A,2nd,KOR,Korea Republic,
+group_stage,Group B,1st,QAT,Qatar,
+group_stage,Group B,2nd,SUI,Switzerland,
+group_stage,Group C,1st,BRA,Brazil,
+group_stage,Group C,2nd,MAR,Morocco,
+group_stage,Group D,1st,AUS,Australia,
+group_stage,Group D,2nd,TUR,Türkiye,
+group_stage,Group E,1st,CUW,Curaçao,
+group_stage,Group E,2nd,CIV,Côte d'Ivoire,
+group_stage,Group F,1st,JPN,Japan,
+group_stage,Group F,2nd,SWE,Sweden,
+group_stage,Group G,1st,EGY,Egypt,
+group_stage,Group G,2nd,BEL,Belgium,
+group_stage,Group H,1st,URU,Uruguay,
+group_stage,Group H,2nd,CPV,Cabo Verde,
+group_stage,Group I,1st,SEN,Senegal,
+group_stage,Group I,2nd,NOR,Norway,
+group_stage,Group J,1st,ARG,Argentina,
+group_stage,Group J,2nd,ALG,Algeria,
+group_stage,Group K,1st,COD,Congo DR,
+group_stage,Group K,2nd,UZB,Uzbekistan,
+group_stage,Group L,1st,ENG,England,
+group_stage,Group L,2nd,GHA,Ghana,
+third_place_advancers,advancer,slot_1,NED,Netherlands,
+third_place_advancers,advancer,slot_2,FRA,France,
+third_place_advancers,advancer,slot_3,ESP,Spain,
+third_place_advancers,advancer,slot_4,PAR,Paraguay,
+third_place_advancers,advancer,slot_5,CAN,Canada,
+third_place_advancers,advancer,slot_6,MEX,Mexico,
+third_place_advancers,advancer,slot_7,USA,USA,
+third_place_advancers,advancer,slot_8,CRO,Croatia,
+round_of_32,M73,winner_pick,ECU,Ecuador,Sat Jun 27
+round_of_32,M74,winner_pick,MAR,Morocco,Sat Jun 27
+round_of_32,M75,winner_pick,USA,USA,Sun Jun 28
+round_of_32,M76,winner_pick,IRN,IR Iran,Sun Jun 28
+round_of_32,M77,winner_pick,FRA,France,Mon Jun 29
+round_of_32,M78,winner_pick,MEX,Mexico,Mon Jun 29
+round_of_32,M79,winner_pick,NOR,Norway,Tue Jun 30
+round_of_32,M80,winner_pick,UZB,Uzbekistan,Tue Jun 30
+round_of_32,M81,winner_pick,SEN,Senegal,Tue Jun 30
+round_of_32,M82,winner_pick,GHA,Ghana,Tue Jun 30
+round_of_32,M83,winner_pick,BRA,Brazil,Wed Jul 1
+round_of_32,M84,winner_pick,IRQ,Iraq,Wed Jul 1
+round_of_32,M85,winner_pick,TUR,Türkiye,Wed Jul 1
+round_of_32,M86,winner_pick,SWE,Sweden,Thu Jul 2
+round_of_32,M87,winner_pick,CPV,Cabo Verde,Thu Jul 2
+round_of_32,M88,winner_pick,TUN,Tunisia,Fri Jul 3
+round_of_16,M89,winner_pick,GER,Germany,Sat Jul 4
+round_of_16,M90,winner_pick,USA,USA,Sat Jul 4
+round_of_16,M91,winner_pick,ESP,Spain,Sun Jul 5
+round_of_16,M92,winner_pick,PAR,Paraguay,Sun Jul 5
+round_of_16,M93,winner_pick,KSA,Saudi Arabia,Mon Jul 6
+round_of_16,M94,winner_pick,CIV,Côte d'Ivoire,Mon Jul 6
+round_of_16,M95,winner_pick,KSA,Saudi Arabia,Tue Jul 7
+round_of_16,M96,winner_pick,MEX,Mexico,Tue Jul 7
+quarterfinals,M97,winner_pick,ESP,Spain,Thu Jul 9
+quarterfinals,M98,winner_pick,ECU,Ecuador,Thu Jul 9
+quarterfinals,M99,winner_pick,USA,USA,Fri Jul 10
+quarterfinals,M100,winner_pick,BRA,Brazil,Fri Jul 10
+semifinals,M101,winner_pick,POR,Portugal,Tue Jul 14
+semifinals,M102,winner_pick,KOR,Korea Republic,Wed Jul 15
+final,M104,winner_pick,PAR,Paraguay,Sun Jul 19
+player_awards,award,player_of_the_tournament,,Kylian Mbappe,
+player_awards,award,young_player_of_the_tournament,,Lamine Yamal,
+player_awards,award,golden_boot,,Julian Alvarez,
+player_awards,award,goal_of_the_tournament,,Some screamer from outside the box,

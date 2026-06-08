@@ -1,0 +1,275 @@
+// Bracketeer data model.
+//
+// Designed so the WC2026 friend-group pool is a special case of a future
+// multi-tenant platform: a Tournament holds its own structure + scoring config,
+// Pools are leagues within a tournament, and nothing is WorldCup-hardcoded.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js (NextAuth) — accounts, OAuth links, sessions, email magic-link tokens
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  accounts    Account[]
+  sessions    Session[]
+  memberships Membership[]
+  entries     Entry[]
+  ownedPools  Pool[]        @relation("PoolOwner")
+  messages    ChatMessage[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Tournament definition (generic; WC2026 is one seeded row)
+// ---------------------------------------------------------------------------
+
+enum TournamentStatus {
+  UPCOMING
+  LIVE
+  COMPLETE
+}
+
+model Tournament {
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  name             String
+  sport            String           @default("football")
+  startsAt         DateTime
+  status           TournamentStatus @default(UPCOMING)
+  // Point values consumed by the scoring engine (groupExact, groupPartial, …).
+  scoringConfig    Json
+  // Optional structural metadata (round defs, labels) for generic tournaments.
+  structure        Json?
+  // Canonical answer key (a scoring Results object): admin-entered group
+  // standings + third advancers + knockout winners + awards. Scoring runs each
+  // entry against this. Result/Match rows hold live per-match scores for display
+  // and feed this via manual entry or API propagation.
+  officialResults  Json?
+  createdAt        DateTime         @default(now())
+
+  teams   Team[]
+  matches Match[]
+  pools   Pool[]
+}
+
+model Team {
+  id           String  @id @default(cuid())
+  tournamentId String
+  code         String // e.g. "MEX"
+  name         String // e.g. "Mexico"
+  group        String? // group letter A–L (null for non-group tournaments)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, code])
+  @@index([tournamentId])
+}
+
+enum ResultStatus {
+  SCHEDULED
+  LIVE
+  FINAL
+}
+
+enum ResultSource {
+  API
+  MANUAL
+}
+
+model Match {
+  id           String   @id @default(cuid())
+  tournamentId String
+  // Internal match number the original tool keys on (group=1..72, R32=73..88,
+  // R16=89..96, QF=97..100, SF=101..102, Bronze=103, Final=104).
+  matchNo      Int
+  roundCode    String // "GROUP" | "R32" | "R16" | "QF" | "SF" | "BRONZE" | "FINAL"
+  // Bridge to the sports-API fixture id; null => manual-only.
+  externalRef  String?
+  scheduledAt  DateTime?
+  // Slot descriptors for knockout feeders (e.g. "W73", "2A", "3rd:ABCDF").
+  homeSlotRef  String?
+  awaySlotRef  String?
+  scored       Boolean  @default(false)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  result     Result?
+
+  @@unique([tournamentId, matchNo])
+  @@index([tournamentId])
+  @@index([externalRef])
+}
+
+model Result {
+  id           String       @id @default(cuid())
+  matchId      String       @unique
+  homeTeamCode String?
+  awayTeamCode String?
+  homeScore    Int?
+  awayScore    Int?
+  winnerCode   String?
+  status       ResultStatus @default(SCHEDULED)
+  source       ResultSource @default(MANUAL)
+  updatedAt    DateTime     @updatedAt
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Pools (leagues) + entries + picks
+// ---------------------------------------------------------------------------
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Pool {
+  id           String   @id @default(cuid())
+  tournamentId String
+  name         String
+  ownerId      String
+  joinCode     String   @unique
+  settings     Json?
+  createdAt    DateTime @default(now())
+
+  tournament  Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  owner       User          @relation("PoolOwner", fields: [ownerId], references: [id])
+  memberships Membership[]
+  entries     Entry[]
+  messages    ChatMessage[]
+
+  @@index([tournamentId])
+}
+
+model Membership {
+  id          String     @id @default(cuid())
+  poolId      String
+  userId      String
+  role        MemberRole @default(MEMBER)
+  displayName String
+  joinedAt    DateTime   @default(now())
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([poolId, userId])
+  @@index([poolId])
+}
+
+enum ImportSource {
+  CSV
+  UI
+}
+
+model Entry {
+  id          String       @id @default(cuid())
+  poolId      String
+  // Nullable until a real user claims this imported entry by email/displayName.
+  userId      String?
+  label       String
+  // Email captured from the CSV contestant row, used for first-login claiming.
+  claimEmail  String?
+  locked      Boolean      @default(false)
+  importedFrom ImportSource @default(CSV)
+  tiebreak    String?
+  createdAt   DateTime     @default(now())
+
+  pool      Pool            @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  picks     Pick[]
+  breakdown ScoreBreakdown?
+
+  @@index([poolId])
+  @@index([claimEmail])
+}
+
+model Pick {
+  id          String @id @default(cuid())
+  entryId     String
+  // Mirrors the long-format CSV columns 1:1 for passthrough import/export.
+  section     String // "group_stage", "round_of_32", "third_place_advancers", …
+  category    String // "Group A", "M73", "advancer", "award" — carries group/match key
+  key         String // "1st", "winner_pick", "player_of_the_tournament", "slot_1"
+  code        String // team code (may be empty for value-only picks)
+  teamOrValue String // team name or free-text award value
+  positionMeta Json?
+
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+}
+
+model ScoreBreakdown {
+  id          String   @id @default(cuid())
+  entryId     String   @unique
+  totalPoints Int      @default(0)
+  byCategory  Json // { group, thirds, r32, r16, qf, sf, final, awards }
+  perPick     Json? // optional per-pick detail for insights
+  computedAt  DateTime @default(now())
+
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  poolId    String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([poolId, createdAt])
+}
