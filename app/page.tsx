@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 // Marketing splash + join-code entry. The join box is a server action that
@@ -72,12 +73,34 @@ export default function Home() {
             Open
           </button>
         </form>
-        <a
+        <Link
           href="/pool/FIXTUR"
           className="mt-3.5 block rounded-full p-2.5 text-center text-[13px] font-semibold text-pitch-dark hover:bg-surface-sunk"
         >
           View the demo pool →
-        </a>
+        </Link>
+      </div>
+
+      {/* Run your own */}
+      <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
+        <h2 className="font-display text-lg text-ink">Running the pool?</h2>
+        <p className="mt-1.5 text-[13px] text-ink-3">
+          Create a pool, share the code, and have everyone fill out their bracket here.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <Link
+            href="/pool/create"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.97]"
+          >
+            Create a pool
+          </Link>
+          <Link
+            href="/join"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-line bg-surface px-[18px] font-semibold text-pitch-dark transition-colors hover:bg-surface-sunk"
+          >
+            Join a pool
+          </Link>
+        </div>
       </div>
 
       <div className="mt-7 flex justify-center gap-2 text-[11px] text-ink-3">
