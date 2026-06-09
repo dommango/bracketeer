@@ -2,9 +2,18 @@
 
 import { cache } from "react";
 import { prisma } from "@/lib/db";
-import { getLeaderboard, asResults, type LeaderboardRow } from "@/lib/pool/scoring";
+import { getLeaderboard, asResults, asScoringConfig, type LeaderboardRow } from "@/lib/pool/scoring";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
+import { resolveBracket } from "@/lib/pool/bracket";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
+import { pickRowsToSubmission } from "@/lib/pool/picks";
+import { buildMatchCenter, type MatchInput, type MatchStatus, type MatchCenterSection } from "@/lib/pool/match-center";
+import { buildPickSplit, type PickSplit } from "@/lib/pool/pick-split";
+import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
+import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
+import { TEAMS } from "@/lib/scoring/data";
+import type { Picks, Results } from "@/lib/scoring/types";
+import type { ScoringConfig } from "@/lib/scoring/score";
 import { listMessages } from "@/lib/pool/chat";
 import {
   buildStanding,
@@ -189,6 +198,258 @@ export async function getNextMatch(poolId: string): Promise<HomeNextMatch | null
     home: full?.result?.homeTeamCode ?? null,
     away: full?.result?.awayTeamCode ?? null,
   };
+}
+
+// The current user's per-match knockout winner picks in this pool (empty if the
+// user is anonymous or has no entry here). Used to mark "your pick" on matches.
+async function getEntryKnockoutPicks(
+  poolId: string,
+  userId: string | null,
+): Promise<Record<number, string>> {
+  if (!userId) return {};
+  const entry = await prisma.entry.findFirst({
+    where: { poolId, userId },
+    select: { picks: true },
+  });
+  if (!entry) return {};
+  const sub = pickRowsToSubmission(entry.picks);
+  return sub.picks.knockout ?? {};
+}
+
+// The full Match-Center list for a pool: every match grouped by round, with
+// teams resolved (group teams are literal codes on the slot ref; knockout teams
+// come from the live Result row when present, else the resolved answer-key
+// bracket), live/scheduled/final status, and the viewer's pick markers.
+export async function getMatchCenter(
+  poolId: string,
+  userId: string | null,
+): Promise<MatchCenterSection[]> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+  });
+  if (!pool) return [];
+
+  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+
+  const matches = await prisma.match.findMany({
+    where: { tournamentId: pool.tournamentId },
+    select: {
+      matchNo: true,
+      roundCode: true,
+      scheduledAt: true,
+      homeSlotRef: true,
+      awaySlotRef: true,
+      result: {
+        select: {
+          homeTeamCode: true,
+          awayTeamCode: true,
+          homeScore: true,
+          awayScore: true,
+          winnerCode: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  const yourPicks = await getEntryKnockoutPicks(poolId, userId);
+
+  const inputs: MatchInput[] = matches.map((m) => {
+    const isGroup = m.roundCode === "GROUP";
+    const r = resolved[m.matchNo];
+    // Group teams are fixed by the draw (the slot ref *is* the team code);
+    // knockout teams come from the live Result, falling back to the answer key.
+    const homeCode = isGroup ? m.homeSlotRef : (m.result?.homeTeamCode ?? r?.home ?? null);
+    const awayCode = isGroup ? m.awaySlotRef : (m.result?.awayTeamCode ?? r?.away ?? null);
+    return {
+      matchNo: m.matchNo,
+      roundCode: m.roundCode,
+      scheduledAt: m.scheduledAt,
+      homeCode,
+      awayCode,
+      homeScore: m.result?.homeScore ?? null,
+      awayScore: m.result?.awayScore ?? null,
+      winnerCode: m.result?.winnerCode ?? r?.winner ?? null,
+      resultStatus: (m.result?.status as MatchStatus | undefined) ?? null,
+    };
+  });
+
+  return buildMatchCenter(inputs, yourPicks);
+}
+
+export interface EntryPicks {
+  entryId: string;
+  label: string;
+  picks: Picks;
+}
+
+// Every entry's decoded picks for a pool. Shared by the pick-split, the what-if
+// projection feed, and the profile's contrarian-call math.
+export async function getEntriesWithPicks(poolId: string): Promise<EntryPicks[]> {
+  const entries = await prisma.entry.findMany({
+    where: { poolId },
+    select: { id: true, label: true, picks: true },
+  });
+  return entries.map((e) => ({
+    entryId: e.id,
+    label: e.label,
+    picks: pickRowsToSubmission(e.picks).picks,
+  }));
+}
+
+// The current answer key + scoring config for a pool's tournament. Feeds the
+// members-only picks payload that the client-side what-if island projects from.
+export async function getScoringContext(
+  poolId: string,
+): Promise<{ results: Results; scoringConfig: ScoringConfig } | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournament: { select: { officialResults: true, scoringConfig: true } } },
+  });
+  if (!pool) return null;
+  return {
+    results: asResults(pool.tournament.officialResults),
+    scoringConfig: asScoringConfig(pool.tournament.scoringConfig),
+  };
+}
+
+const teamName = (code: string | null | undefined): string =>
+  code && TEAMS[code] ? TEAMS[code] : "TBD";
+
+export interface MatchDetailSide {
+  code: string | null;
+  name: string;
+  score: number | null;
+}
+
+export interface MatchDetail {
+  matchNo: number;
+  roundCode: string;
+  roundLabel: string;
+  scheduledAt: string | null;
+  status: MatchStatus;
+  home: MatchDetailSide;
+  away: MatchDetailSide;
+  winnerCode: string | null;
+  isKnockout: boolean;
+  scored: boolean; // a scored knockout match (what-if + pick-split apply)
+  pickSplit: PickSplit | null;
+  yourPick: { code: string; name: string; correct: boolean | null } | null;
+}
+
+// One match's detail view: resolved teams, live status, the pool's pick-split
+// (scored knockout matches only), and the viewer's own pick. Returns null when
+// the match number doesn't exist in this pool's tournament.
+export async function getMatchDetail(
+  poolId: string,
+  matchNo: number,
+  userId: string | null,
+): Promise<MatchDetail | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+  });
+  if (!pool) return null;
+
+  const match = await prisma.match.findUnique({
+    where: { tournamentId_matchNo: { tournamentId: pool.tournamentId, matchNo } },
+    select: {
+      matchNo: true,
+      roundCode: true,
+      scheduledAt: true,
+      homeSlotRef: true,
+      awaySlotRef: true,
+      result: {
+        select: {
+          homeTeamCode: true,
+          awayTeamCode: true,
+          homeScore: true,
+          awayScore: true,
+          winnerCode: true,
+          status: true,
+        },
+      },
+    },
+  });
+  if (!match) return null;
+
+  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const r = resolved[matchNo];
+  const isGroup = match.roundCode === "GROUP";
+  const homeCode = isGroup ? match.homeSlotRef : (match.result?.homeTeamCode ?? r?.home ?? null);
+  const awayCode = isGroup ? match.awaySlotRef : (match.result?.awayTeamCode ?? r?.away ?? null);
+  const winnerCode = match.result?.winnerCode ?? r?.winner ?? null;
+  const status: MatchStatus =
+    (match.result?.status as MatchStatus | undefined) ?? (winnerCode ? "FINAL" : "SCHEDULED");
+  const scored = isScoredKnockout(matchNo);
+
+  // Pick-split + your-pick only carry meaning for scored knockout matches.
+  let pickSplit: PickSplit | null = null;
+  let yourPick: MatchDetail["yourPick"] = null;
+  if (scored) {
+    const entries = await getEntriesWithPicks(poolId);
+    pickSplit = buildPickSplit(
+      homeCode,
+      awayCode,
+      entries.map((e) => e.picks.knockout?.[matchNo]),
+    );
+    const mine = await getEntryKnockoutPicks(poolId, userId);
+    const code = mine[matchNo];
+    if (code) {
+      yourPick = { code, name: teamName(code), correct: winnerCode ? code === winnerCode : null };
+    }
+  }
+
+  return {
+    matchNo,
+    roundCode: match.roundCode,
+    roundLabel: roundLabel(match.roundCode),
+    scheduledAt: match.scheduledAt ? match.scheduledAt.toISOString() : null,
+    status,
+    home: { code: homeCode, name: teamName(homeCode), score: match.result?.homeScore ?? null },
+    away: { code: awayCode, name: teamName(awayCode), score: match.result?.awayScore ?? null },
+    winnerCode,
+    isKnockout: !isGroup,
+    scored,
+    pickSplit,
+    yourPick,
+  };
+}
+
+// A single entry's player profile (hit-grid, accuracy, breakdown, boldest call).
+// Returns null when the entry doesn't belong to this pool.
+export async function getProfile(poolId: string, entryId: string): Promise<Profile | null> {
+  const entry = await prisma.entry.findFirst({
+    where: { id: entryId, poolId },
+    select: { id: true, label: true, picks: true, breakdown: { select: { byCategory: true } } },
+  });
+  if (!entry) return null;
+
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournament: { select: { officialResults: true } } },
+  });
+  if (!pool) return null;
+
+  const [leaderboard, allEntries] = await Promise.all([
+    getLeaderboard(poolId),
+    getEntriesWithPicks(poolId),
+  ]);
+  const row = leaderboard.find((r) => r.entryId === entryId);
+
+  return buildProfile({
+    entryId: entry.id,
+    label: entry.label,
+    total: row?.total ?? 0,
+    // Fall back to last place, but never report a rank beyond the field size.
+    rank: row?.rank ?? Math.max(1, leaderboard.length),
+    entryCount: leaderboard.length,
+    picks: pickRowsToSubmission(entry.picks).picks,
+    results: asResults(pool.tournament.officialResults),
+    breakdown: (entry.breakdown?.byCategory as Record<string, number> | null) ?? null,
+    pickShareByMatch: tallyPickShare(allEntries.map((e) => e.picks)),
+  });
 }
 
 // Aggregate the Home dashboard. Chat teaser is members-only (isMember gates it),

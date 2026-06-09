@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 
 const CATEGORY_LABELS: [string, string][] = [
@@ -46,9 +47,12 @@ function avatarColor(seed: string): string {
 export function Leaderboard({
   rows,
   youUserId,
+  code,
 }: {
   rows: LeaderboardRow[];
   youUserId?: string | null;
+  // When provided, each row links to that entry's player profile.
+  code?: string;
 }) {
   if (rows.length === 0) {
     return (
@@ -65,22 +69,16 @@ export function Leaderboard({
         const isLeader = row.rank === 1;
         const isYou = Boolean(youUserId && row.userId === youUserId);
         const m = medal(row.rank);
-        return (
-          <li
-            key={row.entryId}
-            className={`rounded-2xl border bg-surface p-4 ${
-              isLeader
-                ? "border-gold shadow-[var(--shadow-ring-gold)]"
-                : "border-line shadow-[var(--shadow-xs)]"
-            }`}
-          >
+        const content = (
+          <>
             <div className="flex items-center gap-3">
               <span
+                aria-label={`Rank ${row.rank}`}
                 className={`w-8 shrink-0 text-center font-display ${
                   m ? "text-[22px]" : "text-lg text-ink-3"
                 }`}
               >
-                {m || row.rank}
+                <span aria-hidden>{m || row.rank}</span>
               </span>
               <span
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[13px] text-white"
@@ -114,6 +112,27 @@ export function Leaderboard({
                 </span>
               ))}
             </div>
+          </>
+        );
+        return (
+          <li
+            key={row.entryId}
+            className={`rounded-2xl border bg-surface ${
+              isLeader
+                ? "border-gold shadow-[var(--shadow-ring-gold)]"
+                : "border-line shadow-[var(--shadow-xs)]"
+            }`}
+          >
+            {code ? (
+              <Link
+                href={`/pool/${code}/u/${row.entryId}`}
+                className="block rounded-2xl p-4 transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
+              >
+                {content}
+              </Link>
+            ) : (
+              <div className="p-4">{content}</div>
+            )}
           </li>
         );
       })}

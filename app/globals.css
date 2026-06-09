@@ -184,6 +184,20 @@ body {
   }
 }
 
+/* Accessibility: honour the OS "reduce motion" setting everywhere — collapse
+   animations and transitions (the live pulse, count-ups, hover fades) to a
+   single frame. Per-component motion-reduce: utilities reinforce this. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ============================================================
    Host-city pattern motifs — SUBTLE. Apply behind a solid
    surface at low opacity; the hue follows currentColor.
