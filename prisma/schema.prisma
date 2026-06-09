@@ -183,11 +183,12 @@ model Pool {
   settings     Json?
   createdAt    DateTime @default(now())
 
-  tournament  Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  owner       User          @relation("PoolOwner", fields: [ownerId], references: [id])
+  tournament  Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  owner       User            @relation("PoolOwner", fields: [ownerId], references: [id])
   memberships Membership[]
   entries     Entry[]
   messages    ChatMessage[]
+  snapshots   ScoreSnapshot[]
 
   @@index([tournamentId])
 }
@@ -229,6 +230,7 @@ model Entry {
   user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   picks     Pick[]
   breakdown ScoreBreakdown?
+  snapshots ScoreSnapshot[]
 
   @@index([poolId])
   @@index([claimEmail])
@@ -259,6 +261,24 @@ model ScoreBreakdown {
   computedAt  DateTime @default(now())
 
   entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
+
+// Point/rank history per entry, written on each changing recompute (deduped so
+// unchanged standings don't accumulate rows). Powers movers, table-moves, and
+// recap deltas. Not a scoring source of truth — derived from ScoreBreakdown.
+model ScoreSnapshot {
+  id          String   @id @default(cuid())
+  poolId      String
+  entryId     String
+  totalPoints Int
+  rank        Int
+  capturedAt  DateTime @default(now())
+
+  pool  Pool  @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([poolId, capturedAt])
+  @@index([entryId, capturedAt])
 }
 
 model ChatMessage {

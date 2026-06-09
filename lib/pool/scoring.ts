@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { scorePicks, type ScoringConfig, DEFAULT_SCORING } from "@/lib/scoring/score";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
+import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
 
 // Coerce the tournament's stored JSON answer key into a Results object.
 export function asResults(officialResults: unknown): Results {
@@ -45,7 +46,37 @@ export async function recomputePool(poolId: string) {
     });
   }
 
-  return getLeaderboard(poolId);
+  const leaderboard = await getLeaderboard(poolId);
+  await captureSnapshots(poolId, leaderboard);
+  return leaderboard;
+}
+
+// Persist a point/rank snapshot per entry whose standing changed since its last
+// snapshot. Deduped so identical recomputes don't accumulate rows; the dedup
+// decision itself is the pure snapshotsToWrite (unit-tested in movers.test.ts).
+async function captureSnapshots(poolId: string, leaderboard: LeaderboardRow[]): Promise<void> {
+  const existing = await prisma.scoreSnapshot.findMany({
+    where: { poolId },
+    orderBy: { capturedAt: "asc" },
+    select: { entryId: true, totalPoints: true, rank: true },
+  });
+  const latestByEntry = new Map<string, SnapshotPoint>();
+  for (const s of existing) latestByEntry.set(s.entryId, s);
+
+  const toWrite = snapshotsToWrite(
+    latestByEntry,
+    leaderboard.map((r) => ({ entryId: r.entryId, total: r.total, rank: r.rank })),
+  );
+  if (toWrite.length === 0) return;
+
+  await prisma.scoreSnapshot.createMany({
+    data: toWrite.map((p) => ({
+      poolId,
+      entryId: p.entryId,
+      totalPoints: p.totalPoints,
+      rank: p.rank,
+    })),
+  });
 }
 
 export interface LeaderboardRow {
