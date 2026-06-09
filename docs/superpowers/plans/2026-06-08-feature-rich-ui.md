@@ -1,5 +1,10 @@
 # Broadcast Sport Feature-Rich UI — Implementation Plan
 
+> **⚠️ SUPERSEDED (2026-06-09).** The "Broadcast Sport" design system was dropped in favor of
+> the shipped **HessFest × FIFA 26** system. The feature set and functional cores below remain
+> valid and are carried forward — only the visual skin is dead. See
+> `plans/2026-06-09-fifa26-feature-roadmap.md` for the active plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-extended-cc:subagent-driven-development (recommended) or superpowers-extended-cc:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Overhaul the Bracketeer pool UI into a mobile-first "Broadcast Sport" app shell and add four new surfaces (Home, Player Profile, Match Center + What-if, Daily Summary).

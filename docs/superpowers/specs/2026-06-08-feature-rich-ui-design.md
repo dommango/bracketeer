@@ -1,7 +1,7 @@
 # Bracketeer — Feature-Rich UI Design
 
 **Date:** 2026-06-08
-**Status:** Approved in brainstorm; ready for implementation planning
+**Status:** ⚠️ SUPERSEDED (2026-06-09) — "Broadcast Sport" skin dropped for the HessFest × FIFA 26 system. Feature concepts still valid. See `plans/2026-06-09-fifa26-feature-roadmap.md`.
 **Theme:** "Broadcast Sport" · mobile-first · comprehensive overhaul
 
 ## 1. Context & goals
