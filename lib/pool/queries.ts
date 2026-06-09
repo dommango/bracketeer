@@ -5,6 +5,15 @@ import { prisma } from "@/lib/db";
 import { getLeaderboard, asResults, type LeaderboardRow } from "@/lib/pool/scoring";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
+import { listMessages } from "@/lib/pool/chat";
+import {
+  buildStanding,
+  selectNextMatch,
+  toHomeMover,
+  type HomeView,
+  type HomeMover,
+  type HomeNextMatch,
+} from "@/lib/pool/home";
 
 // The WC2026 MVP runs a single tournament; admin routes default to it but accept
 // an explicit slug so the same code serves future multi-tenant tournaments.
@@ -117,4 +126,95 @@ export async function getMovers(poolId: string, since: Date): Promise<Mover[]> {
   }
 
   return computeMovers(baseline, [...current.values()]);
+}
+
+// Today's biggest gainer, or null if no one has moved since midnight. Returns
+// null until there's a pre-today baseline so day-one imports don't masquerade as
+// "movement today" (the whole leaderboard would read as gained-from-zero).
+export async function getTodaysMover(poolId: string): Promise<HomeMover | null> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const priorCount = await prisma.scoreSnapshot.count({
+    where: { poolId, capturedAt: { lt: startOfDay } },
+  });
+  if (priorCount === 0) return null;
+
+  const movers = await getMovers(poolId, startOfDay);
+  const top = movers.find((m) => m.pointsGained > 0);
+  if (!top) return null;
+
+  const entry = await prisma.entry.findUnique({
+    where: { id: top.entryId },
+    select: { label: true },
+  });
+  return toHomeMover(top, entry?.label ?? "—");
+}
+
+// The next match to surface on Home (see selectNextMatch for the choice rule).
+export async function getNextMatch(poolId: string): Promise<HomeNextMatch | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true },
+  });
+  if (!pool) return null;
+
+  const matches = await prisma.match.findMany({
+    where: { tournamentId: pool.tournamentId },
+    select: {
+      matchNo: true,
+      roundCode: true,
+      scheduledAt: true,
+      scored: true,
+      result: { select: { homeTeamCode: true, awayTeamCode: true } },
+    },
+  });
+
+  const picked = selectNextMatch(
+    matches.map((m) => ({
+      matchNo: m.matchNo,
+      roundCode: m.roundCode,
+      scheduledAt: m.scheduledAt,
+      scored: m.scored,
+    })),
+    new Date(),
+  );
+  if (!picked) return null;
+
+  const full = matches.find((m) => m.matchNo === picked.matchNo);
+  return {
+    matchNo: picked.matchNo,
+    roundCode: picked.roundCode,
+    scheduledAt: picked.scheduledAt ? picked.scheduledAt.toISOString() : null,
+    home: full?.result?.homeTeamCode ?? null,
+    away: full?.result?.awayTeamCode ?? null,
+  };
+}
+
+// Aggregate the Home dashboard. Chat teaser is members-only (isMember gates it),
+// mirroring the chat route's access rule.
+export async function getHomeView(
+  poolId: string,
+  userId: string | null,
+  isMember: boolean,
+): Promise<HomeView> {
+  const [leaderboard, topMover, nextMatch, messages] = await Promise.all([
+    getLeaderboard(poolId),
+    getTodaysMover(poolId),
+    getNextMatch(poolId),
+    isMember ? listMessages(poolId, 1) : Promise.resolve([]),
+  ]);
+
+  const latest = messages.length > 0 ? messages[messages.length - 1] : null;
+  const leader = leaderboard[0] ?? null;
+
+  return {
+    you: buildStanding(leaderboard, userId),
+    leader: leader ? { label: leader.label, total: leader.total } : null,
+    topMover,
+    nextMatch,
+    chatTeaser: latest
+      ? { authorName: latest.authorName, body: latest.body, createdAt: latest.createdAt }
+      : null,
+  };
 }
