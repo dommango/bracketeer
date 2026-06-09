@@ -28,27 +28,46 @@ export default async function SignInPage({
   const { error } = await searchParams;
 
   return (
-    <main className="mx-auto max-w-md px-5 py-16">
-      <div className="rounded-3xl bg-pitch text-white p-8 shadow-lg">
-        <p className="text-gold font-semibold tracking-wide uppercase text-sm">HessFest</p>
-        <h1 className="mt-2 text-2xl font-bold">Sign in</h1>
-        <p className="mt-2 text-white/80 text-sm">
-          Sign in to claim your bracket and join the chat.
-        </p>
+    <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
+      <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: "url(/brand-26-pattern.avif)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.4,
+            mixBlendMode: "luminosity",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(11,107,58,0.45) 0%, rgba(5,48,25,0.95) 100%)",
+          }}
+        />
+        <div className="relative">
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest</p>
+          <h1 className="mt-2.5 font-display text-2xl">Sign in</h1>
+          <p className="mt-2 text-sm text-white/80">
+            Sign in to claim your bracket and join the chat.
+          </p>
+        </div>
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <p className="mt-4 rounded-xl border border-[var(--negative)]/25 bg-[var(--negative-tint)] px-4 py-3 text-sm text-[var(--negative)]">
           Sign-in failed ({error}). Please try again.
         </p>
       ) : null}
 
-      <div className="mt-6 space-y-4 rounded-2xl border border-black/10 bg-white p-6">
+      <div className="mt-6 space-y-4 rounded-3xl border border-line bg-surface p-6">
         {googleEnabled ? (
           <form action={googleSignIn}>
             <button
               type="submit"
-              className="w-full rounded-full border border-black/15 bg-white px-5 py-2.5 font-medium hover:bg-black/5 transition"
+              className="h-11 w-full rounded-full border border-line bg-surface font-semibold text-ink transition-colors hover:bg-surface-sunk active:scale-[0.99]"
             >
               Continue with Google
             </button>
@@ -56,7 +75,7 @@ export default async function SignInPage({
         ) : null}
 
         <form action={emailSignIn} className="space-y-3">
-          <label className="block text-sm font-medium text-black/70" htmlFor="email">
+          <label className="block text-sm font-semibold text-ink-2" htmlFor="email">
             Email magic link
           </label>
           <input
@@ -65,16 +84,16 @@ export default async function SignInPage({
             type="email"
             required
             placeholder="you@example.com"
-            className="w-full rounded-xl border border-black/15 px-4 py-2.5 outline-none focus:border-pitch"
+            className="h-11 w-full rounded-md border border-line bg-surface px-4 text-[15px] text-ink outline-none transition-[border-color,box-shadow] focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]"
           />
           <button
             type="submit"
-            className="w-full rounded-full bg-pitch px-5 py-2.5 text-white font-medium hover:bg-pitch-dark transition"
+            className="h-11 w-full rounded-full bg-pitch font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99]"
           >
             Email me a sign-in link
           </button>
           {!emailEnabled ? (
-            <p className="text-xs text-black/50">
+            <p className="text-xs text-ink-3">
               Email delivery is not configured — the magic link is printed to the server console
               for local development.
             </p>

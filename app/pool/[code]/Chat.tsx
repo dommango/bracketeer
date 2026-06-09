@@ -77,25 +77,36 @@ export function Chat({
   }
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-white">
+    <div className="rounded-2xl border border-line bg-surface">
       <div className="max-h-80 space-y-2 overflow-y-auto p-4">
         {messages.length === 0 ? (
-          <p className="py-6 text-center text-sm text-black/40">No messages yet. Say hello 👋</p>
+          <p className="py-6 text-center text-sm text-ink-3">No messages yet. Say hello 👋</p>
         ) : (
           messages.map((m) => {
             const mine = m.userId === currentUserId;
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-sm ${
-                    mine ? "bg-pitch text-white" : "bg-black/5 text-black"
+                  className={`max-w-[80%] px-3 py-2 text-sm ${
+                    mine ? "bg-pitch text-white" : "bg-surface-sunk text-ink"
                   }`}
+                  style={{
+                    borderRadius: 16,
+                    borderBottomRightRadius: mine ? 4 : 16,
+                    borderBottomLeftRadius: mine ? 16 : 4,
+                  }}
                 >
                   {!mine ? (
-                    <p className="text-[11px] font-semibold text-pitch-dark">{m.authorName}</p>
+                    <p className="mb-0.5 text-[11px] font-bold tracking-[0.04em] text-pitch-dark">
+                      {m.authorName}
+                    </p>
                   ) : null}
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                  <p className={`mt-0.5 text-[10px] ${mine ? "text-white/60" : "text-black/40"}`}>
+                  <p className="whitespace-pre-wrap break-words leading-snug">{m.body}</p>
+                  <p
+                    className={`mt-1 text-right text-[10px] ${
+                      mine ? "text-white/60" : "text-ink-3"
+                    }`}
+                  >
                     {timeLabel(m.createdAt)}
                   </p>
                 </div>
@@ -106,23 +117,23 @@ export function Chat({
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={send} className="flex items-center gap-2 border-t border-black/10 p-3">
+      <form onSubmit={send} className="flex items-center gap-2 border-t border-line p-3">
         <input
           value={body}
           onChange={(e) => setBody(e.target.value)}
           maxLength={2000}
           placeholder="Message your pool…"
-          className="flex-1 rounded-full border border-black/15 px-4 py-2 text-sm outline-none focus:border-pitch"
+          className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none transition-[border-color,box-shadow] focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]"
         />
         <button
           type="submit"
           disabled={sending || !body.trim()}
-          className="rounded-full bg-pitch px-4 py-2 text-sm font-medium text-white hover:bg-pitch-dark disabled:opacity-50"
+          className="h-11 rounded-full bg-pitch px-5 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.97] disabled:opacity-50"
         >
           Send
         </button>
       </form>
-      {error ? <p className="px-4 pb-3 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="px-4 pb-3 text-xs text-[var(--negative)]">{error}</p> : null}
     </div>
   );
 }
