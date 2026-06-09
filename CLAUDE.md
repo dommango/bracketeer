@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Bracketeer is a tournament bracket-pool app. The near-term goal is a **World Cup 2026 MVP**
+HessFest is a tournament bracket-pool app. The near-term goal is a **World Cup 2026 MVP**
 for a friend group (kickoff 2026-06-11); the longer-term goal is a multi-tenant platform where
 anyone can create and run a pool. See `handoff.md` for current status and the remaining build plan.
 

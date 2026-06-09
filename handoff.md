@@ -1,4 +1,4 @@
-# Bracketeer — Session Handoff
+# HessFest — Session Handoff
 
 Working notes for continuing the build. Read `CLAUDE.md` first for architecture + commands.
 Full design rationale: `/home/dom/.claude/plans/kind-wiggling-ritchie.md`.
@@ -73,7 +73,7 @@ recompute→claim, all against the dev DB).
 - Real friend CSVs (final golden sanity check; generator already produces equivalent data).
 - Confirm OK with the ~€20–69 sports-API cost, or ship manual-only first.
 - Google OAuth credentials + a Railway/Postgres target for deploy.
-- A real app name (working name is "bracketeer").
+- ~~A real app name~~ — named **HessFest** (after the friend coordinating the tourney).
 
 ## Gotchas
 - **`.env` is hook-protected** — pass env inline (see `CLAUDE.md`). The dev DB lives in the sousiq

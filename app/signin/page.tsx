@@ -30,7 +30,7 @@ export default async function SignInPage({
   return (
     <main className="mx-auto max-w-md px-5 py-16">
       <div className="rounded-3xl bg-pitch text-white p-8 shadow-lg">
-        <p className="text-gold font-semibold tracking-wide uppercase text-sm">Bracketeer</p>
+        <p className="text-gold font-semibold tracking-wide uppercase text-sm">HessFest</p>
         <h1 className="mt-2 text-2xl font-bold">Sign in</h1>
         <p className="mt-2 text-white/80 text-sm">
           Sign in to claim your bracket and join the chat.

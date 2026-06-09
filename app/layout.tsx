@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bracketeer — World Cup 2026 Pool",
+  title: "HessFest — World Cup 2026 Pool",
   description: "Live scores, leaderboard, and chat for your World Cup 2026 bracket pool.",
   manifest: "/manifest.webmanifest",
 };

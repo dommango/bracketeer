@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 // Minimal installable PWA manifest (offline shell only — no live-data caching).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Bracketeer",
-    short_name: "Bracketeer",
+    name: "HessFest",
+    short_name: "HessFest",
     description: "World Cup 2026 bracket pool — live leaderboard & chat.",
     start_url: "/",
     display: "standalone",

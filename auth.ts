@@ -51,9 +51,9 @@ providers.push(
       const result = await transport.sendMail({
         to: identifier,
         from: provider.from,
-        subject: "Sign in to Bracketeer",
-        text: `Sign in to Bracketeer:\n${url}\n`,
-        html: `<p>Sign in to <b>Bracketeer</b>:</p><p><a href="${url}">${url}</a></p>`,
+        subject: "Sign in to HessFest",
+        text: `Sign in to HessFest:\n${url}\n`,
+        html: `<p>Sign in to <b>HessFest</b>:</p><p><a href="${url}">${url}</a></p>`,
       });
       const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
       if (failed.length) throw new Error(`Magic-link email could not be sent to ${failed.join(", ")}`);

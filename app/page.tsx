@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-16">
       <div className="rounded-3xl bg-pitch text-white p-8 shadow-lg">
-        <p className="text-gold font-semibold tracking-wide uppercase text-sm">Bracketeer</p>
+        <p className="text-gold font-semibold tracking-wide uppercase text-sm">HessFest</p>
         <h1 className="mt-2 text-3xl font-bold leading-tight">
           Run a World Cup 2026 pool with your friends.
         </h1>
