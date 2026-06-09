@@ -2,6 +2,7 @@
 // resolve the current user from the Auth.js session (database strategy) and look
 // up the relevant membership. There is no middleware guard (see auth.ts).
 
+import { cache } from "react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isAdminEmail } from "@/lib/env";
@@ -13,12 +14,14 @@ export interface SessionUser {
   name: string | null;
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+// Memoized per request: the pool layout (hero sign-in state) and child routes
+// (youUserId, membership) each resolve the user without repeating the session lookup.
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const session = await auth();
   const u = session?.user;
   if (!u?.id) return null;
   return { id: u.id, email: u.email ?? null, name: u.name ?? null };
-}
+});
 
 export interface PoolAccess {
   user: SessionUser;

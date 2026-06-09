@@ -1,5 +1,6 @@
 // Read helpers for rendering pool pages.
 
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { getLeaderboard, asResults, type LeaderboardRow } from "@/lib/pool/scoring";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
@@ -18,11 +19,38 @@ export async function getTournamentIdBySlug(
   return t.id;
 }
 
-export async function getPoolByCode(code: string) {
+// Memoized per request so the pool layout and its child route page share one
+// lookup instead of querying twice on every navigation.
+export const getPoolByCode = cache(async (code: string) => {
   return prisma.pool.findUnique({
     where: { joinCode: code.toUpperCase() },
     include: { tournament: true },
   });
+});
+
+export interface PoolHeader {
+  id: string;
+  name: string;
+  joinCode: string;
+  tournamentName: string;
+  tournamentStatus: string;
+  entryCount: number;
+}
+
+// Lightweight header data for the shared pool layout — avoids recomputing the
+// full leaderboard just to render the hero (the table route does that itself).
+export async function getPoolHeader(code: string): Promise<PoolHeader | null> {
+  const pool = await getPoolByCode(code);
+  if (!pool) return null;
+  const entryCount = await prisma.entry.count({ where: { poolId: pool.id } });
+  return {
+    id: pool.id,
+    name: pool.name,
+    joinCode: pool.joinCode,
+    tournamentName: pool.tournament.name,
+    tournamentStatus: pool.tournament.status,
+    entryCount,
+  };
 }
 
 export interface PoolView {
