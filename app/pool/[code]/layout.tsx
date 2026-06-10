@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPoolHeader } from "@/lib/pool/queries";
-import { getSessionUser, getPoolAccess } from "@/lib/pool/access";
+import { getSessionUser, getPoolAccess, canManagePool } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
 import { PoolRealtime } from "./PoolRealtime";
 import { BottomNav } from "./BottomNav";
@@ -36,6 +36,7 @@ export default async function PoolLayout({
   const sessionUser = await getSessionUser();
   const access = sessionUser ? await getPoolAccess(pool.id) : null;
   const isMember = Boolean(access);
+  const canManage = canManagePool(access);
 
   return (
     // Bottom padding clears the fixed bottom nav (plus iPhone home-bar inset).
@@ -126,6 +127,15 @@ export default async function PoolLayout({
                 className="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-gold px-4 text-sm font-bold text-pitch-deep transition-colors hover:bg-gold-dark"
               >
                 Join this pool →
+              </Link>
+            ) : null}
+
+            {canManage ? (
+              <Link
+                href={`/pool/${code}/manage`}
+                className="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
+              >
+                Manage pool →
               </Link>
             ) : null}
           </div>
