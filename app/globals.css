@@ -198,6 +198,13 @@ body {
   }
 }
 
+/* Accessibility: a brand-pitch focus ring as the global baseline for any
+   interactive element that doesn't set its own focus-visible: utilities. */
+:focus-visible {
+  outline: 2px solid var(--pitch);
+  outline-offset: 2px;
+}
+
 /* ============================================================
    Host-city pattern motifs — SUBTLE. Apply behind a solid
    surface at low opacity; the hue follows currentColor.

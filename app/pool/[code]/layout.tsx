@@ -87,7 +87,7 @@ export default async function PoolLayout({
               <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/70">
                 Join code
               </span>
-              <span className="font-mono text-xl font-bold tracking-[0.1em]">
+              <span className="font-mono text-xl font-bold tracking-[0.1em] tabular-nums">
                 {pool.joinCode}
                 <span className="ml-2 text-xs font-medium tracking-normal text-white/70">
                   {pool.entryCount} {pool.entryCount === 1 ? "entry" : "entries"}

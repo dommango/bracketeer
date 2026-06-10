@@ -289,7 +289,7 @@ export function PickForm({
                             onClick={() => toggleThird(t)}
                             disabled={blocked}
                             aria-pressed={on}
-                            className={`inline-flex min-h-9 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pitch ${
+                            className={`inline-flex min-h-11 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pitch ${
                               on
                                 ? "bg-pitch text-white"
                                 : "bg-surface-sunk text-ink hover:bg-pitch-tint disabled:opacity-40"

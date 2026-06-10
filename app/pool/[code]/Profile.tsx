@@ -34,6 +34,9 @@ function HitGrid({ hits }: { hits: KnockoutHit[] }) {
     if (list) list.push(h);
     else byRound.set(h.roundCode, [h]);
   }
+  if (hits.length === 0) {
+    return <p className="text-sm text-ink-3">No knockout results yet — check back once the bracket starts.</p>;
+  }
   return (
     <div className="space-y-3">
       {ROUND_ORDER.filter((r) => byRound.has(r)).map((round) => (

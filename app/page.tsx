@@ -63,7 +63,7 @@ export default function Home() {
               maxLength={6}
               placeholder="FIXTUR"
               autoCapitalize="characters"
-              className="min-w-0 flex-1 bg-transparent text-[15px] uppercase tracking-wide text-ink outline-none placeholder:normal-case"
+              className="min-w-0 flex-1 bg-transparent text-[15px] uppercase tracking-wide tabular-nums text-ink outline-none placeholder:normal-case"
             />
           </div>
           <button
