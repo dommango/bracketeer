@@ -206,6 +206,45 @@ body {
 }
 
 /* ============================================================
+   Desktop bracket tree — flexbox elbow connectors.
+   Each round is a column of equal-height cells (flex:1); a cell's
+   card is centred in its band. Connectors are drawn in the 20px
+   side padding via ::before/::after borders. Because every column
+   shares the same height and equal bands, a parent cell's centre
+   lands exactly on its two feeders' midpoint, so the elbows align.
+   ============================================================ */
+.bkt-cell {
+  position: relative;
+}
+/* outgoing elbow on the right of every cell except the Final column */
+.bkt-round:not(:last-child) .bkt-cell::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 20px;
+  border-right: 2px solid var(--line);
+}
+.bkt-round:not(:last-child) .bkt-cell:nth-child(odd)::after {
+  top: 50%;
+  bottom: 0;
+  border-top: 2px solid var(--line);
+}
+.bkt-round:not(:last-child) .bkt-cell:nth-child(even)::after {
+  top: 0;
+  bottom: 50%;
+  border-bottom: 2px solid var(--line);
+}
+/* incoming horizontal on the left of every cell except the R32 column */
+.bkt-round:not(:first-child) .bkt-cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 20px;
+  border-top: 2px solid var(--line);
+}
+
+/* ============================================================
    Host-city pattern motifs — SUBTLE. Apply behind a solid
    surface at low opacity; the hue follows currentColor.
      <span class="pattern" data-pattern="houston"
