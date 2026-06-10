@@ -21,5 +21,13 @@ export default async function PoolHomePage({
 
   const view = await getHomeView(pool.id, sessionUser?.id ?? null, isMember);
 
-  return <Home view={view} code={code} signedIn={Boolean(sessionUser)} />;
+  return (
+    <Home
+      view={view}
+      code={code}
+      signedIn={Boolean(sessionUser)}
+      startsAt={pool.tournament.startsAt.toISOString()}
+      upcoming={pool.tournament.status === "UPCOMING"}
+    />
+  );
 }

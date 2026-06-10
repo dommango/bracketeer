@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { getPoolByCode } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { getUserEntry } from "@/lib/pool/submit-picks";
+import { arePicksLocked } from "@/lib/pool/lock";
 import { emptyPicks } from "@/lib/scoring/types";
 import { PickForm } from "../PickForm";
+import { Countdown } from "../Countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,8 @@ export default async function PicksPage({
 
   const entry = await getUserEntry(pool.id, sessionUser.id);
   const label = entry?.label ?? sessionUser.name ?? "Player";
+  const entryLocked = entry?.locked ?? false;
+  const locked = arePicksLocked(pool.tournament.startsAt, entryLocked);
 
   return (
     <section className="space-y-4">
@@ -64,14 +68,45 @@ export default async function PicksPage({
         </Link>
       </div>
 
+      <DeadlineBanner
+        startsAt={pool.tournament.startsAt.toISOString()}
+        locked={locked}
+        entryLocked={entryLocked}
+      />
+
       <PickForm
         code={code}
         initialPicks={entry?.picks ?? emptyPicks()}
         initialTiebreak={entry?.tiebreak ?? ""}
         label={label}
-        locked={entry?.locked ?? false}
+        locked={locked}
       />
     </section>
+  );
+}
+
+function DeadlineBanner({
+  startsAt,
+  locked,
+  entryLocked,
+}: {
+  startsAt: string;
+  locked: boolean;
+  entryLocked: boolean;
+}) {
+  if (locked) {
+    return (
+      <div className="flex items-center gap-2 rounded-2xl bg-surface-sunk px-4 py-3 text-sm text-ink-2">
+        <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-ink-4" />
+        Picks are locked — {entryLocked ? "set by your pool admin." : "the tournament has kicked off."}
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-pitch-tint px-4 py-3">
+      <span className="text-sm font-semibold text-pitch-dark">Picks lock at kickoff</span>
+      <Countdown target={startsAt} className="text-sm text-pitch-dark" />
+    </div>
   );
 }
 

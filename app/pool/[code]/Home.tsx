@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatKickoff } from "@/lib/pool/format";
 import { CountUp } from "./CountUp";
+import { Countdown } from "./Countdown";
 import type {
   HomeView,
   HomeLeader,
@@ -155,10 +156,14 @@ export function Home({
   view,
   code,
   signedIn,
+  startsAt,
+  upcoming,
 }: {
   view: HomeView;
   code: string;
   signedIn: boolean;
+  startsAt: string;
+  upcoming: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -173,6 +178,12 @@ export function Home({
             <p className="mt-1 font-semibold text-ink">
               {view.you ? "Review or edit your picks" : "Make your picks"}
             </p>
+            {upcoming ? (
+              <p className="mt-1 text-xs text-ink-3">
+                Locks in{" "}
+                <Countdown target={startsAt} showSeconds={false} className="text-xs text-ink-2" />
+              </p>
+            ) : null}
           </div>
           <span className="font-display text-pitch-dark">→</span>
         </Link>

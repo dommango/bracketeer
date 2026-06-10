@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSessionUser, getPoolAccess } from "@/lib/pool/access";
 import { getPoolByCode } from "@/lib/pool/queries";
+import { arePicksLocked } from "@/lib/pool/lock";
 import { upsertUiEntry } from "@/lib/pool/submit-picks";
 import { validatePicks } from "@/lib/pool/pick-form";
 import { recomputePool } from "@/lib/pool/scoring";
@@ -52,6 +53,10 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
 
   const access = await getPoolAccess(pool.id);
   if (!access) return { ok: false, error: "Join this pool before submitting picks." };
+
+  if (arePicksLocked(pool.tournament.startsAt)) {
+    return { ok: false, error: "Picks are locked — the tournament has kicked off." };
+  }
 
   const errors = validatePicks(picks as Picks);
   if (errors.length > 0) return { ok: false, error: errors[0] };
