@@ -1,8 +1,15 @@
 // Read helpers for rendering pool pages.
 
 import { prisma } from "@/lib/db";
-import { getLeaderboard, asResults, type LeaderboardRow } from "@/lib/pool/scoring";
+import {
+  getLeaderboard,
+  asResults,
+  asScoringConfig,
+  type LeaderboardRow,
+} from "@/lib/pool/scoring";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
+import type { Results } from "@/lib/scoring/types";
+import type { ScoringConfig } from "@/lib/scoring/score";
 
 // The WC2026 MVP runs a single tournament; admin routes default to it but accept
 // an explicit slug so the same code serves future multi-tenant tournaments.
@@ -23,6 +30,22 @@ export async function getPoolByCode(code: string) {
     where: { joinCode: code.toUpperCase() },
     include: { tournament: true },
   });
+}
+
+// A pool's tournament answer key + scoring config, coerced into engine shapes.
+// Shared by the read-only insight features (pick-split, profiles, compare).
+export async function getPoolAnswerKey(
+  poolId: string,
+): Promise<{ results: Results; cfg: ScoringConfig } | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournament: { select: { officialResults: true, scoringConfig: true } } },
+  });
+  if (!pool) return null;
+  return {
+    results: asResults(pool.tournament.officialResults),
+    cfg: asScoringConfig(pool.tournament.scoringConfig),
+  };
 }
 
 export interface PoolView {

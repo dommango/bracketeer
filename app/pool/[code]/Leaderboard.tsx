@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 
 const CATEGORY_LABELS: [string, string][] = [
@@ -46,9 +47,11 @@ function avatarColor(seed: string): string {
 export function Leaderboard({
   rows,
   youUserId,
+  code,
 }: {
   rows: LeaderboardRow[];
   youUserId?: string | null;
+  code?: string;
 }) {
   if (rows.length === 0) {
     return (
@@ -65,15 +68,8 @@ export function Leaderboard({
         const isLeader = row.rank === 1;
         const isYou = Boolean(youUserId && row.userId === youUserId);
         const m = medal(row.rank);
-        return (
-          <li
-            key={row.entryId}
-            className={`rounded-2xl border bg-surface p-4 ${
-              isLeader
-                ? "border-gold shadow-[var(--shadow-ring-gold)]"
-                : "border-line shadow-[var(--shadow-xs)]"
-            }`}
-          >
+        const content = (
+          <>
             <div className="flex items-center gap-3">
               <span
                 className={`w-8 shrink-0 text-center font-display ${
@@ -114,6 +110,27 @@ export function Leaderboard({
                 </span>
               ))}
             </div>
+          </>
+        );
+        return (
+          <li
+            key={row.entryId}
+            className={`rounded-2xl border bg-surface p-4 ${
+              isLeader
+                ? "border-gold shadow-[var(--shadow-ring-gold)]"
+                : "border-line shadow-[var(--shadow-xs)]"
+            }`}
+          >
+            {code ? (
+              <Link
+                href={`/pool/${code}/entry/${row.entryId}`}
+                className="block transition-opacity hover:opacity-80"
+              >
+                {content}
+              </Link>
+            ) : (
+              content
+            )}
           </li>
         );
       })}

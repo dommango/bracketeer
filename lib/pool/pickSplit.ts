@@ -7,11 +7,9 @@
 import { prisma } from "@/lib/db";
 import { TEAMS } from "@/lib/scoring/data";
 import { resolveBracket } from "@/lib/pool/bracket";
-import { asResults, asScoringConfig } from "@/lib/pool/scoring";
+import { getPoolAnswerKey } from "@/lib/pool/queries";
 import { roundLabel, roundPoints } from "@/lib/pool/rounds";
 import { tallyShares, type PickShare } from "@/lib/pool/pickShares";
-import type { ScoringConfig } from "@/lib/scoring/score";
-import type { Results } from "@/lib/scoring/types";
 
 export interface MatchPickSplit {
   matchNo: number;
@@ -30,25 +28,12 @@ export interface MatchPickSplit {
 const teamName = (code: string | null | undefined): string =>
   code && TEAMS[code] ? TEAMS[code] : "TBD";
 
-// Load a pool's tournament answer key + scoring config in one shot.
-async function poolResults(poolId: string): Promise<{ results: Results; cfg: ScoringConfig } | null> {
-  const pool = await prisma.pool.findUnique({
-    where: { id: poolId },
-    select: { tournament: { select: { officialResults: true, scoringConfig: true } } },
-  });
-  if (!pool) return null;
-  return {
-    results: asResults(pool.tournament.officialResults),
-    cfg: asScoringConfig(pool.tournament.scoringConfig),
-  };
-}
-
 // The distribution of picked winners for one knockout match across the pool.
 export async function getMatchPickSplit(
   poolId: string,
   matchNo: number,
 ): Promise<MatchPickSplit | null> {
-  const ctx = await poolResults(poolId);
+  const ctx = await getPoolAnswerKey(poolId);
   if (!ctx) return null;
   const { results, cfg } = ctx;
 

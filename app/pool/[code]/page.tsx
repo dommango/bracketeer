@@ -138,7 +138,7 @@ export default async function PoolPage({
           Leaderboard
         </h2>
         <div className="mt-2.5">
-          <Leaderboard rows={pool.leaderboard} youUserId={sessionUser?.id} />
+          <Leaderboard rows={pool.leaderboard} youUserId={sessionUser?.id} code={pool.joinCode} />
         </div>
       </section>
 
