@@ -5,7 +5,9 @@
 import { prisma } from "@/lib/db";
 import { getPoolAnswerKey } from "@/lib/pool/queries";
 import { getPoolKnockoutShares } from "@/lib/pool/pickSplit";
+import { getEntryTrend } from "@/lib/pool/snapshots";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
+import type { TrendPoint } from "@/lib/pool/movers";
 import {
   knockoutAccuracy,
   championStatus,
@@ -27,6 +29,7 @@ export interface EntryProfile {
   ceiling: number; // current total + max still-earnable points
   potential: number; // max still-earnable points
   boldest: BoldestCall | null;
+  trend: TrendPoint[]; // points/rank history, oldest first
 }
 
 export async function getEntryProfile(
@@ -44,7 +47,10 @@ export async function getEntryProfile(
   const { results, cfg } = ctx;
 
   const { picks } = pickRowsToSubmission(entry.picks);
-  const { counts, totals } = await getPoolKnockoutShares(poolId);
+  const [{ counts, totals }, trend] = await Promise.all([
+    getPoolKnockoutShares(poolId),
+    getEntryTrend(poolId, entryId),
+  ]);
 
   const total = entry.breakdown?.totalPoints ?? 0;
   const potential = remainingPotential(picks, results, cfg);
@@ -60,5 +66,6 @@ export async function getEntryProfile(
     ceiling: total + potential,
     potential,
     boldest: boldestCall(picks, results, cfg, counts, totals),
+    trend,
   };
 }

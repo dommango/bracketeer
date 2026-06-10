@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPoolByCode } from "@/lib/pool/queries";
 import { getEntryProfile } from "@/lib/pool/entryProfile";
 import { Flag } from "../../Flag";
+import { Sparkline } from "../../Sparkline";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,15 @@ export default async function EntryProfilePage({
           </p>
         </section>
       ) : null}
+
+      <section className="mt-6">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+          Points trend
+        </h2>
+        <div className="mt-2.5 rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]">
+          <Sparkline trend={p.trend} />
+        </div>
+      </section>
 
       <section className="mt-6">
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">

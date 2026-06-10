@@ -45,7 +45,24 @@ export async function recomputePool(poolId: string) {
     });
   }
 
-  return getLeaderboard(poolId);
+  const leaderboard = await getLeaderboard(poolId);
+
+  // Append a point-in-time snapshot per entry (single batch timestamp) so the
+  // trend + "biggest mover" views have history. Appended, never overwritten.
+  if (leaderboard.length) {
+    const capturedAt = new Date();
+    await prisma.scoreSnapshot.createMany({
+      data: leaderboard.map((r) => ({
+        poolId,
+        entryId: r.entryId,
+        totalPoints: r.total,
+        rank: r.rank,
+        capturedAt,
+      })),
+    });
+  }
+
+  return leaderboard;
 }
 
 export interface LeaderboardRow {

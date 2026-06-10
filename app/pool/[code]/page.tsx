@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPoolView, getPoolBracket } from "@/lib/pool/queries";
+import { getMovers } from "@/lib/pool/snapshots";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { listMessages } from "@/lib/pool/chat";
 import { signOutAction } from "@/lib/auth/actions";
 import { Leaderboard } from "./Leaderboard";
+import { Movers } from "./Movers";
 import { Bracket, GroupStandings } from "./Bracket";
 import { Chat } from "./Chat";
 import { PoolRealtime } from "./PoolRealtime";
@@ -41,7 +43,11 @@ export default async function PoolPage({
   const pool = await getPoolView(code);
   if (!pool) notFound();
 
-  const [access, bracket] = await Promise.all([getPoolAccess(pool.id), getPoolBracket(pool.id)]);
+  const [access, bracket, movers] = await Promise.all([
+    getPoolAccess(pool.id),
+    getPoolBracket(pool.id),
+    getMovers(pool.id),
+  ]);
   const sessionUser = access?.user ?? (await getSessionUser());
   const isMember = Boolean(access);
   const messages = isMember ? await listMessages(pool.id, 50) : [];
@@ -137,7 +143,8 @@ export default async function PoolPage({
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           Leaderboard
         </h2>
-        <div className="mt-2.5">
+        <div className="mt-2.5 space-y-2.5">
+          <Movers result={movers} code={pool.joinCode} />
           <Leaderboard rows={pool.leaderboard} youUserId={sessionUser?.id} code={pool.joinCode} />
         </div>
       </section>
