@@ -140,9 +140,17 @@ export default async function PoolPage({
       </nav>
 
       <section id="leaderboard" className="mt-6 scroll-mt-16">
-        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-          Leaderboard
-        </h2>
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Leaderboard</h2>
+          {pool.leaderboard.length >= 2 ? (
+            <Link
+              href={`/pool/${pool.joinCode}/compare`}
+              className="text-xs font-semibold text-pitch hover:underline"
+            >
+              Compare brackets →
+            </Link>
+          ) : null}
+        </div>
         <div className="mt-2.5 space-y-2.5">
           <Movers result={movers} code={pool.joinCode} />
           <Leaderboard rows={pool.leaderboard} youUserId={sessionUser?.id} code={pool.joinCode} />
