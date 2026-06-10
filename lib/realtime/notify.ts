@@ -5,6 +5,9 @@
 
 import { Pool } from "pg";
 import { env } from "@/lib/env";
+import { POOL_EVENTS_CHANNEL, type PoolEvent, type PoolEventType } from "./events";
+
+export { POOL_EVENTS_CHANNEL, type PoolEvent, type PoolEventType } from "./events";
 
 // A tiny dedicated pool, reused across hot reloads, just for emitting notifies.
 const globalForPg = globalThis as unknown as { pgNotifyPool?: Pool };
@@ -13,16 +16,6 @@ const notifyPool_ =
   globalForPg.pgNotifyPool ?? new Pool({ connectionString: env.DATABASE_URL, max: 2 });
 
 if (process.env.NODE_ENV !== "production") globalForPg.pgNotifyPool = notifyPool_;
-
-export const POOL_EVENTS_CHANNEL = "pool_events";
-
-export type PoolEventType = "leaderboard" | "result" | "chat";
-
-export interface PoolEvent {
-  poolId: string;
-  type: PoolEventType;
-  at: string;
-}
 
 // Emit a small event for a pool. The payload is intentionally tiny (well under
 // Postgres' 8000-byte NOTIFY limit) — clients refetch the affected resource.

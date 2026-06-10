@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/pool/access";
 import { joinPool } from "@/lib/pool/manage";
+import { rateLimit } from "@/lib/rate-limit";
 
 export interface JoinPoolState {
   error?: string;
@@ -16,6 +17,11 @@ export async function joinPoolAction(
 ): Promise<JoinPoolState> {
   const user = await getSessionUser();
   if (!user) redirect("/signin");
+
+  // Cap join attempts so a stolen session can't brute-force join codes.
+  if (!rateLimit(`join:${user.id}`, 30, 60_000).ok) {
+    return { error: "Too many attempts — wait a minute and try again." };
+  }
 
   const joinCode = String(formData.get("code") || "");
   const displayName = String(formData.get("displayName") || "");

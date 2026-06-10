@@ -9,6 +9,7 @@ import { getPoolAccess, canManagePool } from "@/lib/pool/access";
 import { parseSubmissionCsv, importSubmission, type ImportResult } from "@/lib/pool/import";
 import { recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
+import { rateLimit } from "@/lib/rate-limit";
 import { apiOk, apiError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,11 @@ export async function POST(
   // leaking pool existence to non-members.
   if (!access) return apiError("Pool not found", 404);
   if (!canManagePool(access)) return apiError("Forbidden: owner or admin only", 403);
+
+  // Imports are heavy (parse + persist + full recompute); cap per manager.
+  if (!rateLimit(`import:${access.user.id}`, 10, 60_000).ok) {
+    return apiError("Too many imports — wait a minute and try again.", 429);
+  }
 
   const contentType = req.headers.get("content-type") || "";
 

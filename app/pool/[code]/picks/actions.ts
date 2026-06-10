@@ -9,6 +9,7 @@ import { upsertUiEntry } from "@/lib/pool/submit-picks";
 import { validatePicks } from "@/lib/pool/pick-form";
 import { recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
+import { rateLimit } from "@/lib/rate-limit";
 import type { Picks } from "@/lib/scoring/types";
 
 // Mirrors the import.ts submission schema (picks half only); the contestant
@@ -47,6 +48,11 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
 
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Sign in to submit your picks." };
+
+  // Each save rewrites the entry + recomputes the pool, so cap how often.
+  if (!rateLimit(`picks:${user.id}`, 20, 60_000).ok) {
+    return { ok: false, error: "You're saving too often — wait a moment and try again." };
+  }
 
   const pool = await getPoolByCode(code);
   if (!pool) return { ok: false, error: "Pool not found." };

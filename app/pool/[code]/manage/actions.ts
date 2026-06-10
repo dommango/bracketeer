@@ -16,6 +16,7 @@ import { parseAssignableRole } from "@/lib/pool/admin-rules";
 import { parseSubmissionCsv, importSubmission } from "@/lib/pool/import";
 import { recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MAX_CSV_BYTES = 1_000_000;
 const MAX_FILES = 200;
@@ -115,7 +116,11 @@ export async function importCsvAction(
   formData: FormData,
 ): Promise<ImportState> {
   const code = String(formData.get("code") || "");
-  const { poolId } = await requireManage(code);
+  const { poolId, access } = await requireManage(code);
+
+  if (!rateLimit(`import:${access.user.id}`, 10, 60_000).ok) {
+    return { error: "Too many imports — wait a minute and try again." };
+  }
 
   const files = formData.getAll("file").filter((f): f is File => f instanceof File && f.size > 0);
   if (files.length === 0) return { error: "Choose at least one CSV file." };

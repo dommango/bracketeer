@@ -153,8 +153,10 @@ export async function getTodaysMover(poolId: string): Promise<HomeMover | null> 
   const top = movers.find((m) => m.pointsGained > 0);
   if (!top) return null;
 
-  const entry = await prisma.entry.findUnique({
-    where: { id: top.entryId },
+  // Scope the lookup to this pool too — the id already comes from a pool-scoped
+  // mover list, but constraining poolId keeps the read defensively tenant-safe.
+  const entry = await prisma.entry.findFirst({
+    where: { id: top.entryId, poolId },
     select: { label: true },
   });
   return toHomeMover(top, entry?.label ?? "—");
