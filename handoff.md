@@ -46,6 +46,24 @@ kickoff. Say so to the user rather than treating the date as existential.
   `scripts/cron.mjs`. Empty fixture maps until the real draw → safe no-op; manual stays primary.
 - **Deploy configs**: `railway.json` (preDeploy `prisma migrate deploy`) + `railway.cron.json`.
 
+**Engagement features (read-only over the locked picks; never touch `lib/scoring/*`):**
+Driven by a survey of comparable WC2026 pool repos (wm-pickems/world-cup-pool, onno101,
+ionmx) — the gap was *social/comparison* surfaces. All added as additive reads + one new table.
+- **Per-match pick-split** (`lib/pool/pickShares.ts` pure + `pickSplit.ts` DB): "62% picked Brazil"
+  per knockout match, who-picked-what, right/wrong once decided. Page `/pool/[code]/match/[no]`
+  (bracket cards link to it).
+- **Entry profiles** (`profile.ts` pure + `entryProfile.ts` DB): KO call accuracy, champion +
+  aliveness, point **ceiling** (current + max still-earnable), boldest (contrarian-correct) call,
+  category breakdown, points-trend sparkline. Page `/pool/[code]/entry/[entryId]` (linked from rows).
+- **Score history**: new `ScoreSnapshot` model (migration `20260610000000_score_snapshot`);
+  `recomputePool()` appends one snapshot per entry each run. Powers the **biggest-movers** card on
+  the leaderboard (`movers.ts` pure diff + `snapshots.ts` DB) and the profile sparkline.
+- **Head-to-head compare** (`compare.ts` pure + `comparison.ts` DB): `/pool/[code]/compare` — totals,
+  champions, category table, and the knockout matches where two brackets diverge.
+- Green: `tsc`, `npm run build` (all routes compile), `npx vitest run` (53 tests incl. byte-parity).
+  **Pending live-DB verification** (DB offline in this container): apply the snapshot migration, then
+  seed→import→recompute to populate ≥2 snapshot batches and eyeball movers/pick-split/profile.
+
 **Remaining — only the live deploy + optional polish:**
 
 ### 1. Deploy to Railway
