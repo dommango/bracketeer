@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPoolView } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
@@ -19,9 +20,17 @@ export default async function TablePage({
 
   return (
     <section>
-      <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-        Leaderboard
-      </h2>
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Leaderboard</h2>
+        {pool.leaderboard.length >= 2 ? (
+          <Link
+            href={`/pool/${code}/compare`}
+            className="text-xs font-semibold text-pitch hover:underline"
+          >
+            Compare brackets →
+          </Link>
+        ) : null}
+      </div>
       <div className="mt-2.5">
         <Leaderboard rows={pool.leaderboard} youUserId={sessionUser?.id} code={code} />
       </div>
