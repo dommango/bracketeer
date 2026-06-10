@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { BracketView, BracketMatch } from "@/lib/pool/bracket-view";
 import { Flag } from "./Flag";
 
@@ -60,11 +61,13 @@ function Side({
   );
 }
 
-function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
+function MatchCard({ m, accent, code }: { m: BracketMatch; accent: string; code?: string }) {
   const decided = Boolean(m.winnerCode);
-  return (
+  const body = (
     <div
-      className="rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm"
+      className={`rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm ${
+        code ? "transition-shadow hover:shadow-[var(--shadow-sm)]" : ""
+      }`}
       style={{ borderLeft: `4px solid ${accent}` }}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
@@ -92,9 +95,19 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
       />
     </div>
   );
+
+  // The bronze play-off (M103) carries no winner picks, so it isn't linkable.
+  if (code && m.matchNo !== 103) {
+    return (
+      <Link href={`/pool/${code}/match/${m.matchNo}`} className="block">
+        {body}
+      </Link>
+    );
+  }
+  return body;
 }
 
-export function Bracket({ view }: { view: BracketView }) {
+export function Bracket({ view, code }: { view: BracketView; code?: string }) {
   return (
     <div className="space-y-5">
       {view.rounds.map((round) => {
@@ -107,7 +120,7 @@ export function Bracket({ view }: { view: BracketView }) {
             </h3>
             <div className="grid gap-2 sm:grid-cols-2">
               {round.matches.map((m) => (
-                <MatchCard key={m.matchNo} m={m} accent={accent} />
+                <MatchCard key={m.matchNo} m={m} accent={accent} code={code} />
               ))}
             </div>
           </div>

@@ -144,7 +144,7 @@ export default async function PoolPage({
 
       <section id="bracket" className="mt-8 scroll-mt-16">
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Bracket</h2>
-        <div className="mt-2.5">{bracket ? <Bracket view={bracket} /> : null}</div>
+        <div className="mt-2.5">{bracket ? <Bracket view={bracket} code={pool.joinCode} /> : null}</div>
       </section>
 
       <section id="groups" className="mt-8 scroll-mt-16">
