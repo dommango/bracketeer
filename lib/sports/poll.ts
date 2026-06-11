@@ -8,6 +8,7 @@ import { getTournamentIdBySlug } from "@/lib/pool/queries";
 import { fetchFixtures, type FinishedFixture } from "./client";
 import { EXTERNAL_TO_MATCHNO, EXTERNAL_TEAM_CODES } from "./fixtures-map";
 import { setKnockoutResultFromApi, recomputeTournamentPools } from "@/lib/pool/results";
+import { resolveWinnerExternalId } from "./winner";
 
 export interface PollSummary {
   skipped?: boolean;
@@ -17,8 +18,8 @@ export interface PollSummary {
 }
 
 function resolveWinnerCode(f: FinishedFixture): string | null {
-  if (f.homeGoals == null || f.awayGoals == null || f.homeGoals === f.awayGoals) return null;
-  const winnerExternalId = f.homeGoals > f.awayGoals ? f.homeExternalId : f.awayExternalId;
+  const winnerExternalId = resolveWinnerExternalId(f);
+  if (winnerExternalId == null) return null;
   return EXTERNAL_TEAM_CODES[winnerExternalId] ?? null;
 }
 

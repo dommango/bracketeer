@@ -10,12 +10,15 @@ export interface FinishedFixture {
   awayExternalId: string;
   homeGoals: number | null;
   awayGoals: number | null;
+  homePens: number | null;
+  awayPens: number | null;
 }
 
 interface ApiFixture {
   fixture: { id: number; status?: { short?: string } };
   teams: { home: { id: number }; away: { id: number } };
   goals: { home: number | null; away: number | null };
+  score?: { penalty?: { home: number | null; away: number | null } };
 }
 
 // Statuses API-Football reports for a decided match.
@@ -38,5 +41,7 @@ export async function fetchFixtures(signal?: AbortSignal): Promise<FinishedFixtu
     awayExternalId: String(f.teams.away.id),
     homeGoals: f.goals.home ?? null,
     awayGoals: f.goals.away ?? null,
+    homePens: f.score?.penalty?.home ?? null,
+    awayPens: f.score?.penalty?.away ?? null,
   }));
 }
