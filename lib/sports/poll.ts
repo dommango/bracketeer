@@ -4,6 +4,7 @@
 // sets directly. Safe no-op when SPORTS_API_KEY or the fixture maps are empty.
 
 import { sportsApiEnabled } from "@/lib/env";
+import { isScoredKnockout } from "@/lib/pool/rounds";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
 import { fetchFixtures, type FinishedFixture } from "./client";
 import { EXTERNAL_TO_MATCHNO, EXTERNAL_TEAM_CODES } from "./fixtures-map";
@@ -32,7 +33,7 @@ export async function pollScores(): Promise<PollSummary> {
   let applied = 0;
   for (const f of fixtures) {
     const matchNo = EXTERNAL_TO_MATCHNO[f.externalId];
-    if (!matchNo || matchNo < 73 || matchNo > 104) continue; // knockouts only
+    if (!matchNo || !isScoredKnockout(matchNo)) continue; // scored knockouts only (no bronze)
     if (!f.finished) continue;
 
     const winnerCode = resolveWinnerCode(f);

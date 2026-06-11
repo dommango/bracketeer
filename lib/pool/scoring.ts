@@ -4,10 +4,13 @@
 // the DB glue.
 
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { scorePicks, type ScoringConfig, DEFAULT_SCORING } from "@/lib/scoring/score";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
+
+type Db = Prisma.TransactionClient;
 
 // Coerce the tournament's stored JSON answer key into a Results object.
 export function asResults(officialResults: unknown): Results {
@@ -23,39 +26,57 @@ export function asScoringConfig(scoringConfig: unknown): ScoringConfig {
 
 // Recompute every entry in a pool against its tournament answer key, writing
 // ScoreBreakdown rows. Returns the ranked leaderboard.
+//
+// Runs in ONE transaction holding a per-pool advisory lock: concurrent
+// recomputes (cron poll vs. live import vs. pick save, possibly in separate
+// processes) would otherwise race captureSnapshots' read-then-write into
+// duplicate snapshot rows and serve a leaderboard mixing two half-applied
+// recomputes. The lock serializes them; the transaction makes the breakdown
+// cache flip atomically instead of entry-by-entry.
 export async function recomputePool(poolId: string) {
-  const pool = await prisma.pool.findUniqueOrThrow({
-    where: { id: poolId },
-    include: { tournament: true },
-  });
-  const answer = asResults(pool.tournament.officialResults);
-  const cfg = asScoringConfig(pool.tournament.scoringConfig);
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${poolId}))`;
 
-  const entries = await prisma.entry.findMany({
-    where: { poolId },
-    include: { picks: true },
-  });
+      const pool = await tx.pool.findUniqueOrThrow({
+        where: { id: poolId },
+        include: { tournament: true },
+      });
+      const answer = asResults(pool.tournament.officialResults);
+      const cfg = asScoringConfig(pool.tournament.scoringConfig);
 
-  for (const entry of entries) {
-    const sub = pickRowsToSubmission(entry.picks);
-    const { total, breakdown } = scorePicks(sub.picks, answer, cfg);
-    await prisma.scoreBreakdown.upsert({
-      where: { entryId: entry.id },
-      update: { totalPoints: total, byCategory: breakdown, computedAt: new Date() },
-      create: { entryId: entry.id, totalPoints: total, byCategory: breakdown },
-    });
-  }
+      const entries = await tx.entry.findMany({
+        where: { poolId },
+        include: { picks: true },
+      });
 
-  const leaderboard = await getLeaderboard(poolId);
-  await captureSnapshots(poolId, leaderboard);
-  return leaderboard;
+      for (const entry of entries) {
+        const sub = pickRowsToSubmission(entry.picks);
+        const { total, breakdown } = scorePicks(sub.picks, answer, cfg);
+        await tx.scoreBreakdown.upsert({
+          where: { entryId: entry.id },
+          update: { totalPoints: total, byCategory: breakdown, computedAt: new Date() },
+          create: { entryId: entry.id, totalPoints: total, byCategory: breakdown },
+        });
+      }
+
+      const leaderboard = await getLeaderboard(poolId, tx);
+      await captureSnapshots(poolId, leaderboard, tx);
+      return leaderboard;
+    },
+    { timeout: 30_000 },
+  );
 }
 
 // Persist a point/rank snapshot per entry whose standing changed since its last
 // snapshot. Deduped so identical recomputes don't accumulate rows; the dedup
 // decision itself is the pure snapshotsToWrite (unit-tested in movers.test.ts).
-async function captureSnapshots(poolId: string, leaderboard: LeaderboardRow[]): Promise<void> {
-  const existing = await prisma.scoreSnapshot.findMany({
+async function captureSnapshots(
+  poolId: string,
+  leaderboard: LeaderboardRow[],
+  db: Db = prisma,
+): Promise<void> {
+  const existing = await db.scoreSnapshot.findMany({
     where: { poolId },
     orderBy: { capturedAt: "asc" },
     select: { entryId: true, totalPoints: true, rank: true },
@@ -69,7 +90,7 @@ async function captureSnapshots(poolId: string, leaderboard: LeaderboardRow[]): 
   );
   if (toWrite.length === 0) return;
 
-  await prisma.scoreSnapshot.createMany({
+  await db.scoreSnapshot.createMany({
     data: toWrite.map((p) => ({
       poolId,
       entryId: p.entryId,
@@ -92,8 +113,8 @@ export interface LeaderboardRow {
 // Read the cached leaderboard for a pool, ranked by total desc then label.
 // (Tiebreak handling is intentionally simple for the MVP — surfaced but not
 // auto-applied; the organizer breaks ties using the final-goals tiebreak.)
-export async function getLeaderboard(poolId: string): Promise<LeaderboardRow[]> {
-  const entries = await prisma.entry.findMany({
+export async function getLeaderboard(poolId: string, db: Db = prisma): Promise<LeaderboardRow[]> {
+  const entries = await db.entry.findMany({
     where: { poolId },
     include: { breakdown: true },
   });

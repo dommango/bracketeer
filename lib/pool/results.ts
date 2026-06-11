@@ -5,6 +5,7 @@
 // recomputeTournamentPools so a batch of edits triggers one recompute.
 
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { asResults, recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
 import { resolveBracket, validateKnockoutWinner } from "@/lib/pool/bracket";
@@ -12,16 +13,33 @@ import { findStandingsConflict } from "@/lib/pool/standings";
 import { GROUPS, TEAMS } from "@/lib/scoring/data";
 import type { Results, TeamCode, Awards } from "@/lib/scoring/types";
 
-async function loadAnswerKey(tournamentId: string): Promise<Results> {
-  const t = await prisma.tournament.findUniqueOrThrow({
+type Db = Prisma.TransactionClient;
+
+// Every answer-key mutation is a read-modify-write of one JSON blob, and the
+// admin UI and the cron poller can fire concurrently — so all mutators run
+// inside one transaction holding a per-tournament advisory lock. Without it,
+// two interleaved patches lose one of the writes (e.g. an API result clobbers
+// a simultaneous manual correction).
+async function withAnswerKeyLock<T>(
+  tournamentId: string,
+  fn: (tx: Db) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${tournamentId}))`;
+    return fn(tx);
+  });
+}
+
+async function loadAnswerKey(tournamentId: string, db: Db): Promise<Results> {
+  const t = await db.tournament.findUniqueOrThrow({
     where: { id: tournamentId },
     select: { officialResults: true },
   });
   return asResults(t.officialResults);
 }
 
-async function writeAnswerKey(tournamentId: string, next: Results): Promise<void> {
-  await prisma.tournament.update({
+async function writeAnswerKey(tournamentId: string, next: Results, db: Db): Promise<void> {
+  await db.tournament.update({
     where: { id: tournamentId },
     data: { officialResults: next as unknown as object },
   });
@@ -42,7 +60,18 @@ export async function setKnockoutResult(
   matchNo: number,
   input: KnockoutInput,
 ): Promise<Results> {
-  const current = await loadAnswerKey(tournamentId);
+  return withAnswerKeyLock(tournamentId, (tx) =>
+    setKnockoutResultLocked(tx, tournamentId, matchNo, input),
+  );
+}
+
+async function setKnockoutResultLocked(
+  tx: Db,
+  tournamentId: string,
+  matchNo: number,
+  input: KnockoutInput,
+): Promise<Results> {
+  const current = await loadAnswerKey(tournamentId, tx);
   const winner = (input.winnerCode || "").toUpperCase();
 
   const check = validateKnockoutWinner(current, matchNo, winner);
@@ -52,10 +81,10 @@ export async function setKnockoutResult(
     ...current,
     knockout: { ...current.knockout, [matchNo]: winner },
   };
-  await writeAnswerKey(tournamentId, next);
+  await writeAnswerKey(tournamentId, next, tx);
 
   const slot = resolveBracket(next)[matchNo];
-  await mirrorResultRow(tournamentId, matchNo, {
+  await mirrorResultRow(tx, tournamentId, matchNo, {
     homeTeamCode: slot?.home ?? null,
     awayTeamCode: slot?.away ?? null,
     homeScore: input.homeScore ?? null,
@@ -69,20 +98,24 @@ export async function setKnockoutResult(
 }
 
 // API-sourced variant for the score poller. A manual entry is authoritative, so
-// if a MANUAL Result already exists for this match we leave it untouched.
+// if a MANUAL Result already exists for this match we leave it untouched. The
+// source check runs inside the same lock as the write — a manual correction
+// landing mid-poll can no longer be clobbered between check and write.
 export async function setKnockoutResultFromApi(
   tournamentId: string,
   matchNo: number,
   input: Omit<KnockoutInput, "source">,
 ): Promise<{ applied: boolean }> {
-  const match = await prisma.match.findUnique({
-    where: { tournamentId_matchNo: { tournamentId, matchNo } },
-    select: { result: { select: { source: true } } },
-  });
-  if (match?.result?.source === "MANUAL") return { applied: false };
+  return withAnswerKeyLock(tournamentId, async (tx) => {
+    const match = await tx.match.findUnique({
+      where: { tournamentId_matchNo: { tournamentId, matchNo } },
+      select: { result: { select: { source: true } } },
+    });
+    if (match?.result?.source === "MANUAL") return { applied: false };
 
-  await setKnockoutResult(tournamentId, matchNo, { ...input, source: "API" });
-  return { applied: true };
+    await setKnockoutResultLocked(tx, tournamentId, matchNo, { ...input, source: "API" });
+    return { applied: true };
+  });
 }
 
 // Clear a previously-entered knockout winner (e.g. a mistaken entry).
@@ -90,21 +123,23 @@ export async function clearKnockoutResult(
   tournamentId: string,
   matchNo: number,
 ): Promise<Results> {
-  const current = await loadAnswerKey(tournamentId);
-  const knockout = { ...current.knockout };
-  delete knockout[matchNo];
-  const next: Results = { ...current, knockout };
-  await writeAnswerKey(tournamentId, next);
+  return withAnswerKeyLock(tournamentId, async (tx) => {
+    const current = await loadAnswerKey(tournamentId, tx);
+    const knockout = { ...current.knockout };
+    delete knockout[matchNo];
+    const next: Results = { ...current, knockout };
+    await writeAnswerKey(tournamentId, next, tx);
 
-  const match = await prisma.match.findUnique({
-    where: { tournamentId_matchNo: { tournamentId, matchNo } },
-    select: { id: true },
+    const match = await tx.match.findUnique({
+      where: { tournamentId_matchNo: { tournamentId, matchNo } },
+      select: { id: true },
+    });
+    if (match) {
+      await tx.result.deleteMany({ where: { matchId: match.id } });
+      await tx.match.update({ where: { id: match.id }, data: { scored: false } });
+    }
+    return next;
   });
-  if (match) {
-    await prisma.result.deleteMany({ where: { matchId: match.id } });
-    await prisma.match.update({ where: { id: match.id }, data: { scored: false } });
-  }
-  return next;
 }
 
 export interface StandingsInput {
@@ -120,41 +155,43 @@ export async function setGroupStandings(
   tournamentId: string,
   input: StandingsInput,
 ): Promise<Results> {
-  const current = await loadAnswerKey(tournamentId);
+  return withAnswerKeyLock(tournamentId, async (tx) => {
+    const current = await loadAnswerKey(tournamentId, tx);
 
-  const validatePlacement = (map: Record<string, TeamCode> | undefined) => {
-    const out: Record<string, TeamCode> = {};
-    for (const [g, raw] of Object.entries(map ?? {})) {
-      const code = (raw || "").toUpperCase();
-      if (!code) continue;
-      if (!GROUPS[g]) throw new Error(`Unknown group "${g}"`);
-      if (!GROUPS[g].includes(code)) throw new Error(`${code} is not in group ${g}`);
-      out[g] = code;
+    const validatePlacement = (map: Record<string, TeamCode> | undefined) => {
+      const out: Record<string, TeamCode> = {};
+      for (const [g, raw] of Object.entries(map ?? {})) {
+        const code = (raw || "").toUpperCase();
+        if (!code) continue;
+        if (!GROUPS[g]) throw new Error(`Unknown group "${g}"`);
+        if (!GROUPS[g].includes(code)) throw new Error(`${code} is not in group ${g}`);
+        out[g] = code;
+      }
+      return out;
+    };
+
+    let thirdAdvance = current.thirdAdvance;
+    if (input.thirdAdvance) {
+      thirdAdvance = input.thirdAdvance
+        .map((c) => (c || "").toUpperCase())
+        .filter((c) => c && TEAMS[c]);
     }
-    return out;
-  };
 
-  let thirdAdvance = current.thirdAdvance;
-  if (input.thirdAdvance) {
-    thirdAdvance = input.thirdAdvance
-      .map((c) => (c || "").toUpperCase())
-      .filter((c) => c && TEAMS[c]);
-  }
+    const next: Results = {
+      ...current,
+      groupFirst: { ...current.groupFirst, ...validatePlacement(input.groupFirst) },
+      groupSecond: { ...current.groupSecond, ...validatePlacement(input.groupSecond) },
+      thirdAdvance,
+    };
 
-  const next: Results = {
-    ...current,
-    groupFirst: { ...current.groupFirst, ...validatePlacement(input.groupFirst) },
-    groupSecond: { ...current.groupSecond, ...validatePlacement(input.groupSecond) },
-    thirdAdvance,
-  };
+    // Reject a self-contradictory answer key (e.g. a team placed twice) before it
+    // can silently corrupt scoring for the whole pool.
+    const conflict = findStandingsConflict(next);
+    if (conflict) throw new Error(conflict);
 
-  // Reject a self-contradictory answer key (e.g. a team placed twice) before it
-  // can silently corrupt scoring for the whole pool.
-  const conflict = findStandingsConflict(next);
-  if (conflict) throw new Error(conflict);
-
-  await writeAnswerKey(tournamentId, next);
-  return next;
+    await writeAnswerKey(tournamentId, next, tx);
+    return next;
+  });
 }
 
 // Set tournament awards (player / young / golden boot / goal) — free text.
@@ -162,31 +199,44 @@ export async function setAwards(
   tournamentId: string,
   awards: Partial<Awards>,
 ): Promise<Results> {
-  const current = await loadAnswerKey(tournamentId);
-  const next: Results = {
-    ...current,
-    awards: {
-      ...current.awards,
-      ...Object.fromEntries(
-        Object.entries(awards).map(([k, v]) => [k, (v ?? "").trim()]),
-      ),
-    },
-  };
-  await writeAnswerKey(tournamentId, next);
-  return next;
+  return withAnswerKeyLock(tournamentId, async (tx) => {
+    const current = await loadAnswerKey(tournamentId, tx);
+    const next: Results = {
+      ...current,
+      awards: {
+        ...current.awards,
+        ...Object.fromEntries(
+          Object.entries(awards).map(([k, v]) => [k, (v ?? "").trim()]),
+        ),
+      },
+    };
+    await writeAnswerKey(tournamentId, next, tx);
+    return next;
+  });
 }
 
 // Recompute every pool under a tournament and notify each. Returns the count.
+// One pool's failure must not freeze standings for every later pool, so each
+// recompute is isolated; failures are logged and rethrown only if all failed.
 export async function recomputeTournamentPools(tournamentId: string): Promise<number> {
   const pools = await prisma.pool.findMany({
     where: { tournamentId },
     select: { id: true },
   });
+  let failures = 0;
   for (const p of pools) {
-    await recomputePool(p.id);
-    await notifyPool(p.id, "result");
+    try {
+      await recomputePool(p.id);
+      await notifyPool(p.id, "result");
+    } catch (err) {
+      failures += 1;
+      console.error(`recomputePool failed for pool ${p.id}:`, err);
+    }
   }
-  return pools.length;
+  if (failures > 0 && failures === pools.length) {
+    throw new Error(`recompute failed for all ${failures} pool(s)`);
+  }
+  return pools.length - failures;
 }
 
 interface ResultRowData {
@@ -201,11 +251,12 @@ interface ResultRowData {
 
 // Upsert the display Result row for a match. Manual entries always win over API.
 async function mirrorResultRow(
+  db: Db,
   tournamentId: string,
   matchNo: number,
   data: ResultRowData,
 ): Promise<void> {
-  const match = await prisma.match.findUnique({
+  const match = await db.match.findUnique({
     where: { tournamentId_matchNo: { tournamentId, matchNo } },
     select: { id: true },
   });
@@ -214,7 +265,7 @@ async function mirrorResultRow(
   // Inlined (not extracted to a const) so Prisma's input types contextually
   // type the status/source string literals as their enums rather than `string`.
   const status = data.final ? "FINAL" : "LIVE";
-  await prisma.result.upsert({
+  await db.result.upsert({
     where: { matchId: match.id },
     update: {
       homeTeamCode: data.homeTeamCode,
@@ -236,5 +287,5 @@ async function mirrorResultRow(
       source: data.source,
     },
   });
-  await prisma.match.update({ where: { id: match.id }, data: { scored: data.final } });
+  await db.match.update({ where: { id: match.id }, data: { scored: data.final } });
 }

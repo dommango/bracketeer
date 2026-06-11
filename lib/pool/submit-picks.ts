@@ -24,6 +24,20 @@ export interface SubmitPicksResult {
 }
 
 export async function upsertUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult> {
+  try {
+    return await writeUiEntry(input);
+  } catch (err) {
+    // Two concurrent saves (double-submit) can both pass findFirst; the
+    // (poolId, userId) unique rejects the duplicate — retry once so the loser
+    // updates the winner's row instead of failing the save.
+    if ((err as { code?: string }).code === "P2002") {
+      return writeUiEntry(input);
+    }
+    throw err;
+  }
+}
+
+async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult> {
   const label = input.label.trim() || "Player";
   const tiebreak = (input.tiebreak ?? "").trim() || null;
   const claimEmail = (input.email ?? "").trim().toLowerCase() || null;

@@ -232,6 +232,12 @@ model Entry {
   breakdown ScoreBreakdown?
   snapshots ScoreSnapshot[]
 
+  // Back the import/submit idempotency keys with real constraints so two
+  // concurrent writes for the same contestant can't both pass findFirst and
+  // duplicate the entry. NULLs are distinct in Postgres, so email-less CSV
+  // entries and userId-less imports are unaffected.
+  @@unique([poolId, claimEmail])
+  @@unique([poolId, userId])
   @@index([poolId])
   @@index([claimEmail])
 }
