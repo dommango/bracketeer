@@ -50,6 +50,20 @@ export async function importSubmission(
   poolId: string,
   sub: Submission,
 ): Promise<ImportResult> {
+  try {
+    return await writeSubmission(poolId, sub);
+  } catch (err) {
+    // A concurrent import of the same contestant can slip past findFirst; the
+    // (poolId, claimEmail) unique rejects the duplicate — retry once so the
+    // loser updates the winner's row instead of failing the file.
+    if ((err as { code?: string }).code === "P2002") {
+      return writeSubmission(poolId, sub);
+    }
+    throw err;
+  }
+}
+
+async function writeSubmission(poolId: string, sub: Submission): Promise<ImportResult> {
   const label = sub.contestant.name.trim() || "Anonymous";
   const claimEmail = sub.contestant.email.trim().toLowerCase() || null;
   const tiebreak = sub.contestant.tiebreak.trim() || null;
