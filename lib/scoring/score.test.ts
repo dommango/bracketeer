@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- referenceScorePicks below is a verbatim copy of untyped JS from the original tool and must not be altered */
 import { describe, it, expect } from "vitest";
 import { GROUPS } from "./data";
 import { scorePicks } from "./score";
