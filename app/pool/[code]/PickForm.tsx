@@ -71,6 +71,9 @@ function TeamOption({ code }: { code: string }) {
   );
 }
 
+// Single-tap winner selection styled like the design system's PickSelector:
+// two big centered options (real flag, display-font code, name), a "vs"
+// divider, and a solid pitch-green picked state.
 function KnockoutMatch({
   slot,
   disabled,
@@ -81,36 +84,49 @@ function KnockoutMatch({
   onPick: (matchNo: number, code: string) => void;
 }) {
   const ready = Boolean(slot.a && slot.b);
-  return (
-    <div className="rounded-md border border-line bg-surface p-1.5">
-      <div className="mb-1 px-1 font-mono text-[10px] font-bold text-ink-3">M{slot.matchNo}</div>
-      <div className="grid grid-cols-2 gap-1.5">
-        {([slot.a, slot.b] as const).map((side, i) => {
-          const picked = side && slot.pick === side.code;
-          return (
-            <button
-              key={i}
-              type="button"
-              disabled={disabled || !ready || !side}
-              onClick={() => side && onPick(slot.matchNo, side.code)}
-              aria-pressed={Boolean(picked)}
-              className={`flex min-h-11 items-center gap-1.5 rounded px-2 py-1.5 text-left text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pitch disabled:cursor-not-allowed ${
-                picked
-                  ? "bg-gold-tint font-bold text-pitch-deep ring-1 ring-gold"
-                  : "bg-surface-sunk text-ink hover:bg-pitch-tint disabled:opacity-50 disabled:hover:bg-surface-sunk"
+
+  const option = (side: KnockoutSlot["a"]) => {
+    const picked = side && slot.pick === side.code;
+    return (
+      <button
+        type="button"
+        disabled={disabled || !ready || !side}
+        onClick={() => side && onPick(slot.matchNo, side.code)}
+        aria-pressed={Boolean(picked)}
+        className={`flex min-h-11 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg border-2 px-2 py-3 transition-all duration-[var(--dur-2)] [transition-timing-function:var(--ease-standard)] active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pitch disabled:cursor-not-allowed motion-reduce:transition-none ${
+          picked
+            ? "border-pitch bg-pitch text-white"
+            : "border-line bg-surface text-ink hover:bg-pitch-tint disabled:opacity-50 disabled:hover:bg-surface"
+        }`}
+      >
+        {side ? (
+          <>
+            <Flag code={side.code} size={48} />
+            <span className="font-display text-lg leading-none tracking-[0.02em]">{side.code}</span>
+            <span
+              className={`w-full truncate text-xs font-medium ${
+                picked ? "text-white/85" : "text-ink-3"
               }`}
             >
-              {side ? (
-                <>
-                  <Flag code={side.code} size={16} />
-                  <span className="truncate">{side.name}</span>
-                </>
-              ) : (
-                <span className="text-ink-4">—</span>
-              )}
-            </button>
-          );
-        })}
+              {side.name}
+            </span>
+          </>
+        ) : (
+          <span className="text-ink-4">—</span>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <div className="rounded-xl border border-line bg-surface p-3">
+      <div className="mb-2 px-0.5 font-mono text-[11px] font-bold text-ink-3">M{slot.matchNo}</div>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2.5">
+        {option(slot.a)}
+        <span className="self-center font-display text-xs text-ink-3" aria-hidden>
+          vs
+        </span>
+        {option(slot.b)}
       </div>
     </div>
   );

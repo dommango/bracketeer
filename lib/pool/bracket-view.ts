@@ -15,6 +15,7 @@ export interface BracketMatch {
   winnerCode: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  live: boolean;
 }
 
 export interface BracketRound {
@@ -38,6 +39,7 @@ export interface BracketView {
 export interface MatchScore {
   homeScore: number | null;
   awayScore: number | null;
+  status?: string | null;
 }
 
 const teamName = (code: string | null | undefined): string =>
@@ -61,6 +63,7 @@ export function buildBracketView(
       winnerCode: m?.winner ?? null,
       homeScore: s?.homeScore ?? null,
       awayScore: s?.awayScore ?? null,
+      live: s?.status === "LIVE",
     };
   };
 

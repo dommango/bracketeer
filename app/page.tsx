@@ -12,7 +12,8 @@ async function openPool(formData: FormData) {
 export default function Home() {
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
-      {/* Hero — FIFA 26 pattern behind a pitch-green scrim. */}
+      {/* Hero — FIFA 26 pattern full-strength and uncolored; copy sits on a
+          frosted-glass plate over a bottom-only darken. */}
       <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
         <div
           className="absolute inset-0"
@@ -20,26 +21,33 @@ export default function Home() {
             backgroundImage: "url(/brand-26-pattern.avif)",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            opacity: 0.45,
-            mixBlendMode: "luminosity",
           }}
         />
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(180deg, rgba(11,107,58,0.4) 0%, rgba(5,48,25,0.95) 100%)",
+            background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)",
           }}
         />
         <div className="relative">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest</p>
-          <h1 className="mt-2.5 font-display text-[34px] leading-[1.02]">
-            Run a World Cup 2026 pool with your friends.
-          </h1>
-          <p className="mt-3.5 text-sm text-white/80">
-            Live scores, a realtime leaderboard, and group chat — all in one place.
-          </p>
-          <div className="mt-[18px] flex gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">
+          <div
+            className="inline-block max-w-full rounded-2xl p-4"
+            style={{
+              background: "rgba(0,0,0,0.42)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
+            }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest</p>
+            <h1 className="mt-2.5 font-display text-[34px] leading-[1.02] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+              Run a World Cup 2026 pool with your friends.
+            </h1>
+            <p className="mt-3.5 text-sm text-white/90">
+              Live scores, a realtime leaderboard, and group chat — all in one place.
+            </p>
+          </div>
+          <div className="mt-4 flex gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
             <span>48 teams</span>
             <span>·</span>
             <span>104 matches</span>

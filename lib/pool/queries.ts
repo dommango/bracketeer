@@ -11,6 +11,7 @@ import { buildMatchCenter, type MatchInput, type MatchStatus, type MatchCenterSe
 import { buildPickSplit, type PickSplit } from "@/lib/pool/pick-split";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
+import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { TEAMS } from "@/lib/scoring/data";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
@@ -81,10 +82,69 @@ export interface PoolView {
   leaderboard: LeaderboardRow[];
 }
 
+// Knockout pick rows carry the match id in their CSV-mirrored category ("M73").
+const KNOCKOUT_PICK_SECTIONS = [
+  "round_of_32",
+  "round_of_16",
+  "quarterfinals",
+  "semifinals",
+  "final",
+];
+
+// Merge display-only projected live points into leaderboard rows. A no-op
+// (rows returned untouched) unless a knockout match is currently live.
+async function withProjectedPoints(
+  poolId: string,
+  tournamentId: string,
+  scoringConfig: unknown,
+  rows: LeaderboardRow[],
+): Promise<LeaderboardRow[]> {
+  const liveRows = await prisma.result.findMany({
+    where: { status: "LIVE", match: { tournamentId } },
+    select: {
+      homeTeamCode: true,
+      awayTeamCode: true,
+      homeScore: true,
+      awayScore: true,
+      status: true,
+      match: { select: { matchNo: true } },
+    },
+  });
+  const leaders = liveLeaders(
+    liveRows.map((r) => ({ ...r, matchNo: r.match.matchNo })),
+  );
+  if (leaders.length === 0) return rows;
+
+  const pickRows = await prisma.pick.findMany({
+    where: { entry: { poolId }, section: { in: KNOCKOUT_PICK_SECTIONS } },
+    select: { entryId: true, category: true, code: true },
+  });
+  const picksByEntry = new Map<string, Record<number, string>>();
+  for (const p of pickRows) {
+    if (!p.code) continue;
+    const matchNo = Number(p.category.replace(/^M/i, ""));
+    if (!Number.isInteger(matchNo)) continue;
+    const entry = picksByEntry.get(p.entryId) ?? {};
+    entry[matchNo] = p.code;
+    picksByEntry.set(p.entryId, entry);
+  }
+
+  const projected = projectedLivePoints(leaders, picksByEntry, asScoringConfig(scoringConfig));
+  return rows.map((r) => {
+    const pts = projected.get(r.entryId) ?? 0;
+    return pts > 0 ? { ...r, projected: pts } : r;
+  });
+}
+
 export async function getPoolView(code: string): Promise<PoolView | null> {
   const pool = await getPoolByCode(code);
   if (!pool) return null;
-  const leaderboard = await getLeaderboard(pool.id);
+  const leaderboard = await withProjectedPoints(
+    pool.id,
+    pool.tournament.id,
+    pool.tournament.scoringConfig,
+    await getLeaderboard(pool.id),
+  );
   return {
     id: pool.id,
     name: pool.name,
@@ -106,10 +166,13 @@ export async function getPoolBracket(poolId: string): Promise<BracketView | null
 
   const resultRows = await prisma.result.findMany({
     where: { match: { tournamentId: pool.tournament.id } },
-    select: { homeScore: true, awayScore: true, match: { select: { matchNo: true } } },
+    select: { homeScore: true, awayScore: true, status: true, match: { select: { matchNo: true } } },
   });
   const scores = new Map<number, MatchScore>(
-    resultRows.map((r) => [r.match.matchNo, { homeScore: r.homeScore, awayScore: r.awayScore }]),
+    resultRows.map((r) => [
+      r.match.matchNo,
+      { homeScore: r.homeScore, awayScore: r.awayScore, status: r.status },
+    ]),
   );
 
   return buildBracketView(asResults(pool.tournament.officialResults), scores);

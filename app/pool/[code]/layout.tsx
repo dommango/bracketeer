@@ -22,6 +22,14 @@ const STATUS_BADGE: Record<string, string> = {
   COMPLETE: "bg-white/15 text-white",
 };
 
+// Buttons floating over the hero artwork share the frosted-dark vocabulary.
+const FROSTED_BUTTON: React.CSSProperties = {
+  background: "rgba(0,0,0,0.45)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  border: "1px solid rgba(255,255,255,0.28)",
+};
+
 export default async function PoolLayout({
   children,
   params,
@@ -51,15 +59,12 @@ export default async function PoolLayout({
               backgroundImage: "url(/brand-26-pattern.avif)",
               backgroundSize: "cover",
               backgroundPosition: "center",
-              opacity: 0.42,
-              mixBlendMode: "luminosity",
             }}
           />
           <div
             className="absolute inset-0"
             style={{
-              background:
-                "linear-gradient(180deg, rgba(11,107,58,0.55) 0%, rgba(8,77,42,0.95) 100%)",
+              background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)",
             }}
           />
           <div className="relative">
@@ -68,7 +73,7 @@ export default async function PoolLayout({
                 <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
                   {pool.tournamentName}
                 </p>
-                <h1 className="mt-1 break-words font-display text-[28px] leading-[1.05]">
+                <h1 className="mt-1 break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
                   {pool.name}
                 </h1>
               </div>
@@ -84,7 +89,15 @@ export default async function PoolLayout({
               </span>
             </div>
 
-            <div className="mt-4 inline-flex flex-col rounded-md border border-white/20 bg-white/10 px-3.5 py-2.5 backdrop-blur">
+            <div
+              className="mt-4 inline-flex flex-col rounded-md px-3.5 py-2.5"
+              style={{
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+              }}
+            >
               <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/70">
                 Join code
               </span>
@@ -106,7 +119,10 @@ export default async function PoolLayout({
                     {sessionUser.email ?? sessionUser.name}
                   </Link>
                   <form action={signOutAction}>
-                    <button className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold hover:bg-white/25">
+                    <button
+                      className="rounded-full px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-black/60"
+                      style={FROSTED_BUTTON}
+                    >
                       Sign out
                     </button>
                   </form>
@@ -133,7 +149,8 @@ export default async function PoolLayout({
             {canManage ? (
               <Link
                 href={`/pool/${code}/manage`}
-                className="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
+                className="mt-3 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition-colors hover:bg-black/60"
+                style={FROSTED_BUTTON}
               >
                 Manage pool →
               </Link>

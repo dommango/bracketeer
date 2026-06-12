@@ -35,7 +35,7 @@ export const DEFAULT_SCORING: ScoringConfig = {
 
 // Per-match knockout point bucket, mirroring the original ROUND_PTS table.
 // Match 103 (bronze final) is intentionally absent — it is not scored.
-function roundPointsFor(mid: number, cfg: ScoringConfig): number {
+export function roundPointsFor(mid: number, cfg: ScoringConfig): number {
   if (mid >= 73 && mid <= 88) return cfg.r32;
   if (mid >= 89 && mid <= 96) return cfg.r16;
   if (mid >= 97 && mid <= 100) return cfg.qf;

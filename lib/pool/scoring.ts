@@ -108,6 +108,9 @@ export interface LeaderboardRow {
   total: number;
   breakdown: unknown;
   tiebreak: string | null;
+  // Display-only: points this entry would gain if live knockout matches ended
+  // at their current score (see lib/pool/projected.ts). Absent when nothing is live.
+  projected?: number;
 }
 
 // Read the cached leaderboard for a pool, ranked by total desc then label.

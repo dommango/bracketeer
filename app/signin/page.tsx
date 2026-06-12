@@ -36,23 +36,32 @@ export default async function SignInPage({
             backgroundImage: "url(/brand-26-pattern.avif)",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            opacity: 0.4,
-            mixBlendMode: "luminosity",
           }}
         />
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(180deg, rgba(11,107,58,0.45) 0%, rgba(5,48,25,0.95) 100%)",
+            background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)",
           }}
         />
         <div className="relative">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest</p>
-          <h1 className="mt-2.5 font-display text-2xl">Sign in</h1>
-          <p className="mt-2 text-sm text-white/80">
-            Sign in to claim your bracket and join the chat.
-          </p>
+          <div
+            className="inline-block max-w-full rounded-2xl p-4"
+            style={{
+              background: "rgba(0,0,0,0.42)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
+            }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest</p>
+            <h1 className="mt-2.5 font-display text-2xl [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+              Sign in
+            </h1>
+            <p className="mt-2 text-sm text-white/90">
+              Sign in to claim your bracket and join the chat.
+            </p>
+          </div>
         </div>
       </div>
 

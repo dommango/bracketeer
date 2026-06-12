@@ -100,6 +100,11 @@ export function Leaderboard({
               <span className="shrink-0 text-right">
                 <span className="font-display text-[22px] tabular-nums text-ink">{row.total}</span>
                 <span className="text-xs text-ink-3"> pts</span>
+                {row.projected ? (
+                  <span className="block font-mono text-[11px] tabular-nums text-positive">
+                    ▲ {row.projected} live
+                  </span>
+                ) : null}
               </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5 pl-[76px]">

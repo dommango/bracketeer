@@ -93,7 +93,12 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-mono text-[11px] font-bold text-ink-3">M{m.matchNo}</span>
-        {decided ? (
+        {m.live ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
+            <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
+            Live
+          </span>
+        ) : decided ? (
           <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
             Final
           </span>
@@ -120,8 +125,8 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
 
 function RoundHeading({ label, accent }: { label: string; accent: string }) {
   return (
-    <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-      <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
+    <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.08em] text-ink-2">
+      <span className="h-2.5 w-2.5 rounded" style={{ background: accent }} />
       {label}
     </h3>
   );

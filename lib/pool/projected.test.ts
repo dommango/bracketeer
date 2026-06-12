@@ -1,0 +1,68 @@
+import { describe, it, expect } from "vitest";
+import { liveLeaders, projectedLivePoints, type LiveResultRow } from "./projected";
+
+const row = (over: Partial<LiveResultRow>): LiveResultRow => ({
+  matchNo: 73,
+  homeTeamCode: "BRA",
+  awayTeamCode: "ARG",
+  homeScore: 1,
+  awayScore: 0,
+  status: "LIVE",
+  ...over,
+});
+
+describe("liveLeaders", () => {
+  it("returns the leading side of a live knockout match", () => {
+    expect(liveLeaders([row({})])).toEqual([{ matchNo: 73, leadingCode: "BRA" }]);
+    expect(liveLeaders([row({ homeScore: 0, awayScore: 2 })])).toEqual([
+      { matchNo: 73, leadingCode: "ARG" },
+    ]);
+  });
+
+  it("skips ties, missing scores, and non-live rows", () => {
+    expect(liveLeaders([row({ awayScore: 1 })])).toEqual([]);
+    expect(liveLeaders([row({ homeScore: null })])).toEqual([]);
+    expect(liveLeaders([row({ status: "FINAL" })])).toEqual([]);
+    expect(liveLeaders([row({ status: "SCHEDULED" })])).toEqual([]);
+  });
+
+  it("skips non-knockout matches and missing team codes", () => {
+    expect(liveLeaders([row({ matchNo: 50 })])).toEqual([]);
+    expect(liveLeaders([row({ homeTeamCode: null })])).toEqual([]);
+  });
+});
+
+describe("projectedLivePoints", () => {
+  it("awards round points to entries whose pick is currently leading", () => {
+    const leaders = [
+      { matchNo: 73, leadingCode: "BRA" }, // R32 -> 1
+      { matchNo: 97, leadingCode: "FRA" }, // QF  -> 3
+    ];
+    const picks = new Map<string, Record<number, string>>([
+      ["e1", { 73: "BRA", 97: "FRA" }],
+      ["e2", { 73: "ARG", 97: "FRA" }],
+      ["e3", { 73: "ARG" }],
+    ]);
+    const out = projectedLivePoints(leaders, picks);
+    expect(out.get("e1")).toBe(4);
+    expect(out.get("e2")).toBe(3);
+    expect(out.get("e3")).toBe(0);
+  });
+
+  it("never projects the bronze final (match 103 is not scored)", () => {
+    const out = projectedLivePoints(
+      [{ matchNo: 103, leadingCode: "BRA" }],
+      new Map([["e1", { 103: "BRA" }]]),
+    );
+    expect(out.get("e1")).toBe(0);
+  });
+
+  it("respects a custom scoring config", () => {
+    const out = projectedLivePoints(
+      [{ matchNo: 104, leadingCode: "BRA" }],
+      new Map([["e1", { 104: "BRA" }]]),
+      { final: 10 },
+    );
+    expect(out.get("e1")).toBe(10);
+  });
+});
