@@ -1,0 +1,58 @@
+/* ============================================================
+   Bracketeer × FIFA 26 — Typography tokens
+   Display: "Archivo Black" — chunky, blocky sans that echoes
+   the cropped "26" wordmark. Used for scores, team codes, big
+   numerics, headlines.
+   Body: "Inter" — neutral, dense, reads well at small sizes on
+   match cards and chat bubbles.
+   Mono: "JetBrains Mono" — tabular numerics for scores,
+   join codes, timestamps.
+   ============================================================ */
+
+:root {
+  --font-display: "Archivo Black", "Arial Black", system-ui, sans-serif;
+  --font-body:    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Type scale (modular, body-relative)                              */
+  --text-2xs: 11px;
+  --text-xs:  12px;
+  --text-sm:  13px;
+  --text-md:  15px;
+  --text-lg:  17px;
+  --text-xl:  20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 40px;
+  --text-5xl: 56px;
+  --text-6xl: 80px;
+
+  --leading-tight:   1.05;
+  --leading-snug:    1.2;
+  --leading-normal:  1.45;
+  --leading-loose:   1.6;
+
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-caps:   0.08em;
+
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semi:    600;
+  --weight-bold:    700;
+  --weight-black:   900;
+
+  /* Role-based aliases */
+  --type-display:    var(--weight-black) var(--text-5xl)/var(--leading-tight) var(--font-display);
+  --type-h1:         var(--weight-black) var(--text-3xl)/var(--leading-snug) var(--font-display);
+  --type-h2:         var(--weight-bold)  var(--text-2xl)/var(--leading-snug) var(--font-display);
+  --type-h3:         var(--weight-bold)  var(--text-xl)/var(--leading-snug) var(--font-body);
+  --type-body:       var(--weight-regular) var(--text-md)/var(--leading-normal) var(--font-body);
+  --type-body-strong:var(--weight-semi)    var(--text-md)/var(--leading-normal) var(--font-body);
+  --type-small:      var(--weight-regular) var(--text-sm)/var(--leading-normal) var(--font-body);
+  --type-caption:    var(--weight-semi)    var(--text-xs)/var(--leading-normal) var(--font-body);
+  --type-eyebrow:    var(--weight-bold)    var(--text-xs)/var(--leading-snug)   var(--font-body);
+  --type-mono:       var(--weight-medium)  var(--text-sm)/var(--leading-normal) var(--font-mono);
+  --type-score:      var(--weight-black)   var(--text-2xl)/1 var(--font-display);
+}

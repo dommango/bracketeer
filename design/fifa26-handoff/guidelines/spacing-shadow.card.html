@@ -1,0 +1,24 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Elevation" subtitle="xs → lg + brand rings" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--paper); font-family: var(--font-body); }
+  .row { display: flex; gap: 22px; align-items: flex-end; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .box { width: 84px; height: 60px; background: var(--surface); border-radius: 12px; }
+  .lbl { font: var(--type-caption); color: var(--ink-3); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="col"><div class="box" style="box-shadow: var(--shadow-xs)"></div><span class="lbl">xs</span></div>
+    <div class="col"><div class="box" style="box-shadow: var(--shadow-sm)"></div><span class="lbl">sm</span></div>
+    <div class="col"><div class="box" style="box-shadow: var(--shadow-md)"></div><span class="lbl">md</span></div>
+    <div class="col"><div class="box" style="box-shadow: var(--shadow-lg)"></div><span class="lbl">lg</span></div>
+    <div class="col"><div class="box" style="box-shadow: var(--shadow-ring-gold)"></div><span class="lbl">ring · gold</span></div>
+    <div class="col"><div class="box" style="box-shadow: var(--shadow-ring-live)"></div><span class="lbl">ring · live</span></div>
+  </div>
+</body>
+</html>

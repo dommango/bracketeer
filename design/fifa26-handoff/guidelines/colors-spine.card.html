@@ -1,0 +1,23 @@
+<!-- @dsCard group="Colors" viewport="700x140" name="Brand spine" subtitle="Pitch green + gold + paper/ink" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--paper); font-family: var(--font-body); }
+  .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .sw { border-radius: 12px; padding: 14px 12px; height: 100px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--line); }
+  .name { font: var(--type-caption); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+  .hex  { font: var(--type-mono); font-size: 11px; opacity: 0.85; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw" style="background: var(--pitch);       color: #fff;"><span class="name">Pitch</span><span class="hex">#0B6B3A</span></div>
+    <div class="sw" style="background: var(--pitch-dark);  color: #fff;"><span class="name">Pitch dark</span><span class="hex">#084D2A</span></div>
+    <div class="sw" style="background: var(--gold);        color: var(--pitch-deep);"><span class="name">Gold</span><span class="hex">#F4C542</span></div>
+    <div class="sw" style="background: var(--ink);         color: #fff;"><span class="name">Ink</span><span class="hex">#0A0F0D</span></div>
+    <div class="sw" style="background: var(--paper);       color: var(--ink); border:1px solid var(--line);"><span class="name">Paper</span><span class="hex">#F6F7F5</span></div>
+  </div>
+</body>
+</html>

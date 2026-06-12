@@ -1,0 +1,10 @@
+/* ============================================================
+   Bracketeer × FIFA 26 Design System — root entry point.
+   Consumers link this single file. No rules live here; only
+   imports.
+   ============================================================ */
+@import "./tokens/fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/patterns.css";

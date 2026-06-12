@@ -1,0 +1,31 @@
+<!-- @dsCard group="Brand" viewport="700x180" name="Host-city blocks" subtitle="Each host city's color block — used for groups & user accents" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 18px; background: var(--paper); font-family: var(--font-body); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .blk {
+    aspect-ratio: 16/9; border-radius: 12px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 10px 12px; color: #fff;
+    font: var(--type-caption); text-transform: uppercase; letter-spacing: var(--tracking-caps);
+  }
+  .num { font: var(--weight-black) 28px/1 var(--font-display); }
+  .city { font-size: 11px; opacity: .9; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="blk" style="background: var(--city-mexico-city);"><span class="num">26</span><span class="city">Mexico City</span></div>
+    <div class="blk" style="background: var(--city-philadelphia);"><span class="num">26</span><span class="city">Philadelphia</span></div>
+    <div class="blk" style="background: var(--city-houston);"><span class="num">26</span><span class="city">Houston</span></div>
+    <div class="blk" style="background: var(--city-guadalajara);"><span class="num">26</span><span class="city">Guadalajara</span></div>
+    <div class="blk" style="background: var(--city-toronto); color: var(--pitch-deep);"><span class="num">26</span><span class="city">Toronto</span></div>
+    <div class="blk" style="background: var(--city-atlanta);"><span class="num">26</span><span class="city">Atlanta</span></div>
+    <div class="blk" style="background: var(--city-new-york-nj);"><span class="num">26</span><span class="city">New York/NJ</span></div>
+    <div class="blk" style="background: var(--city-vancouver);"><span class="num">26</span><span class="city">Vancouver</span></div>
+  </div>
+</body>
+</html>

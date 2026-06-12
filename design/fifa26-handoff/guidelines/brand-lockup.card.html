@@ -1,0 +1,40 @@
+<!-- @dsCard group="Brand" viewport="700x260" name="Emblem & lockup" subtitle="The FIFA 26 trophy mark + Bracketeer wordmark" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 0; background: var(--paper); font-family: var(--font-body); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; height: 260px; }
+  .cell { display:flex; align-items:center; justify-content:center; padding: 24px; }
+  .light { background: var(--paper); }
+  .dark  { background: var(--pitch); color: #fff; }
+  .lockup { display: flex; align-items: center; gap: 14px; }
+  .lockup img { height: 96px; width: auto; }
+  .wordmark { font: var(--weight-black) 28px/1 var(--font-display); letter-spacing: -0.01em; text-transform: uppercase; }
+  .tag { display: block; font: var(--type-caption); letter-spacing: var(--tracking-caps); margin-top: 4px; opacity: .8; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="cell light">
+      <div class="lockup">
+        <img src="../assets/emblem-26.png" alt="">
+        <div>
+          <span class="wordmark" style="color: var(--ink)">BRACKETEER</span>
+          <span class="tag" style="color: var(--pitch)">World Cup 2026 Pools</span>
+        </div>
+      </div>
+    </div>
+    <div class="cell dark">
+      <div class="lockup">
+        <img src="../assets/emblem-26.png" alt="" style="filter: brightness(0) invert(1)">
+        <div>
+          <span class="wordmark">BRACKETEER</span>
+          <span class="tag" style="color: var(--gold)">World Cup 2026 Pools</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

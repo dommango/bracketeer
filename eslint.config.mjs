@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "generated/**",
     ".claude/**",
     ".superpowers/**",
+    // Design-reference bundle (plain JSX, not app code) — see design/fifa26-handoff/README.md.
+    "design/**",
   ]),
 ]);
 

@@ -1,0 +1,89 @@
+/* ============================================================
+   Bracketeer × FIFA 26 — Color tokens
+   The brand spine is "pitch green + gold". On top of that we
+   carry the FIFA 26 host-city palette — 16 saturated swatches
+   that read like a confetti of national colors. They're used
+   as accents (group chips, user avatars, knockout round tints)
+   not as primary surfaces.
+   ============================================================ */
+
+:root {
+  /* --- Brand spine -------------------------------------------------- */
+  --pitch:         #0b6b3a;   /* primary brand green */
+  --pitch-dark:    #084d2a;   /* hover / depth */
+  --pitch-deep:    #053019;   /* darkest pressed state */
+  --pitch-tint:    #e6f1ea;   /* pale fill */
+  --gold:          #f4c542;   /* trophy gold accent */
+  --gold-dark:     #c8a032;
+  --gold-tint:     #fcf2cf;
+  --ink:           #0a0f0d;   /* near-black for text */
+  --ink-2:         #2b332e;   /* secondary text */
+  --ink-3:         #5b6760;   /* tertiary text / icons */
+  --ink-4:         #98a39c;   /* disabled / hint */
+  --paper:         #f6f7f5;   /* page background */
+  --paper-2:       #ecefeb;   /* subtle band */
+  --line:          #d9ddd6;   /* hairline borders */
+  --line-soft:     #e6e9e3;
+  --surface:       #ffffff;   /* card surface */
+  --surface-sunk:  #f1f3ee;
+
+  /* --- Semantic / status -------------------------------------------- */
+  --live:          #e63946;   /* "LIVE" badge red */
+  --live-tint:     #fde6e8;
+  --positive:      #138a4a;   /* correct pick green */
+  --positive-tint: #d8eedd;
+  --warning:       #d97706;   /* tiebreaker amber */
+  --warning-tint:  #fdecd2;
+  --negative:      #b00020;
+  --negative-tint: #f8dbe0;
+
+  /* --- FIFA 26 host-city palette ------------------------------------ */
+  /* Drawn from the official host-city swatch sheet.                   */
+  --city-atlanta:        #2cb9c6;  /* cyan */
+  --city-boston:         #1e7a3a;  /* forest green */
+  --city-dallas:         #c8e23f;  /* lime / volt */
+  --city-guadalajara:    #ea3b78;  /* magenta */
+  --city-houston:        #ff6b1a;  /* orange */
+  --city-kansas-city:    #e83a2c;  /* red */
+  --city-los-angeles:    #6a3cd6;  /* purple */
+  --city-mexico-city:    #1f8a3a;  /* deep green */
+  --city-miami:          #f08fb3;  /* pink */
+  --city-monterrey:      #2c2a86;  /* navy */
+  --city-new-york-nj:    #15224a;  /* deep navy */
+  --city-philadelphia:   #2a4cc7;  /* royal blue */
+  --city-san-francisco:  #ff4a1f;  /* red-orange */
+  --city-seattle:        #aa9a2c;  /* olive */
+  --city-toronto:        #d9ff2e;  /* electric yellow */
+  --city-vancouver:      #0f4b2a;  /* dark forest */
+
+  /* --- Semantic aliases (consumers prefer these) ------------------- */
+  --text-strong:    var(--ink);
+  --text-body:      var(--ink-2);
+  --text-muted:     var(--ink-3);
+  --text-hint:      var(--ink-4);
+  --text-on-brand:  #ffffff;
+  --text-on-gold:   var(--pitch-deep);
+
+  --surface-page:   var(--paper);
+  --surface-card:   var(--surface);
+  --surface-sunk-2: var(--surface-sunk);
+  --surface-brand:  var(--pitch);
+  --surface-brand-2: var(--pitch-dark);
+
+  --border-default: var(--line);
+  --border-soft:    var(--line-soft);
+  --border-strong:  var(--ink);
+
+  --accent-primary: var(--pitch);
+  --accent-gold:    var(--gold);
+  --accent-live:    var(--live);
+
+  /* Round tints — each knockout round gets a city color so the bracket
+     reads like a chromatic sweep from group stage to final. */
+  --round-groups:   var(--city-mexico-city);
+  --round-r32:      var(--city-philadelphia);
+  --round-r16:      var(--city-los-angeles);
+  --round-qf:       var(--city-guadalajara);
+  --round-sf:       var(--city-houston);
+  --round-final:    var(--gold);
+}

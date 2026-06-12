@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x140" name="Round tints" subtitle="Each knockout round is colored by a host city" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 18px; background: var(--paper); font-family: var(--font-body); }
+  .row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .sw { border-radius: 12px; height: 96px; padding: 10px 12px; color:#fff; display:flex; flex-direction:column; justify-content:space-between;
+        font: var(--type-caption); text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+  .lbl { opacity: .9; font-size: 10px; }
+  .name { font: var(--weight-black) 16px/1 var(--font-display); text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw" style="background: var(--round-groups);"><span class="lbl">Stage</span><span class="name">Groups</span></div>
+    <div class="sw" style="background: var(--round-r32);"><span class="lbl">Round of</span><span class="name">32</span></div>
+    <div class="sw" style="background: var(--round-r16);"><span class="lbl">Round of</span><span class="name">16</span></div>
+    <div class="sw" style="background: var(--round-qf);"><span class="lbl">Quarter</span><span class="name">QF</span></div>
+    <div class="sw" style="background: var(--round-sf);"><span class="lbl">Semi</span><span class="name">SF</span></div>
+    <div class="sw" style="background: var(--round-final); color: var(--pitch-deep);"><span class="lbl">The</span><span class="name">Final</span></div>
+  </div>
+</body>
+</html>

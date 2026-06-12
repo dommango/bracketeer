@@ -1,0 +1,23 @@
+<!-- @dsCard group="Colors" viewport="700x140" name="Status & feedback" subtitle="Live / positive / warning / negative" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--paper); font-family: var(--font-body); }
+  .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .sw { border-radius: 12px; height: 100px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; }
+  .name { font: var(--type-caption); text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+  .hex  { font: var(--type-mono); font-size: 11px; opacity: 0.9; }
+  .dot { width:10px;height:10px;border-radius:99px;display:inline-block;margin-right:6px;vertical-align:middle; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw" style="background: var(--live-tint); color: var(--live);"><span class="name"><span class="dot" style="background:var(--live)"></span>Live</span><span class="hex">#E63946</span></div>
+    <div class="sw" style="background: var(--positive-tint); color: var(--positive);"><span class="name"><span class="dot" style="background:var(--positive)"></span>Positive</span><span class="hex">#138A4A</span></div>
+    <div class="sw" style="background: var(--warning-tint); color: var(--warning);"><span class="name"><span class="dot" style="background:var(--warning)"></span>Warning</span><span class="hex">#D97706</span></div>
+    <div class="sw" style="background: var(--negative-tint); color: var(--negative);"><span class="name"><span class="dot" style="background:var(--negative)"></span>Negative</span><span class="hex">#B00020</span></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,161 @@
+/* ============================================================
+   Host-city pattern motifs — SUBTLE.
+   Each pattern is a CSS-only background; apply at low opacity
+   (8–14%) behind a solid surface, never as the foreground.
+   Color is inherited via currentColor in the data URI, so the
+   pattern's hue follows the element's text color (or set --p
+   to the desired color first).
+
+   Use:
+     .pattern-houston { background-image: ...; opacity: 0.10; }
+     <div class="pattern" data-pattern="houston" style="color: var(--city-houston)">
+
+   The base .pattern class sets common subtlety defaults.
+   ============================================================ */
+
+:root {
+  /* Default tint for patterns when not overridden. */
+  --pattern-opacity: 0.10; /* @kind other */
+}
+
+.pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--pattern-opacity);
+  background-color: transparent;
+  background-repeat: repeat;
+  color: currentColor;
+}
+
+/* ATLANTA — horizontal banded stripes */
+.pattern[data-pattern="atlanta"] {
+  background-image: repeating-linear-gradient(
+    180deg,
+    currentColor 0 2px,
+    transparent 2px 14px
+  );
+}
+
+/* BOSTON — zigzag */
+.pattern[data-pattern="boston"] {
+  background-image:
+    linear-gradient(135deg, currentColor 25%, transparent 25%) 0 0,
+    linear-gradient(225deg, currentColor 25%, transparent 25%) 0 0;
+  background-size: 18px 18px;
+  background-position: 0 0;
+}
+
+/* DALLAS — large rounded "26" stamp */
+.pattern[data-pattern="dallas"] {
+  background-image:
+    radial-gradient(circle at 30% 50%, currentColor 6px, transparent 7px),
+    radial-gradient(circle at 70% 50%, currentColor 6px, transparent 7px);
+  background-size: 64px 64px;
+}
+
+/* GUADALAJARA — small dots */
+.pattern[data-pattern="guadalajara"] {
+  background-image: radial-gradient(currentColor 1.5px, transparent 2px);
+  background-size: 14px 14px;
+}
+
+/* HOUSTON — chevrons */
+.pattern[data-pattern="houston"] {
+  background-image:
+    linear-gradient(135deg, currentColor 25%, transparent 25%) 0 0,
+    linear-gradient(45deg, currentColor 25%, transparent 25%) 0 0;
+  background-size: 24px 24px;
+  background-position: 0 12px, 12px 12px;
+}
+
+/* KANSAS CITY — concentric arches */
+.pattern[data-pattern="kansas-city"] {
+  background-image:
+    radial-gradient(circle at 50% 100%, transparent 18px, currentColor 18px 19px, transparent 19px 30px, currentColor 30px 31px, transparent 31px);
+  background-size: 60px 60px;
+}
+
+/* LOS ANGELES — waves */
+.pattern[data-pattern="los-angeles"] {
+  background-image:
+    radial-gradient(circle at 0 50%, transparent 8px, currentColor 8px 9px, transparent 9px),
+    radial-gradient(circle at 16px 50%, transparent 8px, currentColor 8px 9px, transparent 9px);
+  background-size: 32px 16px;
+}
+
+/* MEXICO CITY — vertical pinstripes */
+.pattern[data-pattern="mexico-city"] {
+  background-image: repeating-linear-gradient(
+    90deg,
+    currentColor 0 1.5px,
+    transparent 1.5px 12px
+  );
+}
+
+/* MIAMI — diagonal stripes */
+.pattern[data-pattern="miami"] {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    currentColor 0 2px,
+    transparent 2px 16px
+  );
+}
+
+/* MONTERREY — mountain triangles */
+.pattern[data-pattern="monterrey"] {
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50% 52%, transparent 52%),
+    linear-gradient(-45deg, transparent 50%, currentColor 50% 52%, transparent 52%);
+  background-size: 28px 28px;
+}
+
+/* NEW YORK / NJ — fine grid */
+.pattern[data-pattern="new-york-nj"] {
+  background-image:
+    linear-gradient(90deg, currentColor 0 1px, transparent 1px),
+    linear-gradient(180deg, currentColor 0 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* PHILADELPHIA — brick offset */
+.pattern[data-pattern="philadelphia"] {
+  background-image:
+    linear-gradient(90deg, currentColor 0 1px, transparent 1px),
+    linear-gradient(180deg, currentColor 0 1px, transparent 1px);
+  background-size: 30px 14px;
+}
+
+/* SAN FRANCISCO — suspension cables */
+.pattern[data-pattern="san-francisco"] {
+  background-image: repeating-linear-gradient(
+    90deg,
+    currentColor 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* SEATTLE — horizontal hairlines */
+.pattern[data-pattern="seattle"] {
+  background-image: repeating-linear-gradient(
+    0deg,
+    currentColor 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* TORONTO — micro grid */
+.pattern[data-pattern="toronto"] {
+  background-image:
+    linear-gradient(90deg, currentColor 0 1px, transparent 1px),
+    linear-gradient(180deg, currentColor 0 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+/* VANCOUVER — pine triangles */
+.pattern[data-pattern="vancouver"] {
+  background-image:
+    linear-gradient(45deg, currentColor 25%, transparent 25%) 0 0,
+    linear-gradient(-45deg, currentColor 25%, transparent 25%) 0 0;
+  background-size: 24px 24px;
+}

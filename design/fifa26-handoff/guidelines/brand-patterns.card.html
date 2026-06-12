@@ -1,0 +1,36 @@
+<!-- @dsCard group="Brand" viewport="700x320" name="Host-city patterns" subtitle="Subtle CSS motifs · apply behind solid surfaces at 8–12% opacity" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--paper); font-family: var(--font-body); color: var(--ink); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .swatch {
+    position: relative;
+    aspect-ratio: 16/10;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 10px 12px;
+  }
+  .swatch .pattern { --pattern-opacity: 0.18; }
+  .name { position: relative; font: var(--type-caption); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-2); }
+  .num  { position: relative; font: var(--weight-black) 22px/1 var(--font-display); color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="swatch"><div class="pattern" data-pattern="atlanta" style="color: var(--city-atlanta)"></div><span class="num">ATL</span><span class="name">Atlanta · stripes</span></div>
+  <div class="swatch"><div class="pattern" data-pattern="houston" style="color: var(--city-houston)"></div><span class="num">HOU</span><span class="name">Houston · chevrons</span></div>
+  <div class="swatch"><div class="pattern" data-pattern="los-angeles" style="color: var(--city-los-angeles)"></div><span class="num">LA</span><span class="name">LA · waves</span></div>
+  <div class="swatch"><div class="pattern" data-pattern="guadalajara" style="color: var(--city-guadalajara)"></div><span class="num">GDL</span><span class="name">Guadalajara · dots</span></div>
+  <div class="swatch"><div class="pattern" data-pattern="monterrey" style="color: var(--city-monterrey)"></div><span class="num">MTY</span><span class="name">Monterrey · peaks</span></div>
+  <div class="swatch"><div class="pattern" data-pattern="philadelphia" style="color: var(--city-philadelphia)"></div><span class="num">PHI</span><span class="name">Philly · bricks</span></div>
+  <div class="swatch"><div class="pattern" data-pattern="miami" style="color: var(--city-miami)"></div><span class="num">MIA</span><span class="name">Miami · diagonal</span></div>
+  <div class="swatch"><div class="pattern" data-pattern="vancouver" style="color: var(--city-vancouver)"></div><span class="num">VAN</span><span class="name">Vancouver · pines</span></div>
+</div>
+</body>
+</html>

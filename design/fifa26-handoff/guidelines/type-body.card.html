@@ -1,0 +1,25 @@
+<!-- @dsCard group="Type" viewport="700x200" name="Body — Inter" subtitle="UI copy, chat, leaderboard rows" -->
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+  .stack { display: grid; gap: 10px; }
+  .row { display: flex; align-items: baseline; gap: 16px; }
+  .label { font: var(--type-caption); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-3); width: 90px; }
+  .e { font: var(--type-body-strong); font-size: 17px; }
+  .b { font: var(--type-body); }
+  .s { font: var(--type-small); color: var(--ink-3); }
+  .c { font: var(--type-caption); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-3); }
+</style>
+</head>
+<body>
+  <div class="stack">
+    <div class="row"><span class="label">H3 / Strong</span><span class="e">Your pool · 12 entries</span></div>
+    <div class="row"><span class="label">Body</span><span class="b">Tap a team to advance them. Your bracket auto-saves on every change.</span></div>
+    <div class="row"><span class="label">Small</span><span class="s">Last updated · 2 minutes ago</span></div>
+    <div class="row"><span class="label">Caption</span><span class="c">Group Stage · Match 1 of 72</span></div>
+  </div>
+</body>
+</html>
