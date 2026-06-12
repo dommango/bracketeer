@@ -51,9 +51,12 @@ in that tool and people's standings must not change. Everything below serves tha
   - `score.test.ts` holds a **verbatim copy of the original `scorePicks` as a reference oracle**
     and asserts the TS port matches it across 2000 randomized inputs. Any change to scoring must
     keep this green.
-  - `resolve.ts` uses **greedy first-eligible third-place assignment** (not FIFA's deterministic
-    placement table). This is a known, intentional quirk inherited from the HTML — do **not**
-    "correct" it without re-validating every imported bracket.
+  - `resolve.ts` assigns third-place teams by **backtracking over R32 slots in match-id order**,
+    ported from the revised tool (`WorldCup2026Bracket Revised.html`). The original greedy
+    first-eligible assignment stranded valid pick sets and was deliberately replaced (PR #4).
+    Slot resolution affects display/validation only — `scorePicks` never reads it, so scoring
+    parity with the oracle is unaffected. Do **not** reintroduce the greedy version or swap in
+    FIFA's placement table without re-validating every imported bracket.
   - Point values live in `score.ts`'s `DEFAULT_SCORING` and are mirrored into
     `Tournament.scoringConfig`: group exact 3, partial (wrong-position or correct-3rd) 1, third
     advancer 3, R32 1, R16 2, QF 3, SF 4, Final 5, award 1, **bronze (match 103) not scored**.
