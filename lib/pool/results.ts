@@ -155,16 +155,17 @@ export async function upsertGroupMatchResultFromApi(
     awayScore: number | null;
     live: boolean;
     finished: boolean;
+    elapsed?: number | null;
   },
-): Promise<{ applied: boolean }> {
-  if (!input.live && !input.finished) return { applied: false };
+): Promise<{ applied: boolean; matchId: string | null }> {
+  if (!input.live && !input.finished) return { applied: false, matchId: null };
 
   const match = await prisma.match.findUnique({
     where: { tournamentId_matchNo: { tournamentId, matchNo } },
     select: { id: true, result: { select: { source: true } } },
   });
-  if (!match) return { applied: false };
-  if (match.result?.source === "MANUAL") return { applied: false };
+  if (!match) return { applied: false, matchId: null };
+  if (match.result?.source === "MANUAL") return { applied: false, matchId: match.id };
 
   const status = input.finished ? ("FINAL" as const) : ("LIVE" as const);
   const winnerCode =
@@ -183,6 +184,7 @@ export async function upsertGroupMatchResultFromApi(
     homeScore: input.homeScore,
     awayScore: input.awayScore,
     winnerCode,
+    elapsed: input.elapsed ?? null,
     status,
     source: "API" as const,
   };
@@ -196,7 +198,7 @@ export async function upsertGroupMatchResultFromApi(
     data: { scored: input.finished },
   });
 
-  return { applied: true };
+  return { applied: true, matchId: match.id };
 }
 
 // Backfill Match.scheduledAt for group-stage matches that have no scheduled time

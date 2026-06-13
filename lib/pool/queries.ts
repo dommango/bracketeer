@@ -558,6 +558,17 @@ export async function getScoringContext(
   };
 }
 
+export async function getMatchEvents(matchId: string) {
+  return prisma.matchEvent.findMany({
+    where: { matchId },
+    orderBy: [{ minute: "asc" }, { extraMinute: "asc" }],
+  });
+}
+
+export async function getMatchStats(matchId: string) {
+  return prisma.matchStats.findUnique({ where: { matchId } });
+}
+
 const teamName = (code: string | null | undefined): string =>
   code && TEAMS[code] ? TEAMS[code] : "TBD";
 
