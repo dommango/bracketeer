@@ -114,7 +114,7 @@ export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]
       {sections.map((section) => {
         const accent = ROUND_ACCENT[section.roundCode] ?? "var(--line)";
         return (
-          <div key={section.roundCode}>
+          <div key={section.label}>
             <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
               {section.label}

@@ -4,7 +4,7 @@
 // queries.ts and resolves team codes (group teams from the slot ref, knockout
 // teams from resolveBracket / live Result rows) before calling in here.
 
-import { TEAMS } from "@/lib/scoring/data";
+import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { ROUND_ORDER, roundLabel, isScoredKnockout, type RoundCode } from "@/lib/pool/rounds";
 
 export type MatchStatus = "SCHEDULED" | "LIVE" | "FINAL";
@@ -113,6 +113,48 @@ export function buildMatchCenter(
     sections.push({ roundCode: code, label: roundLabel(code), matches: rows });
   }
   return sections;
+}
+
+// Group-Stage focused variant: produces one section per group letter (A–L)
+// instead of one flat GROUP section, followed by knockout sections in round order.
+// The group letter is derived from home/away team codes via the GROUPS lookup.
+export function buildGroupCenterSections(
+  matches: MatchInput[],
+  yourKnockoutPicks: Record<number, string> = {},
+): MatchCenterSection[] {
+  const teamToGroup = new Map<string, string>();
+  for (const [letter, teams] of Object.entries(GROUPS)) {
+    for (const code of teams) teamToGroup.set(code, letter);
+  }
+
+  const groupMatches: MatchInput[] = [];
+  const knockoutMatches: MatchInput[] = [];
+  for (const m of matches) {
+    if (m.roundCode === "GROUP") groupMatches.push(m);
+    else knockoutMatches.push(m);
+  }
+
+  const byGroup = new Map<string, MatchCenterRow[]>();
+  for (const m of groupMatches) {
+    const row = buildRow(m, yourKnockoutPicks);
+    const letter =
+      teamToGroup.get(m.homeCode ?? "") ??
+      teamToGroup.get(m.awayCode ?? "") ??
+      "?";
+    const list = byGroup.get(letter);
+    if (list) list.push(row);
+    else byGroup.set(letter, [row]);
+  }
+
+  const sections: MatchCenterSection[] = [];
+  for (const letter of Object.keys(GROUPS)) {
+    const rows = byGroup.get(letter);
+    if (!rows || rows.length === 0) continue;
+    rows.sort((a, b) => a.matchNo - b.matchNo);
+    sections.push({ roundCode: "GROUP", label: `Group ${letter}`, matches: rows });
+  }
+
+  return [...sections, ...buildMatchCenter(knockoutMatches, yourKnockoutPicks)];
 }
 
 // Re-exported for the selector layer.

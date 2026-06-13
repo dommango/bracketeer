@@ -9,6 +9,7 @@ import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import {
   buildMatchCenter,
+  buildGroupCenterSections,
   type MatchInput,
   type MatchStatus,
   type MatchCenterSection,
@@ -475,6 +476,63 @@ export async function getMatchCenter(
   return buildMatchCenter(inputs, yourPicks);
 }
 
+// The most recently finalised match for the Home score-card row.
+export async function getLastMatch(
+  poolId: string,
+  userId: string | null,
+): Promise<MatchCenterRow | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+  });
+  if (!pool) return null;
+
+  const result = await prisma.result.findFirst({
+    where: { status: "FINAL", match: { tournamentId: pool.tournamentId } },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      homeTeamCode: true,
+      awayTeamCode: true,
+      homeScore: true,
+      awayScore: true,
+      winnerCode: true,
+      status: true,
+      match: {
+        select: {
+          matchNo: true,
+          roundCode: true,
+          scheduledAt: true,
+          homeSlotRef: true,
+          awaySlotRef: true,
+        },
+      },
+    },
+  });
+  if (!result) return null;
+
+  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const yourPicks = await getEntryKnockoutPicks(poolId, userId);
+
+  const m: ResolvableMatch = {
+    matchNo: result.match.matchNo,
+    roundCode: result.match.roundCode,
+    scheduledAt: result.match.scheduledAt,
+    homeSlotRef: result.match.homeSlotRef,
+    awaySlotRef: result.match.awaySlotRef,
+    result: {
+      homeTeamCode: result.homeTeamCode,
+      awayTeamCode: result.awayTeamCode,
+      homeScore: result.homeScore,
+      awayScore: result.awayScore,
+      winnerCode: result.winnerCode,
+      status: result.status,
+    },
+  };
+
+  const sections = buildMatchCenter([toMatchInput(m, resolved)], yourPicks);
+  return sections.flatMap((s) => s.matches)[0] ?? null;
+}
+
 // Matches in progress right now, as flat MatchCenter rows (round grouping isn't
 // needed for the Home live card). LIVE only ever comes from a live Result feed,
 // so we filter on the Result status and reuse the same resolution as the full
@@ -725,11 +783,12 @@ async function getHomeStats(poolId: string, entryId: string): Promise<HomeStats 
 // Aggregate the landing context: your standing(s), today's mover, the next match,
 // any live matches, and your headline stats.
 export async function getHomeView(poolId: string, userId: string | null): Promise<HomeView> {
-  const [leaderboard, topMover, nextMatch, liveMatches] = await Promise.all([
+  const [leaderboard, topMover, nextMatch, liveMatches, lastMatch] = await Promise.all([
     cachedLeaderboard(poolId),
     getTodaysMover(poolId),
     getNextMatch(poolId, userId),
     getLiveMatches(poolId, userId),
+    getLastMatch(poolId, userId),
   ]);
 
   const leader = leaderboard[0] ?? null;
@@ -744,6 +803,47 @@ export async function getHomeView(poolId: string, userId: string | null): Promis
     topMover,
     nextMatch,
     liveMatches,
+    lastMatch,
     stats,
   };
+}
+
+// Group-Stage focused match center: 12 group sections (A–L) followed by knockout
+// round sections. Used by the Matches tab.
+export async function getGroupMatchCenter(
+  poolId: string,
+  userId: string | null,
+): Promise<MatchCenterSection[]> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+  });
+  if (!pool) return [];
+
+  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+
+  const matches = await prisma.match.findMany({
+    where: { tournamentId: pool.tournamentId },
+    select: {
+      matchNo: true,
+      roundCode: true,
+      scheduledAt: true,
+      homeSlotRef: true,
+      awaySlotRef: true,
+      result: {
+        select: {
+          homeTeamCode: true,
+          awayTeamCode: true,
+          homeScore: true,
+          awayScore: true,
+          winnerCode: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  const yourPicks = await getEntryKnockoutPicks(poolId, userId);
+  const inputs = matches.map((m) => toMatchInput(m, resolved));
+  return buildGroupCenterSections(inputs, yourPicks);
 }

@@ -1,21 +1,10 @@
 import Link from "next/link";
-import { formatKickoff } from "@/lib/pool/format";
 import { CountUp } from "./CountUp";
 import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
-import { LiveNow } from "./LiveNow";
-import type { HomeView, HomeLeader, HomeNextMatch, HomeStats, Standing } from "@/lib/pool/home";
+import { ScoreCards } from "./ScoreCards";
+import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
-
-const ROUND_LABEL: Record<string, string> = {
-  GROUP: "Group stage",
-  R32: "Round of 32",
-  R16: "Round of 16",
-  QF: "Quarter-final",
-  SF: "Semi-final",
-  BRONZE: "Third place",
-  FINAL: "Final",
-};
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
@@ -194,65 +183,29 @@ function StatsStrip({ stats }: { stats: HomeStats }) {
   );
 }
 
-// Next match + today's mover folded into one compact card — context without the
-// stacked-card clutter the old digest had. Renders only the rows that exist.
-function ContextStrip({
-  next,
-  mover,
-}: {
-  next: HomeNextMatch | null;
-  mover: HomeView["topMover"];
-}) {
-  if (!next && !mover) return null;
-  const teams = next
-    ? next.home && next.away
-      ? `${next.home} v ${next.away}`
-      : `Match ${next.matchNo}`
-    : null;
-  const climbed = mover ? mover.rankDelta > 0 : false;
+function ContextStrip({ mover }: { mover: HomeView["topMover"] }) {
+  if (!mover) return null;
+  const climbed = mover.rankDelta > 0;
   return (
     <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
-      {next ? (
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-          <span aria-hidden className="text-ink-3">
-            ⚽
-          </span>
-          <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Up next</span>
-          <span className="ml-1 truncate font-semibold text-ink">{teams}</span>
-          <span className="ml-auto shrink-0 text-xs text-ink-3">
-            {next.scheduledAt
-              ? formatKickoff(next.scheduledAt)
-              : (ROUND_LABEL[next.roundCode] ?? next.roundCode)}
-          </span>
-          {next.yourPick ? (
-            <span className="w-full pl-6">
-              <span className="inline-flex items-center rounded-full bg-pitch-tint px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-pitch-dark">
-                Your pick: {next.yourPick.name}
-              </span>
+      <div className="flex items-center gap-2 px-4 py-3">
+        <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Top mover</span>
+        <span className="ml-1 truncate font-semibold text-ink">{mover.label}</span>
+        {mover.rankDelta !== 0 ? (
+          <span
+            className="text-xs font-bold tabular-nums"
+            style={{ color: climbed ? "var(--positive)" : "var(--negative)" }}
+            aria-label={`moved ${climbed ? "up" : "down"} ${Math.abs(mover.rankDelta)}`}
+          >
+            <span aria-hidden>
+              {climbed ? "▲" : "▼"} {Math.abs(mover.rankDelta)}
             </span>
-          ) : null}
-        </div>
-      ) : null}
-      {mover ? (
-        <div className="flex items-center gap-2 px-4 py-3">
-          <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Top mover</span>
-          <span className="ml-1 truncate font-semibold text-ink">{mover.label}</span>
-          {mover.rankDelta !== 0 ? (
-            <span
-              className="text-xs font-bold tabular-nums"
-              style={{ color: climbed ? "var(--positive)" : "var(--negative)" }}
-              aria-label={`moved ${climbed ? "up" : "down"} ${Math.abs(mover.rankDelta)}`}
-            >
-              <span aria-hidden>
-                {climbed ? "▲" : "▼"} {Math.abs(mover.rankDelta)}
-              </span>
-            </span>
-          ) : null}
-          <span className="ml-auto shrink-0 rounded-full bg-pitch-tint px-2 py-0.5 text-[11px] font-bold tabular-nums text-pitch-dark">
-            +{mover.pointsGained} pts
           </span>
-        </div>
-      ) : null}
+        ) : null}
+        <span className="ml-auto shrink-0 rounded-full bg-pitch-tint px-2 py-0.5 text-[11px] font-bold tabular-nums text-pitch-dark">
+          +{mover.pointsGained} pts
+        </span>
+      </div>
     </div>
   );
 }
@@ -282,7 +235,7 @@ export function Home({
 }) {
   return (
     <div className="space-y-4">
-      <LiveNow rows={view.liveMatches} code={code} />
+      <ScoreCards live={view.liveMatches} last={view.lastMatch} next={view.nextMatch} code={code} />
 
       <StandingCard
         you={view.you}
@@ -297,7 +250,7 @@ export function Home({
 
       {view.stats ? <StatsStrip stats={view.stats} /> : null}
 
-      <ContextStrip next={view.nextMatch} mover={view.topMover} />
+      <ContextStrip mover={view.topMover} />
 
       <section>
         <div className="flex items-center justify-between px-1">

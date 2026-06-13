@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPoolByCode, getMatchDetail, type MatchDetail } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
+import { listMessages } from "@/lib/pool/chat";
 import type { PickSplit, PickSplitSlice } from "@/lib/pool/pick-split";
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "../../Flag";
 import { WhatIf } from "../../WhatIf";
+import { Chat } from "../../Chat";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +100,11 @@ export default async function MatchDetailPage({
   const sessionUser = access?.user ?? (await getSessionUser());
   const isMember = Boolean(access);
 
-  const detail = await getMatchDetail(pool.id, matchNo, sessionUser?.id ?? null);
+  const [detail, initialMessages] = await Promise.all([
+    getMatchDetail(pool.id, matchNo, sessionUser?.id ?? null),
+    listMessages(pool.id, 50),
+  ]);
+
   if (!detail) notFound();
 
   const decided = detail.status === "FINAL" && Boolean(detail.winnerCode);
@@ -180,6 +186,11 @@ export default async function MatchDetailPage({
           </div>
         )
       ) : null}
+
+      <div>
+        <h3 className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Pool chat</h3>
+        <Chat poolId={pool.id} currentUserId={sessionUser?.id ?? ""} initialMessages={initialMessages} />
+      </div>
     </section>
   );
 }

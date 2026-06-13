@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPoolByCode, getMatchCenter } from "@/lib/pool/queries";
+import { getPoolByCode, getGroupMatchCenter } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
 import { MatchCenter } from "../MatchCenter";
 
@@ -16,7 +16,7 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const sections = await getMatchCenter(pool.id, sessionUser?.id ?? null);
+  const sections = await getGroupMatchCenter(pool.id, sessionUser?.id ?? null);
 
   return (
     <section>

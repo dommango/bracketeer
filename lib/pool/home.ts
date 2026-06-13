@@ -133,6 +133,7 @@ export interface HomeView {
   topMover: HomeMover | null;
   nextMatch: HomeNextMatch | null;
   liveMatches: MatchCenterRow[]; // matches in progress right now
+  lastMatch: MatchCenterRow | null; // most recently finalised match
   stats: HomeStats | null;
 }
 

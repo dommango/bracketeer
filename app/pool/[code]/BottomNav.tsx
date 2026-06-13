@@ -33,18 +33,18 @@ export function BottomNav({ code }: { code: string }) {
       icon: <HomeGlyph />,
     },
     {
-      key: "bracket",
-      label: "Bracket",
-      href: `${base}/bracket`,
-      isActive: prefix(`${base}/bracket`),
-      icon: <BracketGlyph />,
-    },
-    {
       key: "matches",
       label: "Matches",
       href: `${base}/matches`,
       isActive: prefix(`${base}/matches`),
       icon: <MatchesGlyph />,
+    },
+    {
+      key: "bracket",
+      label: "Bracket",
+      href: `${base}/bracket`,
+      isActive: prefix(`${base}/bracket`),
+      icon: <BracketGlyph />,
     },
     {
       key: "chat",
