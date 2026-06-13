@@ -29,6 +29,9 @@ const picksSchema = z.object({
 
 const inputSchema = z.object({
   code: z.string().min(1),
+  // The bracket being edited. Omitted when creating a first bracket; required to
+  // disambiguate when the user owns more than one in the pool.
+  entryId: z.string().min(1).optional(),
   label: z.string().max(40),
   tiebreak: z.string().max(20),
   picks: picksSchema,
@@ -44,7 +47,7 @@ export interface SubmitPicksResult {
 export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult> {
   const parsed = inputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid picks payload." };
-  const { code, label, tiebreak, picks } = parsed.data;
+  const { code, entryId, label, tiebreak, picks } = parsed.data;
 
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Sign in to submit your picks." };
@@ -71,6 +74,7 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
     const res = await upsertUiEntry({
       poolId: pool.id,
       userId: user.id,
+      entryId,
       label,
       picks: picks as Picks,
       email: user.email,

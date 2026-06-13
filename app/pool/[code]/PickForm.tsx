@@ -134,12 +134,14 @@ function KnockoutMatch({
 
 export function PickForm({
   code,
+  entryId,
   initialPicks,
   initialTiebreak,
   label,
   locked,
 }: {
   code: string;
+  entryId?: string;
   initialPicks: Picks;
   initialTiebreak: string;
   label: string;
@@ -188,7 +190,7 @@ export function PickForm({
     setError(null);
     setSaved(null);
     startTransition(async () => {
-      const res = await submitPicksAction({ code, label, tiebreak, picks });
+      const res = await submitPicksAction({ code, entryId, label, tiebreak, picks });
       if (res.ok) setSaved("Picks saved");
       else setError(res.error ?? "Could not save picks.");
     });
