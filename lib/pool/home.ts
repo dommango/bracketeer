@@ -62,10 +62,18 @@ export function selectNextMatch(matches: MatchLite[], now: Date): MatchLite | nu
   const unscored = matches.filter((m) => !m.scored);
   if (unscored.length === 0) return null;
 
+  const lowestUnscheduled = unscored
+    .filter((m) => m.scheduledAt === null)
+    .sort((a, b) => a.matchNo - b.matchNo)[0];
   const upcoming = unscored
     .filter((m) => m.scheduledAt !== null && m.scheduledAt.getTime() >= now.getTime())
     .sort((a, b) => a.scheduledAt!.getTime() - b.scheduledAt!.getTime());
-  if (upcoming.length > 0) return upcoming[0];
+  if (upcoming.length > 0) {
+    if (lowestUnscheduled && lowestUnscheduled.matchNo < upcoming[0].matchNo) {
+      return lowestUnscheduled;
+    }
+    return upcoming[0];
+  }
 
   return [...unscored].sort((a, b) => a.matchNo - b.matchNo)[0];
 }

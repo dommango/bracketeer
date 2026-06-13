@@ -76,6 +76,17 @@ describe("selectNextMatch", () => {
     expect(picked?.matchNo).toBe(3);
   });
 
+  it("does not skip unscheduled earlier matches for a future knockout date", () => {
+    const picked = selectNextMatch(
+      [
+        m(1, null, false),
+        { ...m(73, new Date("2026-06-27T19:00:00Z"), false), roundCode: "R32" },
+      ],
+      now,
+    );
+    expect(picked?.matchNo).toBe(1);
+  });
+
   it("falls back to lowest unscored when all scheduled times are in the past", () => {
     const picked = selectNextMatch(
       [m(7, new Date("2026-06-10T12:00:00Z"), false), m(4, new Date("2026-06-09T12:00:00Z"), false)],
