@@ -18,6 +18,8 @@ import { buildPickSplit, type PickSplit } from "@/lib/pool/pick-split";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
+import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
+import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { TEAMS } from "@/lib/scoring/data";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
@@ -146,47 +148,105 @@ const KNOCKOUT_PICK_SECTIONS = [
   "final",
 ];
 
+// Per-entry additive provisional group+thirds points from live/finished group
+// matches. Display-only; mirrors withProjectedPoints' knockout projection but for
+// the group stage. Empty map when no group match has a score yet.
+async function provisionalGroupPoints(
+  poolId: string,
+  tournamentId: string,
+  scoringConfig: unknown,
+): Promise<Map<string, number>> {
+  const groupResults = await prisma.result.findMany({
+    where: {
+      status: { in: ["LIVE", "FINAL"] },
+      match: { tournamentId, matchNo: { lte: 72 } },
+    },
+    select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+  });
+
+  const rows: GroupResultRow[] = [];
+  for (const r of groupResults) {
+    if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
+    rows.push({
+      homeCode: r.homeTeamCode,
+      awayCode: r.awayTeamCode,
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+    });
+  }
+  if (rows.length === 0) return new Map();
+
+  const tournament = await prisma.tournament.findUniqueOrThrow({
+    where: { id: tournamentId },
+    select: { officialResults: true },
+  });
+  const official = asResults(tournament.officialResults);
+  const overlay = overlayProvisional(official, provisionalStandings(computeGroupTables(rows)));
+  const cfg = asScoringConfig(scoringConfig);
+
+  const entries = await prisma.entry.findMany({
+    where: { poolId },
+    include: { picks: true },
+  });
+
+  const out = new Map<string, number>();
+  for (const entry of entries) {
+    const sub = pickRowsToSubmission(entry.picks);
+    const delta = provisionalGroupDelta(sub.picks, official, overlay, cfg);
+    if (delta > 0) out.set(entry.id, delta);
+  }
+  return out;
+}
+
 // Merge display-only projected live points into leaderboard rows. A no-op
-// (rows returned untouched) unless a knockout match is currently live.
+// (rows returned untouched) unless a knockout match is currently live or a
+// group match is live/finished with scorable provisional standings.
 async function withProjectedPoints(
   poolId: string,
   tournamentId: string,
   scoringConfig: unknown,
   rows: LeaderboardRow[],
 ): Promise<LeaderboardRow[]> {
-  const liveRows = await prisma.result.findMany({
-    where: { status: "LIVE", match: { tournamentId } },
-    select: {
-      homeTeamCode: true,
-      awayTeamCode: true,
-      homeScore: true,
-      awayScore: true,
-      status: true,
-      match: { select: { matchNo: true } },
-    },
-  });
+  const [liveRows, groupPoints] = await Promise.all([
+    prisma.result.findMany({
+      where: { status: "LIVE", match: { tournamentId } },
+      select: {
+        homeTeamCode: true,
+        awayTeamCode: true,
+        homeScore: true,
+        awayScore: true,
+        status: true,
+        match: { select: { matchNo: true } },
+      },
+    }),
+    provisionalGroupPoints(poolId, tournamentId, scoringConfig),
+  ]);
+
   const leaders = liveLeaders(
     liveRows.map((r) => ({ ...r, matchNo: r.match.matchNo })),
   );
-  if (leaders.length === 0) return rows;
+  if (leaders.length === 0 && groupPoints.size === 0) return rows;
 
-  const pickRows = await prisma.pick.findMany({
-    where: { entry: { poolId }, section: { in: KNOCKOUT_PICK_SECTIONS } },
-    select: { entryId: true, category: true, code: true },
-  });
-  const picksByEntry = new Map<string, Record<number, string>>();
-  for (const p of pickRows) {
-    if (!p.code) continue;
-    const matchNo = Number(p.category.replace(/^M/i, ""));
-    if (!Number.isInteger(matchNo)) continue;
-    const entry = picksByEntry.get(p.entryId) ?? {};
-    entry[matchNo] = p.code;
-    picksByEntry.set(p.entryId, entry);
+  let projected = new Map<string, number>();
+  if (leaders.length > 0) {
+    const pickRows = await prisma.pick.findMany({
+      where: { entry: { poolId }, section: { in: KNOCKOUT_PICK_SECTIONS } },
+      select: { entryId: true, category: true, code: true },
+    });
+    const picksByEntry = new Map<string, Record<number, string>>();
+    for (const p of pickRows) {
+      if (!p.code) continue;
+      const matchNo = Number(p.category.replace(/^M/i, ""));
+      if (!Number.isInteger(matchNo)) continue;
+      const entry = picksByEntry.get(p.entryId) ?? {};
+      entry[matchNo] = p.code;
+      picksByEntry.set(p.entryId, entry);
+    }
+    projected = projectedLivePoints(leaders, picksByEntry, asScoringConfig(scoringConfig));
   }
 
-  const projected = projectedLivePoints(leaders, picksByEntry, asScoringConfig(scoringConfig));
   return rows.map((r) => {
-    const pts = projected.get(r.entryId) ?? 0;
+    const pts = (projected.get(r.entryId) ?? 0) + (groupPoints.get(r.entryId) ?? 0);
     return pts > 0 ? { ...r, projected: pts } : r;
   });
 }
