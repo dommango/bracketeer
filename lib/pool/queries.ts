@@ -7,7 +7,13 @@ import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/
 import { resolveBracket } from "@/lib/pool/bracket";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
-import { buildMatchCenter, type MatchInput, type MatchStatus, type MatchCenterSection } from "@/lib/pool/match-center";
+import {
+  buildMatchCenter,
+  type MatchInput,
+  type MatchStatus,
+  type MatchCenterSection,
+  type MatchCenterRow,
+} from "@/lib/pool/match-center";
 import { buildPickSplit, type PickSplit } from "@/lib/pool/pick-split";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
@@ -16,12 +22,13 @@ import { TEAMS } from "@/lib/scoring/data";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
 import {
-  buildStanding,
+  buildStandings,
   selectNextMatch,
   toHomeMover,
   type HomeView,
   type HomeMover,
   type HomeNextMatch,
+  type HomeStats,
 } from "@/lib/pool/home";
 
 // The WC2026 MVP runs a single tournament; admin routes default to it but accept
@@ -51,6 +58,50 @@ export const getPoolByCode = cache(async (code: string) => {
 // through both getPoolView and getHomeView, so this shares one compute instead
 // of scanning + scoring the whole pool twice on the most-hit route.
 const cachedLeaderboard = cache((poolId: string) => getLeaderboard(poolId));
+
+// One DB match row with its Result, as selected by the match-center queries.
+interface ResolvableMatch {
+  matchNo: number;
+  roundCode: string;
+  scheduledAt: Date | null;
+  homeSlotRef: string | null;
+  awaySlotRef: string | null;
+  result: {
+    homeTeamCode: string | null;
+    awayTeamCode: string | null;
+    homeScore: number | null;
+    awayScore: number | null;
+    winnerCode: string | null;
+    status: string | null;
+  } | null;
+}
+
+// Resolve one DB match row into a MatchInput. Group teams come from the live
+// Result row (which preserves API home/away orientation) else the fixed draw
+// slot ref; knockout teams come from the Result row else the resolved answer-key
+// bracket. Shared by getMatchCenter and getLiveMatches so slot resolution lives
+// in one place (it's load-bearing — see lib/scoring/resolve.ts).
+function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBracket>): MatchInput {
+  const isGroup = m.roundCode === "GROUP";
+  const r = resolved[m.matchNo];
+  const homeCode = isGroup
+    ? (m.result?.homeTeamCode ?? m.homeSlotRef)
+    : (m.result?.homeTeamCode ?? r?.home ?? null);
+  const awayCode = isGroup
+    ? (m.result?.awayTeamCode ?? m.awaySlotRef)
+    : (m.result?.awayTeamCode ?? r?.away ?? null);
+  return {
+    matchNo: m.matchNo,
+    roundCode: m.roundCode,
+    scheduledAt: m.scheduledAt,
+    homeCode,
+    awayCode,
+    homeScore: m.result?.homeScore ?? null,
+    awayScore: m.result?.awayScore ?? null,
+    winnerCode: m.result?.winnerCode ?? r?.winner ?? null,
+    resultStatus: (m.result?.status as MatchStatus | undefined) ?? null,
+  };
+}
 
 export interface PoolHeader {
   id: string;
@@ -229,8 +280,12 @@ export async function getTodaysMover(poolId: string): Promise<HomeMover | null> 
   return toHomeMover(top, entry?.label ?? "—");
 }
 
-// The next match to surface on Home (see selectNextMatch for the choice rule).
-export async function getNextMatch(poolId: string): Promise<HomeNextMatch | null> {
+// The next match to surface on Home (see selectNextMatch for the choice rule),
+// annotated with the viewer's winner pick when it's a scored knockout they picked.
+export async function getNextMatch(
+  poolId: string,
+  userId: string | null = null,
+): Promise<HomeNextMatch | null> {
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
     select: { tournamentId: true },
@@ -259,6 +314,13 @@ export async function getNextMatch(poolId: string): Promise<HomeNextMatch | null
   );
   if (!picked) return null;
 
+  let yourPick: HomeNextMatch["yourPick"] = null;
+  if (isScoredKnockout(picked.matchNo)) {
+    const mine = await getEntryKnockoutPicks(poolId, userId);
+    const code = mine[picked.matchNo];
+    if (code) yourPick = { code, name: teamName(code) };
+  }
+
   const full = matches.find((m) => m.matchNo === picked.matchNo);
   return {
     matchNo: picked.matchNo,
@@ -266,6 +328,7 @@ export async function getNextMatch(poolId: string): Promise<HomeNextMatch | null
     scheduledAt: picked.scheduledAt ? picked.scheduledAt.toISOString() : null,
     home: full?.result?.homeTeamCode ?? null,
     away: full?.result?.awayTeamCode ?? null,
+    yourPick,
   };
 }
 
@@ -324,32 +387,54 @@ export async function getMatchCenter(
 
   const yourPicks = await getEntryKnockoutPicks(poolId, userId);
 
-  const inputs: MatchInput[] = matches.map((m) => {
-    const isGroup = m.roundCode === "GROUP";
-    const r = resolved[m.matchNo];
-    // Result rows preserve API home/away orientation, which can differ from the
-    // seeded group-pair order. Before a group Result exists, the slot ref is the
-    // fixed draw team code.
-    const homeCode = isGroup
-      ? (m.result?.homeTeamCode ?? m.homeSlotRef)
-      : (m.result?.homeTeamCode ?? r?.home ?? null);
-    const awayCode = isGroup
-      ? (m.result?.awayTeamCode ?? m.awaySlotRef)
-      : (m.result?.awayTeamCode ?? r?.away ?? null);
-    return {
-      matchNo: m.matchNo,
-      roundCode: m.roundCode,
-      scheduledAt: m.scheduledAt,
-      homeCode,
-      awayCode,
-      homeScore: m.result?.homeScore ?? null,
-      awayScore: m.result?.awayScore ?? null,
-      winnerCode: m.result?.winnerCode ?? r?.winner ?? null,
-      resultStatus: (m.result?.status as MatchStatus | undefined) ?? null,
-    };
-  });
+  const inputs = matches.map((m) => toMatchInput(m, resolved));
 
   return buildMatchCenter(inputs, yourPicks);
+}
+
+// Matches in progress right now, as flat MatchCenter rows (round grouping isn't
+// needed for the Home live card). LIVE only ever comes from a live Result feed,
+// so we filter on the Result status and reuse the same resolution as the full
+// match center. Empty when nothing is live.
+export async function getLiveMatches(
+  poolId: string,
+  userId: string | null,
+): Promise<MatchCenterRow[]> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+  });
+  if (!pool) return [];
+
+  const matches = await prisma.match.findMany({
+    where: { tournamentId: pool.tournamentId, result: { status: "LIVE" } },
+    select: {
+      matchNo: true,
+      roundCode: true,
+      scheduledAt: true,
+      homeSlotRef: true,
+      awaySlotRef: true,
+      result: {
+        select: {
+          homeTeamCode: true,
+          awayTeamCode: true,
+          homeScore: true,
+          awayScore: true,
+          winnerCode: true,
+          status: true,
+        },
+      },
+    },
+  });
+  if (matches.length === 0) return [];
+
+  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const yourPicks = await getEntryKnockoutPicks(poolId, userId);
+
+  const inputs = matches.map((m) => toMatchInput(m, resolved));
+
+  // buildMatchCenter groups + orders by round; flatten back to a single list.
+  return buildMatchCenter(inputs, yourPicks).flatMap((s) => s.matches);
 }
 
 export interface EntryPicks {
@@ -359,8 +444,10 @@ export interface EntryPicks {
 }
 
 // Every entry's decoded picks for a pool. Shared by the pick-split, the what-if
-// projection feed, and the profile's contrarian-call math.
-export async function getEntriesWithPicks(poolId: string): Promise<EntryPicks[]> {
+// projection feed, and the profile's contrarian-call math. Per-request memoized
+// so the Home dashboard (which reaches it via getProfile) doesn't re-decode the
+// whole pool when other selectors on the same request already have.
+export const getEntriesWithPicks = cache(async (poolId: string): Promise<EntryPicks[]> => {
   const entries = await prisma.entry.findMany({
     where: { poolId },
     select: { id: true, label: true, picks: true },
@@ -370,7 +457,7 @@ export async function getEntriesWithPicks(poolId: string): Promise<EntryPicks[]>
     label: e.label,
     picks: pickRowsToSubmission(e.picks).picks,
   }));
-}
+});
 
 // The current answer key + scoring config for a pool's tournament. Feeds the
 // members-only picks payload that the client-side what-if island projects from.
@@ -510,8 +597,11 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
   });
   if (!pool) return null;
 
+  // cachedLeaderboard, not getLeaderboard: on the Home route getHomeView already
+  // computed it, so the dashboard's stats strip reuses it instead of re-scoring
+  // the whole pool a second time.
   const [leaderboard, allEntries] = await Promise.all([
-    getLeaderboard(poolId),
+    cachedLeaderboard(poolId),
     getEntriesWithPicks(poolId),
   ]);
   const row = leaderboard.find((r) => r.entryId === entryId);
@@ -530,20 +620,36 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
   });
 }
 
-// Aggregate the landing context: your standing, today's mover, the next match.
+// Your headline stats for the dashboard, from your primary entry's profile.
+// Null when you have no entry or nothing is decided yet (pre-tournament).
+async function getHomeStats(poolId: string, entryId: string): Promise<HomeStats | null> {
+  const profile = await getProfile(poolId, entryId);
+  if (!profile || profile.accuracy.decided === 0) return null;
+  return { accuracy: profile.accuracy, boldest: profile.boldest };
+}
+
+// Aggregate the landing context: your standing(s), today's mover, the next match,
+// any live matches, and your headline stats.
 export async function getHomeView(poolId: string, userId: string | null): Promise<HomeView> {
-  const [leaderboard, topMover, nextMatch] = await Promise.all([
+  const [leaderboard, topMover, nextMatch, liveMatches] = await Promise.all([
     cachedLeaderboard(poolId),
     getTodaysMover(poolId),
-    getNextMatch(poolId),
+    getNextMatch(poolId, userId),
+    getLiveMatches(poolId, userId),
   ]);
 
   const leader = leaderboard[0] ?? null;
+  const standings = buildStandings(leaderboard, userId);
+  const you = standings[0] ?? null;
+  const stats = you ? await getHomeStats(poolId, you.entryId) : null;
 
   return {
-    you: buildStanding(leaderboard, userId),
+    you,
+    otherEntries: standings.slice(1),
     leader: leader ? { label: leader.label, total: leader.total } : null,
     topMover,
     nextMatch,
+    liveMatches,
+    stats,
   };
 }

@@ -3,6 +3,8 @@
 // aggregator (getHomeView) lives in queries.ts and fills these shapes.
 
 import type { Mover } from "@/lib/pool/movers";
+import type { Accuracy, BoldestCall } from "@/lib/pool/profile";
+import type { MatchCenterRow } from "@/lib/pool/match-center";
 
 // A leaderboard row reduced to what the standing card needs.
 export interface LeaderboardLike {
@@ -23,15 +25,9 @@ export interface Standing {
   gapToNext: number | null; // points to the entry one rank above (null when you lead)
 }
 
-// Your standing within the pool, or null if the user has no (claimed) entry here.
-export function buildStanding(
-  leaderboard: LeaderboardLike[],
-  userId: string | null,
-): Standing | null {
-  if (!userId) return null;
-  const idx = leaderboard.findIndex((r) => r.userId === userId);
-  if (idx === -1) return null;
-
+// The standing at a given leaderboard index, with gaps relative to the leader
+// and the entry one rank above.
+function standingAt(leaderboard: LeaderboardLike[], idx: number): Standing {
   const me = leaderboard[idx];
   const leader = leaderboard[0];
   const above = idx > 0 ? leaderboard[idx - 1] : null;
@@ -45,6 +41,29 @@ export function buildStanding(
     gapToLeader: leader.total - me.total,
     gapToNext: above ? above.total - me.total : null,
   };
+}
+
+// Every standing the user owns in this pool, in leaderboard (rank) order — a user
+// can hold more than one bracket. Empty when anonymous or unclaimed here.
+export function buildStandings(
+  leaderboard: LeaderboardLike[],
+  userId: string | null,
+): Standing[] {
+  if (!userId) return [];
+  const standings: Standing[] = [];
+  leaderboard.forEach((r, idx) => {
+    if (r.userId === userId) standings.push(standingAt(leaderboard, idx));
+  });
+  return standings;
+}
+
+// Your best (top-ranked) standing within the pool, or null if you have no
+// (claimed) entry here.
+export function buildStanding(
+  leaderboard: LeaderboardLike[],
+  userId: string | null,
+): Standing | null {
+  return buildStandings(leaderboard, userId)[0] ?? null;
 }
 
 // Match fields needed to choose what to surface as "up next".
@@ -97,13 +116,24 @@ export interface HomeNextMatch {
   scheduledAt: string | null; // ISO
   home: string | null; // team code, once known
   away: string | null;
+  yourPick: { code: string; name: string } | null; // your winner pick (scored KO only)
+}
+
+// Your headline numbers for the dashboard, drawn from your primary entry's
+// profile. Null pre-tournament (nothing decided yet) or when you have no entry.
+export interface HomeStats {
+  accuracy: Accuracy;
+  boldest: BoldestCall | null;
 }
 
 export interface HomeView {
-  you: Standing | null;
+  you: Standing | null; // your top-ranked entry
+  otherEntries: Standing[]; // your remaining entries (multi-bracket)
   leader: HomeLeader | null;
   topMover: HomeMover | null;
   nextMatch: HomeNextMatch | null;
+  liveMatches: MatchCenterRow[]; // matches in progress right now
+  stats: HomeStats | null;
 }
 
 // Fold a computed Mover + its label into the HomeMover shape.

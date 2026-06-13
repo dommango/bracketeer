@@ -3,8 +3,8 @@ import { formatKickoff } from "@/lib/pool/format";
 import { CountUp } from "./CountUp";
 import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
-import { CopyButton } from "./manage/CopyButton";
-import type { HomeView, HomeLeader, HomeMover, HomeNextMatch, Standing } from "@/lib/pool/home";
+import { LiveNow } from "./LiveNow";
+import type { HomeView, HomeLeader, HomeNextMatch, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 
 const ROUND_LABEL: Record<string, string> = {
@@ -19,14 +19,52 @@ const ROUND_LABEL: Record<string, string> = {
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
+// A minor inline link to the pick editor, folded into the standing card so the
+// bracket no longer needs its own card. Shows the lock countdown pre-tournament.
+function PicksLink({
+  code,
+  hasEntry,
+  upcoming,
+  startsAt,
+}: {
+  code: string;
+  hasEntry: boolean;
+  upcoming: boolean;
+  startsAt: string;
+}) {
+  return (
+    <Link
+      href={`/pool/${code}/picks`}
+      className="group inline-flex items-center gap-1.5 text-sm font-semibold text-pitch hover:underline"
+    >
+      {hasEntry ? "Review or edit your picks" : "Make your picks"}
+      <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+        →
+      </span>
+      {upcoming ? (
+        <span className="ml-1 text-xs font-normal text-ink-3">
+          · locks in{" "}
+          <Countdown target={startsAt} showSeconds={false} className="text-xs text-ink-2" />
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 function StandingCard({
   you,
   leader,
   signedIn,
+  code,
+  upcoming,
+  startsAt,
 }: {
   you: Standing | null;
   leader: HomeLeader | null;
   signedIn: boolean;
+  code: string;
+  upcoming: boolean;
+  startsAt: string;
 }) {
   if (!you) {
     return (
@@ -36,14 +74,18 @@ function StandingCard({
             ? "Your account isn’t linked to an entry yet. Sign in with the email your bracket was imported under."
             : "Sign in to see your standing and claim your bracket."}
         </p>
-        {!signedIn ? (
-          <Link
-            href="/signin"
-            className="mt-3 inline-block font-semibold text-pitch underline-offset-2 hover:underline"
-          >
-            Sign in →
-          </Link>
-        ) : null}
+        <div className="mt-3">
+          {signedIn ? (
+            <PicksLink code={code} hasEntry={false} upcoming={upcoming} startsAt={startsAt} />
+          ) : (
+            <Link
+              href="/signin"
+              className="inline-block font-semibold text-pitch underline-offset-2 hover:underline"
+            >
+              Sign in →
+            </Link>
+          )}
+        </div>
       </div>
     );
   }
@@ -83,13 +125,84 @@ function StandingCard({
           </>
         )}
       </p>
+      <div className="mt-4 border-t border-line-soft pt-3">
+        <PicksLink code={code} hasEntry upcoming={upcoming} startsAt={startsAt} />
+      </div>
+    </div>
+  );
+}
+
+// Your other brackets in this pool, when you hold more than one — compact rows
+// that link to each entry's profile.
+function OtherEntries({ entries, code }: { entries: Standing[]; code: string }) {
+  if (entries.length === 0) return null;
+  return (
+    <section>
+      <h2 className={`px-1 ${LABEL}`}>Your other brackets</h2>
+      <ul className="mt-2 divide-y divide-line rounded-2xl border border-line bg-surface">
+        {entries.map((e) => (
+          <li key={e.entryId}>
+            <Link
+              href={`/pool/${code}/u/${e.entryId}`}
+              className="flex items-center gap-3 px-4 py-2.5 transition-colors first:rounded-t-2xl last:rounded-b-2xl hover:bg-surface-sunk"
+            >
+              <span className="w-8 shrink-0 text-center font-display text-lg text-ink-3">
+                #{e.rank}
+              </span>
+              <span className="min-w-0 flex-1 truncate font-semibold text-ink">{e.label}</span>
+              <span className="shrink-0 text-right">
+                <span className="font-display text-lg tabular-nums text-ink">{e.total}</span>
+                <span className="text-xs text-ink-3"> pts</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Your headline numbers — accuracy and your boldest correct call. Shown once
+// matches are decided (the data layer returns null pre-tournament).
+function StatsStrip({ stats }: { stats: HomeStats }) {
+  const { accuracy, boldest } = stats;
+  return (
+    <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
+      <div className="flex items-center gap-2 px-4 py-3">
+        <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Accuracy</span>
+        <span className="ml-1 font-semibold text-ink">
+          <span className="font-mono tabular-nums">
+            {accuracy.hits}/{accuracy.decided}
+          </span>{" "}
+          calls
+        </span>
+        <span className="ml-auto shrink-0 rounded-full bg-pitch-tint px-2 py-0.5 text-[11px] font-bold tabular-nums text-pitch-dark">
+          {accuracy.pct}%
+        </span>
+      </div>
+      {boldest ? (
+        <div className="flex items-center gap-2 px-4 py-3">
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Boldest</span>
+          <span className="ml-1 truncate font-semibold text-ink">{boldest.pickName}</span>
+          <span className="shrink-0 text-xs text-ink-3">{boldest.roundLabel}</span>
+          <span className="ml-auto shrink-0 text-xs text-ink-3">
+            <span className="font-mono tabular-nums">{boldest.sharePct}%</span> of pool
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 // Next match + today's mover folded into one compact card — context without the
 // stacked-card clutter the old digest had. Renders only the rows that exist.
-function ContextStrip({ next, mover }: { next: HomeNextMatch | null; mover: HomeMover | null }) {
+function ContextStrip({
+  next,
+  mover,
+}: {
+  next: HomeNextMatch | null;
+  mover: HomeView["topMover"];
+}) {
   if (!next && !mover) return null;
   const teams = next
     ? next.home && next.away
@@ -100,7 +213,7 @@ function ContextStrip({ next, mover }: { next: HomeNextMatch | null; mover: Home
   return (
     <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
       {next ? (
-        <div className="flex items-center gap-2 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
           <span aria-hidden className="text-ink-3">
             ⚽
           </span>
@@ -111,6 +224,13 @@ function ContextStrip({ next, mover }: { next: HomeNextMatch | null; mover: Home
               ? formatKickoff(next.scheduledAt)
               : (ROUND_LABEL[next.roundCode] ?? next.roundCode)}
           </span>
+          {next.yourPick ? (
+            <span className="w-full pl-6">
+              <span className="inline-flex items-center rounded-full bg-pitch-tint px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-pitch-dark">
+                Your pick: {next.yourPick.name}
+              </span>
+            </span>
+          ) : null}
         </div>
       ) : null}
       {mover ? (
@@ -137,24 +257,6 @@ function ContextStrip({ next, mover }: { next: HomeNextMatch | null; mover: Home
   );
 }
 
-// Join-code lives here now (relocated off the every-screen hero) so members can
-// still invite from the landing; admins also have the full invite UI on Manage.
-function InviteLine({ joinCode }: { joinCode: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-      <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-3">Invite</p>
-        <p className="font-mono text-lg font-bold tracking-[0.1em] tabular-nums text-ink">
-          {joinCode}
-        </p>
-      </div>
-      <div className="ml-auto">
-        <CopyButton value={joinCode} label="Copy code" />
-      </div>
-    </div>
-  );
-}
-
 export function Home({
   view,
   leaderboard,
@@ -163,47 +265,39 @@ export function Home({
   signedIn,
   startsAt,
   upcoming,
-  joinCode,
   entryCount,
+  hasMore,
 }: {
   view: HomeView;
+  // Already truncated to the top rows (+ your row when you're below it).
   leaderboard: LeaderboardRow[];
   youUserId?: string | null;
   code: string;
   signedIn: boolean;
   startsAt: string;
   upcoming: boolean;
-  joinCode: string;
   entryCount: number;
+  // True when the pool has more entries than the truncated top rows shown here.
+  hasMore: boolean;
 }) {
   return (
     <div className="space-y-4">
-      <StandingCard you={view.you} leader={view.leader} signedIn={signedIn} />
+      <LiveNow rows={view.liveMatches} code={code} />
 
-      {signedIn ? (
-        <Link
-          href={`/pool/${code}/picks`}
-          className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
-        >
-          <div>
-            <p className={LABEL}>Your bracket</p>
-            <p className="mt-1 font-semibold text-ink">
-              {view.you ? "Review or edit your picks" : "Make your picks"}
-            </p>
-            {upcoming ? (
-              <p className="mt-1 text-xs text-ink-3">
-                Locks in{" "}
-                <Countdown target={startsAt} showSeconds={false} className="text-xs text-ink-2" />
-              </p>
-            ) : null}
-          </div>
-          <span className="font-display text-pitch-dark">→</span>
-        </Link>
-      ) : null}
+      <StandingCard
+        you={view.you}
+        leader={view.leader}
+        signedIn={signedIn}
+        code={code}
+        upcoming={upcoming}
+        startsAt={startsAt}
+      />
+
+      <OtherEntries entries={view.otherEntries} code={code} />
+
+      {view.stats ? <StatsStrip stats={view.stats} /> : null}
 
       <ContextStrip next={view.nextMatch} mover={view.topMover} />
-
-      <InviteLine joinCode={joinCode} />
 
       <section>
         <div className="flex items-center justify-between px-1">
@@ -213,12 +307,12 @@ export function Home({
               {entryCount} {entryCount === 1 ? "entry" : "entries"}
             </span>
           </h2>
-          {leaderboard.length >= 2 ? (
+          {hasMore ? (
             <Link
-              href={`/pool/${code}/compare`}
+              href={`/pool/${code}/leaderboard`}
               className="text-xs font-semibold text-pitch hover:underline"
             >
-              Compare brackets →
+              Full leaderboard →
             </Link>
           ) : null}
         </div>

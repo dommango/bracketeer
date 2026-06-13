@@ -3,9 +3,11 @@ import { getPoolByCode, getHomeView, getPoolView } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { Home } from "./Home";
 
-// Personalized landing: your standing, slim context strip (next match + mover),
-// invite code, and the full leaderboard — the leaderboard is now the landing.
+// Personal dashboard: live scores, your standing(s), stats, the next match, and a
+// truncated leaderboard (full list lives at /pool/[code]/leaderboard).
 export const dynamic = "force-dynamic";
+
+const TOP_N = 5;
 
 export default async function PoolHomePage({
   params,
@@ -23,7 +25,16 @@ export default async function PoolHomePage({
     getHomeView(pool.id, sessionUser?.id ?? null),
     getPoolView(code),
   ]);
-  const leaderboard = poolView?.leaderboard ?? [];
+  const fullBoard = poolView?.leaderboard ?? [];
+
+  // Top N, plus the viewer's own *best* row when it ranks below the cut so they
+  // always see themselves without opening the full leaderboard. Their other
+  // brackets (if any) surface separately via view.otherEntries.
+  const topRows = fullBoard.slice(0, TOP_N);
+  const yourRow = sessionUser ? fullBoard.find((r) => r.userId === sessionUser.id) : undefined;
+  const leaderboard =
+    yourRow && yourRow.rank > TOP_N ? [...topRows, yourRow] : topRows;
+  const hasMore = fullBoard.length > TOP_N;
 
   return (
     <Home
@@ -34,8 +45,8 @@ export default async function PoolHomePage({
       signedIn={Boolean(sessionUser)}
       startsAt={pool.tournament.startsAt.toISOString()}
       upcoming={pool.tournament.status === "UPCOMING"}
-      joinCode={pool.joinCode}
-      entryCount={leaderboard.length}
+      entryCount={fullBoard.length}
+      hasMore={hasMore}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildStanding,
+  buildStandings,
   selectNextMatch,
   type LeaderboardLike,
   type MatchLite,
@@ -43,6 +44,36 @@ describe("buildStanding (gap math)", () => {
       gapToLeader: 0,
       gapToNext: null,
     });
+  });
+});
+
+describe("buildStandings (multi-entry)", () => {
+  // ua owns two brackets (a at #1, d at #4); ub owns one.
+  const board = [
+    lb(1, "a", "ua", 50),
+    lb(2, "b", "ub", 42),
+    lb(3, "c", "uc", 30),
+    lb(4, "d", "ua", 18),
+  ];
+
+  it("returns an empty array when the user is anonymous", () => {
+    expect(buildStandings(board, null)).toEqual([]);
+  });
+
+  it("returns an empty array when the user has no entry here", () => {
+    expect(buildStandings(board, "stranger")).toEqual([]);
+  });
+
+  it("returns all of a user's entries in rank order, each with its own gaps", () => {
+    const standings = buildStandings(board, "ua");
+    expect(standings.map((s) => s.entryId)).toEqual(["a", "d"]);
+    expect(standings[0]).toMatchObject({ rank: 1, gapToLeader: 0, gapToNext: null });
+    // d at #4: 50 − 18 behind leader; entry above is c (30) → 12 to next.
+    expect(standings[1]).toMatchObject({ rank: 4, gapToLeader: 32, gapToNext: 12 });
+  });
+
+  it("buildStanding returns the top-ranked of a user's entries", () => {
+    expect(buildStanding(board, "ua")?.entryId).toBe("a");
   });
 });
 

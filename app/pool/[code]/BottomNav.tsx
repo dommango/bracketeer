@@ -27,10 +27,10 @@ export function BottomNav({ code }: { code: string }) {
   const tabs: Tab[] = [
     {
       key: "home",
-      label: "Standings",
+      label: "Home",
       href: base,
       isActive: (p) => p === base,
-      icon: <TableGlyph />,
+      icon: <HomeGlyph />,
     },
     {
       key: "bracket",
@@ -133,13 +133,13 @@ const svgProps: SVGProps<SVGSVGElement> = {
   focusable: false,
 };
 
-function TableGlyph() {
-  // Podium — reads as "leaderboard" not "spreadsheet".
+function HomeGlyph() {
+  // House — the personal dashboard landing.
   return (
     <svg {...svgProps}>
-      <rect x="3.25" y="11.5" width="5.5" height="8.5" rx="1.25" />
-      <rect x="9.25" y="6" width="5.5" height="14" rx="1.25" />
-      <rect x="15.25" y="13.5" width="5.5" height="6.5" rx="1.25" />
+      <path d="M4 10.5 12 4l8 6.5" />
+      <path d="M5.5 9.5V20h13V9.5" />
+      <path d="M10 20v-5h4v5" />
     </svg>
   );
 }
