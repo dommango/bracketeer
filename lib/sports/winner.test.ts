@@ -5,6 +5,8 @@ import type { FinishedFixture } from "./client";
 function fixture(over: Partial<FinishedFixture>): FinishedFixture {
   return {
     externalId: "1",
+    scheduledAt: null,
+    live: false,
     finished: true,
     homeExternalId: "H",
     awayExternalId: "A",

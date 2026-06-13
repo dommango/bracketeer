@@ -142,6 +142,79 @@ export async function clearKnockoutResult(
   });
 }
 
+// Upsert the display Result row for a group-stage match. Pure display — does NOT
+// touch officialResults. Skips if a MANUAL source row already exists. Returns
+// false for matches that haven't started yet (live=false and finished=false).
+export async function upsertGroupMatchResultFromApi(
+  tournamentId: string,
+  matchNo: number,
+  input: {
+    homeCode: string;
+    awayCode: string;
+    homeScore: number | null;
+    awayScore: number | null;
+    live: boolean;
+    finished: boolean;
+  },
+): Promise<{ applied: boolean }> {
+  if (!input.live && !input.finished) return { applied: false };
+
+  const match = await prisma.match.findUnique({
+    where: { tournamentId_matchNo: { tournamentId, matchNo } },
+    select: { id: true, result: { select: { source: true } } },
+  });
+  if (!match) return { applied: false };
+  if (match.result?.source === "MANUAL") return { applied: false };
+
+  const status = input.finished ? ("FINAL" as const) : ("LIVE" as const);
+  const winnerCode =
+    input.finished &&
+    input.homeScore !== null &&
+    input.awayScore !== null &&
+    input.homeScore !== input.awayScore
+      ? input.homeScore > input.awayScore
+        ? input.homeCode
+        : input.awayCode
+      : null;
+
+  const row = {
+    homeTeamCode: input.homeCode,
+    awayTeamCode: input.awayCode,
+    homeScore: input.homeScore,
+    awayScore: input.awayScore,
+    winnerCode,
+    status,
+    source: "API" as const,
+  };
+  await prisma.result.upsert({
+    where: { matchId: match.id },
+    update: row,
+    create: { matchId: match.id, ...row },
+  });
+  await prisma.match.update({
+    where: { id: match.id },
+    data: { scored: input.finished },
+  });
+
+  return { applied: true };
+}
+
+// Backfill Match.scheduledAt for group-stage matches that have no scheduled time
+// yet (null). Called once per poll run; only writes where scheduledAt IS NULL.
+export async function backfillGroupMatchScheduledAt(
+  tournamentId: string,
+  updates: Array<{ matchNo: number; scheduledAt: Date }>,
+): Promise<void> {
+  await Promise.all(
+    updates.map(({ matchNo, scheduledAt }) =>
+      prisma.match.updateMany({
+        where: { tournamentId, matchNo, scheduledAt: null },
+        data: { scheduledAt },
+      }),
+    ),
+  );
+}
+
 export interface StandingsInput {
   groupFirst?: Record<string, TeamCode>;
   groupSecond?: Record<string, TeamCode>;

@@ -24,7 +24,7 @@ export function CreatePoolForm({ defaultDisplayName }: { defaultDisplayName: str
           name="name"
           required
           maxLength={60}
-          placeholder="The Hess Fest"
+          placeholder="Friends & Family Pool"
           className={INPUT}
         />
       </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { CreatePoolForm } from "./CreatePoolForm";
+import { Hero } from "../../Hero";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,10 @@ export default async function CreatePoolPage() {
       >
         ← Back
       </Link>
+
+      <div className="mt-4">
+        <Hero />
+      </div>
 
       <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">

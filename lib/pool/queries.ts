@@ -323,10 +323,15 @@ export async function getMatchCenter(
   const inputs: MatchInput[] = matches.map((m) => {
     const isGroup = m.roundCode === "GROUP";
     const r = resolved[m.matchNo];
-    // Group teams are fixed by the draw (the slot ref *is* the team code);
-    // knockout teams come from the live Result, falling back to the answer key.
-    const homeCode = isGroup ? m.homeSlotRef : (m.result?.homeTeamCode ?? r?.home ?? null);
-    const awayCode = isGroup ? m.awaySlotRef : (m.result?.awayTeamCode ?? r?.away ?? null);
+    // Result rows preserve API home/away orientation, which can differ from the
+    // seeded group-pair order. Before a group Result exists, the slot ref is the
+    // fixed draw team code.
+    const homeCode = isGroup
+      ? (m.result?.homeTeamCode ?? m.homeSlotRef)
+      : (m.result?.homeTeamCode ?? r?.home ?? null);
+    const awayCode = isGroup
+      ? (m.result?.awayTeamCode ?? m.awaySlotRef)
+      : (m.result?.awayTeamCode ?? r?.away ?? null);
     return {
       matchNo: m.matchNo,
       roundCode: m.roundCode,
@@ -442,8 +447,12 @@ export async function getMatchDetail(
   const resolved = resolveBracket(asResults(pool.tournament.officialResults));
   const r = resolved[matchNo];
   const isGroup = match.roundCode === "GROUP";
-  const homeCode = isGroup ? match.homeSlotRef : (match.result?.homeTeamCode ?? r?.home ?? null);
-  const awayCode = isGroup ? match.awaySlotRef : (match.result?.awayTeamCode ?? r?.away ?? null);
+  const homeCode = isGroup
+    ? (match.result?.homeTeamCode ?? match.homeSlotRef)
+    : (match.result?.homeTeamCode ?? r?.home ?? null);
+  const awayCode = isGroup
+    ? (match.result?.awayTeamCode ?? match.awaySlotRef)
+    : (match.result?.awayTeamCode ?? r?.away ?? null);
   const winnerCode = match.result?.winnerCode ?? r?.winner ?? null;
   const status: MatchStatus =
     (match.result?.status as MatchStatus | undefined) ?? (winnerCode ? "FINAL" : "SCHEDULED");

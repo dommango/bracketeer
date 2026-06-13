@@ -32,11 +32,6 @@ function mulberry32(seed: number) {
 function buildPicks(rng: () => number, chalk: number): Submission["picks"] {
   const p = emptyPicks();
 
-  const pickSeeded = (teams: string[]): string => {
-    if (rng() < chalk) return teams[0];
-    return teams[Math.floor(rng() * teams.length)];
-  };
-
   for (const g of groups) {
     const teams = GROUPS[g];
     const first = rng() < chalk ? teams[0] : teams[Math.floor(rng() * teams.length)];

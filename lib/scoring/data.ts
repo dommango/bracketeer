@@ -112,3 +112,17 @@ export function groupMatchups(letter: GroupLetter): [TeamCode, TeamCode][] {
     for (let j = i + 1; j < teams.length; j++) out.push([teams[i], teams[j]]);
   return out;
 }
+
+// Reverse map: sorted team-pair key (e.g. "KOR_MEX") → internal match number (1–72).
+// Key is always alphabetically sorted so it matches regardless of home/away order.
+// Must iterate groups in Object.keys order (A–L) to match the seed's matchNo assignment.
+export function buildGroupPairMatchNos(): Map<string, number> {
+  const map = new Map<string, number>();
+  let no = 1;
+  for (const letter of Object.keys(GROUPS) as GroupLetter[]) {
+    for (const [home, away] of groupMatchups(letter)) {
+      map.set([home, away].sort().join("_"), no++);
+    }
+  }
+  return map;
+}
