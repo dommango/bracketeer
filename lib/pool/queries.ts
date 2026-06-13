@@ -15,7 +15,6 @@ import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { TEAMS } from "@/lib/scoring/data";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
-import { listMessages } from "@/lib/pool/chat";
 import {
   buildStanding,
   selectNextMatch,
@@ -47,6 +46,11 @@ export const getPoolByCode = cache(async (code: string) => {
     include: { tournament: true },
   });
 });
+
+// Per-request memoized leaderboard read. The landing aggregates the leaderboard
+// through both getPoolView and getHomeView, so this shares one compute instead
+// of scanning + scoring the whole pool twice on the most-hit route.
+const cachedLeaderboard = cache((poolId: string) => getLeaderboard(poolId));
 
 export interface PoolHeader {
   id: string;
@@ -143,7 +147,7 @@ export async function getPoolView(code: string): Promise<PoolView | null> {
     pool.id,
     pool.tournament.id,
     pool.tournament.scoringConfig,
-    await getLeaderboard(pool.id),
+    await cachedLeaderboard(pool.id),
   );
   return {
     id: pool.id,
@@ -517,21 +521,14 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
   });
 }
 
-// Aggregate the Home dashboard. Chat teaser is members-only (isMember gates it),
-// mirroring the chat route's access rule.
-export async function getHomeView(
-  poolId: string,
-  userId: string | null,
-  isMember: boolean,
-): Promise<HomeView> {
-  const [leaderboard, topMover, nextMatch, messages] = await Promise.all([
-    getLeaderboard(poolId),
+// Aggregate the landing context: your standing, today's mover, the next match.
+export async function getHomeView(poolId: string, userId: string | null): Promise<HomeView> {
+  const [leaderboard, topMover, nextMatch] = await Promise.all([
+    cachedLeaderboard(poolId),
     getTodaysMover(poolId),
     getNextMatch(poolId),
-    isMember ? listMessages(poolId, 1) : Promise.resolve([]),
   ]);
 
-  const latest = messages.length > 0 ? messages[messages.length - 1] : null;
   const leader = leaderboard[0] ?? null;
 
   return {
@@ -539,8 +536,5 @@ export async function getHomeView(
     leader: leader ? { label: leader.label, total: leader.total } : null,
     topMover,
     nextMatch,
-    chatTeaser: latest
-      ? { authorName: latest.authorName, body: latest.body, createdAt: latest.createdAt }
-      : null,
   };
 }

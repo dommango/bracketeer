@@ -89,26 +89,6 @@ export default async function PoolLayout({
               </span>
             </div>
 
-            <div
-              className="mt-4 inline-flex flex-col rounded-md px-3.5 py-2.5"
-              style={{
-                background: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.18)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-              }}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/70">
-                Join code
-              </span>
-              <span className="font-mono text-xl font-bold tracking-[0.1em] tabular-nums">
-                {pool.joinCode}
-                <span className="ml-2 text-xs font-medium tracking-normal text-white/70">
-                  {pool.entryCount} {pool.entryCount === 1 ? "entry" : "entries"}
-                </span>
-              </span>
-            </div>
-
             <div className="mt-4 text-sm text-white/80">
               {sessionUser ? (
                 <div className="flex items-center gap-2">

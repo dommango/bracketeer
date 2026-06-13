@@ -2,14 +2,10 @@ import Link from "next/link";
 import { formatKickoff } from "@/lib/pool/format";
 import { CountUp } from "./CountUp";
 import { Countdown } from "./Countdown";
-import type {
-  HomeView,
-  HomeLeader,
-  HomeMover,
-  HomeNextMatch,
-  HomeChatTeaser,
-  Standing,
-} from "@/lib/pool/home";
+import { Leaderboard } from "./Leaderboard";
+import { CopyButton } from "./manage/CopyButton";
+import type { HomeView, HomeLeader, HomeMover, HomeNextMatch, Standing } from "@/lib/pool/home";
+import type { LeaderboardRow } from "@/lib/pool/scoring";
 
 const ROUND_LABEL: Record<string, string> = {
   GROUP: "Group stage",
@@ -22,11 +18,6 @@ const ROUND_LABEL: Record<string, string> = {
 };
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
-
-function truncate(text: string, max = 80): string {
-  const t = text.trim();
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
-}
 
 function StandingCard({
   you,
@@ -96,78 +87,99 @@ function StandingCard({
   );
 }
 
-function MoverCard({ mover }: { mover: HomeMover }) {
-  const climbed = mover.rankDelta > 0;
+// Next match + today's mover folded into one compact card — context without the
+// stacked-card clutter the old digest had. Renders only the rows that exist.
+function ContextStrip({ next, mover }: { next: HomeNextMatch | null; mover: HomeMover | null }) {
+  if (!next && !mover) return null;
+  const teams = next
+    ? next.home && next.away
+      ? `${next.home} v ${next.away}`
+      : `Match ${next.matchNo}`
+    : null;
+  const climbed = mover ? mover.rankDelta > 0 : false;
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4">
-      <p className={LABEL}>Today’s biggest mover</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="font-semibold text-ink">{mover.label}</span>
-        <span className="rounded-full bg-pitch-tint px-2 py-0.5 text-[11px] font-bold tabular-nums text-pitch-dark">
-          +{mover.pointsGained} pts
-        </span>
-        {mover.rankDelta !== 0 ? (
-          <span
-            className="text-xs font-bold tabular-nums"
-            style={{ color: climbed ? "var(--positive)" : "var(--negative)" }}
-          >
-            {climbed ? "▲" : "▼"} {Math.abs(mover.rankDelta)}
+    <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
+      {next ? (
+        <div className="flex items-center gap-2 px-4 py-3">
+          <span aria-hidden className="text-ink-3">
+            ⚽
           </span>
-        ) : null}
-      </div>
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Up next</span>
+          <span className="ml-1 truncate font-semibold text-ink">{teams}</span>
+          <span className="ml-auto shrink-0 text-xs text-ink-3">
+            {next.scheduledAt
+              ? formatKickoff(next.scheduledAt)
+              : (ROUND_LABEL[next.roundCode] ?? next.roundCode)}
+          </span>
+        </div>
+      ) : null}
+      {mover ? (
+        <div className="flex items-center gap-2 px-4 py-3">
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Top mover</span>
+          <span className="ml-1 truncate font-semibold text-ink">{mover.label}</span>
+          {mover.rankDelta !== 0 ? (
+            <span
+              className="text-xs font-bold tabular-nums"
+              style={{ color: climbed ? "var(--positive)" : "var(--negative)" }}
+              aria-label={`moved ${climbed ? "up" : "down"} ${Math.abs(mover.rankDelta)}`}
+            >
+              <span aria-hidden>
+                {climbed ? "▲" : "▼"} {Math.abs(mover.rankDelta)}
+              </span>
+            </span>
+          ) : null}
+          <span className="ml-auto shrink-0 rounded-full bg-pitch-tint px-2 py-0.5 text-[11px] font-bold tabular-nums text-pitch-dark">
+            +{mover.pointsGained} pts
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function NextMatchCard({ next }: { next: HomeNextMatch }) {
-  const teams = next.home && next.away ? `${next.home} v ${next.away}` : `Match ${next.matchNo}`;
+// Join-code lives here now (relocated off the every-screen hero) so members can
+// still invite from the landing; admins also have the full invite UI on Manage.
+function InviteLine({ joinCode }: { joinCode: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4">
-      <p className={LABEL}>Up next</p>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="font-semibold text-ink">{teams}</span>
-        <span className="font-mono text-[11px] text-ink-3">
-          {ROUND_LABEL[next.roundCode] ?? next.roundCode}
-        </span>
+    <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-3">Invite</p>
+        <p className="font-mono text-lg font-bold tracking-[0.1em] tabular-nums text-ink">
+          {joinCode}
+        </p>
       </div>
-      <p className="mt-1 text-xs text-ink-3">
-        {next.scheduledAt ? formatKickoff(next.scheduledAt) : "Kickoff time TBD"}
-      </p>
+      <div className="ml-auto">
+        <CopyButton value={joinCode} label="Copy code" />
+      </div>
     </div>
-  );
-}
-
-function ChatTeaserCard({ teaser, code }: { teaser: HomeChatTeaser; code: string }) {
-  return (
-    <Link
-      href={`/pool/${code}/chat`}
-      className="block rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
-    >
-      <p className={LABEL}>Latest in chat</p>
-      <p className="mt-2 text-sm text-ink">
-        <span className="font-semibold text-pitch-dark">{teaser.authorName}</span>{" "}
-        {truncate(teaser.body)}
-      </p>
-    </Link>
   );
 }
 
 export function Home({
   view,
+  leaderboard,
+  youUserId,
   code,
   signedIn,
   startsAt,
   upcoming,
+  joinCode,
+  entryCount,
 }: {
   view: HomeView;
+  leaderboard: LeaderboardRow[];
+  youUserId?: string | null;
   code: string;
   signedIn: boolean;
   startsAt: string;
   upcoming: boolean;
+  joinCode: string;
+  entryCount: number;
 }) {
   return (
     <div className="space-y-4">
       <StandingCard you={view.you} leader={view.leader} signedIn={signedIn} />
+
       {signedIn ? (
         <Link
           href={`/pool/${code}/picks`}
@@ -188,9 +200,32 @@ export function Home({
           <span className="font-display text-pitch-dark">→</span>
         </Link>
       ) : null}
-      {view.topMover ? <MoverCard mover={view.topMover} /> : null}
-      {view.nextMatch ? <NextMatchCard next={view.nextMatch} /> : null}
-      {view.chatTeaser ? <ChatTeaserCard teaser={view.chatTeaser} code={code} /> : null}
+
+      <ContextStrip next={view.nextMatch} mover={view.topMover} />
+
+      <InviteLine joinCode={joinCode} />
+
+      <section>
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+            Leaderboard
+            <span className="ml-1.5 font-medium normal-case tracking-normal text-ink-4">
+              {entryCount} {entryCount === 1 ? "entry" : "entries"}
+            </span>
+          </h2>
+          {leaderboard.length >= 2 ? (
+            <Link
+              href={`/pool/${code}/compare`}
+              className="text-xs font-semibold text-pitch hover:underline"
+            >
+              Compare brackets →
+            </Link>
+          ) : null}
+        </div>
+        <div className="mt-2.5">
+          <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} />
+        </div>
+      </section>
     </div>
   );
 }
