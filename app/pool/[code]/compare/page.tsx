@@ -69,7 +69,7 @@ export default async function ComparePage({
   const rows = pool.leaderboard.map((r) => ({ entryId: r.entryId, label: r.label }));
 
   const back = (
-    <Link href={`/pool/${code}/table`} className="text-sm font-semibold text-pitch hover:underline">
+    <Link href={`/pool/${code}`} className="text-sm font-semibold text-pitch hover:underline">
       ← Back to {pool.name}
     </Link>
   );
