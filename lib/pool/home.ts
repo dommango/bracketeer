@@ -6,13 +6,16 @@ import type { Mover } from "@/lib/pool/movers";
 import type { Accuracy, BoldestCall } from "@/lib/pool/profile";
 import type { MatchCenterRow } from "@/lib/pool/match-center";
 
-// A leaderboard row reduced to what the standing card needs.
+// A leaderboard row reduced to what the standing card needs. `projected` is the
+// live (provisional group + knockout) delta; gaps and the displayed total use the
+// live total so the card matches the re-ranked leaderboard.
 export interface LeaderboardLike {
   rank: number;
   entryId: string;
   label: string;
   userId: string | null;
   total: number;
+  projected?: number;
 }
 
 export interface Standing {
@@ -31,15 +34,16 @@ function standingAt(leaderboard: LeaderboardLike[], idx: number): Standing {
   const me = leaderboard[idx];
   const leader = leaderboard[0];
   const above = idx > 0 ? leaderboard[idx - 1] : null;
+  const live = (r: LeaderboardLike) => r.total + (r.projected ?? 0);
 
   return {
     rank: me.rank,
     entryId: me.entryId,
     label: me.label,
-    total: me.total,
+    total: live(me),
     entryCount: leaderboard.length,
-    gapToLeader: leader.total - me.total,
-    gapToNext: above ? above.total - me.total : null,
+    gapToLeader: live(leader) - live(me),
+    gapToNext: above ? live(above) - live(me) : null,
   };
 }
 

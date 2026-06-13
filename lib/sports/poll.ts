@@ -19,6 +19,7 @@ import {
   setKnockoutResultFromApi,
   upsertGroupMatchResultFromApi,
   backfillGroupMatchScheduledAt,
+  promoteCompletedGroupsToOfficial,
   recomputeTournamentPools,
 } from "@/lib/pool/results";
 import { resolveWinnerExternalId } from "./winner";
@@ -192,6 +193,10 @@ export async function pollScores(): Promise<PollSummary> {
     await backfillGroupMatchScheduledAt(tournamentId, scheduledAtQueue);
   }
 
+  // A finished group match may complete its group — promote it to the official
+  // key before recomputing so pools rescore (and the knockout resolves) against
+  // the freshly-settled standings rather than the provisional overlay.
+  if (groupsApplied > 0) await promoteCompletedGroupsToOfficial(tournamentId);
   if (applied > 0 || groupsApplied > 0) await recomputeTournamentPools(tournamentId);
 
   // --- Pass 3: events + stats for currently-live group fixtures ---

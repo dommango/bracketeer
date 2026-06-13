@@ -3,6 +3,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { getLeaderboard, asResults, asScoringConfig, type LeaderboardRow } from "@/lib/pool/scoring";
+import { assignRanks } from "@/lib/pool/rank";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
 import { resolveBracket } from "@/lib/pool/bracket";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
@@ -247,21 +248,43 @@ async function withProjectedPoints(
     projected = projectedLivePoints(leaders, picksByEntry, asScoringConfig(scoringConfig));
   }
 
-  return rows.map((r) => {
+  const withLive = rows.map((r) => {
     const pts = (projected.get(r.entryId) ?? 0) + (groupPoints.get(r.entryId) ?? 0);
     return pts > 0 ? { ...r, projected: pts } : r;
   });
+
+  // Re-rank by live total (official + provisional/projected) so the standings
+  // reflect who is actually ahead right now; the ▲ badge still shows the
+  // provisional portion. Tied live totals share a place (competition ranking),
+  // label breaks display order only.
+  const liveTotal = (r: LeaderboardRow) => r.total + (r.projected ?? 0);
+  const sorted = [...withLive].sort(
+    (a, b) => liveTotal(b) - liveTotal(a) || a.label.localeCompare(b.label),
+  );
+  return assignRanks(sorted, liveTotal);
 }
+
+// The live leaderboard for a pool: the cached official board re-ranked by live
+// (official + provisional) points. Shared by getPoolView and getHomeView via the
+// per-request cache so both surfaces show the same order.
+const liveLeaderboard = cache(async (poolId: string): Promise<LeaderboardRow[]> => {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true, tournament: { select: { scoringConfig: true } } },
+  });
+  if (!pool) return [];
+  return withProjectedPoints(
+    poolId,
+    pool.tournamentId,
+    pool.tournament.scoringConfig,
+    await cachedLeaderboard(poolId),
+  );
+});
 
 export async function getPoolView(code: string): Promise<PoolView | null> {
   const pool = await getPoolByCode(code);
   if (!pool) return null;
-  const leaderboard = await withProjectedPoints(
-    pool.id,
-    pool.tournament.id,
-    pool.tournament.scoringConfig,
-    await cachedLeaderboard(pool.id),
-  );
+  const leaderboard = await liveLeaderboard(pool.id);
   return {
     id: pool.id,
     name: pool.name,
@@ -784,7 +807,7 @@ async function getHomeStats(poolId: string, entryId: string): Promise<HomeStats 
 // any live matches, and your headline stats.
 export async function getHomeView(poolId: string, userId: string | null): Promise<HomeView> {
   const [leaderboard, topMover, nextMatch, liveMatches, lastMatch] = await Promise.all([
-    cachedLeaderboard(poolId),
+    liveLeaderboard(poolId),
     getTodaysMover(poolId),
     getNextMatch(poolId, userId),
     getLiveMatches(poolId, userId),
@@ -799,7 +822,7 @@ export async function getHomeView(poolId: string, userId: string | null): Promis
   return {
     you,
     otherEntries: standings.slice(1),
-    leader: leader ? { label: leader.label, total: leader.total } : null,
+    leader: leader ? { label: leader.label, total: leader.total + (leader.projected ?? 0) } : null,
     topMover,
     nextMatch,
     liveMatches,

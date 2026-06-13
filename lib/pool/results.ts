@@ -10,6 +10,8 @@ import { asResults, recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
 import { resolveBracket, validateKnockoutWinner } from "@/lib/pool/bracket";
 import { findStandingsConflict } from "@/lib/pool/standings";
+import { promoteCompletedGroups } from "@/lib/pool/group-promote";
+import type { GroupResultRow } from "@/lib/pool/group-table";
 import { GROUPS, TEAMS } from "@/lib/scoring/data";
 import type { Results, TeamCode, Awards } from "@/lib/scoring/types";
 
@@ -267,6 +269,87 @@ export async function setGroupStandings(
     await writeAnswerKey(tournamentId, next, tx);
     return next;
   });
+}
+
+// Promote every group whose six matches are all FINAL into the official answer
+// key: its determinate 1st/2nd (and, once the whole stage is done, the best-8
+// thirds). Admin entries always win — only empty official slots are filled — so a
+// manually-corrected standing is never clobbered. Display-only and scoring both
+// then read these as official, and the knockout bracket resolves from them.
+//
+// Idempotent: re-running once a group is already promoted changes nothing. The
+// caller runs recomputeTournamentPools afterwards so pools rescore against the
+// freshly-promoted key. Returns the group letters newly written this call.
+export async function promoteCompletedGroupsToOfficial(tournamentId: string): Promise<string[]> {
+  const finalResults = await prisma.result.findMany({
+    where: { status: "FINAL", match: { tournamentId, matchNo: { lte: 72 } } },
+    select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+  });
+  const rows: GroupResultRow[] = [];
+  for (const r of finalResults) {
+    if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
+    rows.push({
+      homeCode: r.homeTeamCode,
+      awayCode: r.awayTeamCode,
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+    });
+  }
+
+  const promoted = promoteCompletedGroups(rows);
+  if (
+    Object.keys(promoted.groupFirst).length === 0 &&
+    Object.keys(promoted.groupSecond).length === 0 &&
+    promoted.thirdAdvance.length === 0
+  ) {
+    return [];
+  }
+
+  return withAnswerKeyLock(tournamentId, async (tx) => {
+    const current = await loadAnswerKey(tournamentId, tx);
+    const groupFirst = { ...current.groupFirst };
+    const groupSecond = { ...current.groupSecond };
+    const added: string[] = [];
+
+    for (const [g, code] of Object.entries(promoted.groupFirst)) {
+      if (!groupFirst[g]) {
+        groupFirst[g] = code;
+        added.push(g);
+      }
+    }
+    for (const [g, code] of Object.entries(promoted.groupSecond)) {
+      if (!groupSecond[g]) groupSecond[g] = code;
+    }
+    const thirdAdvance =
+      !current.thirdAdvance?.length && promoted.thirdAdvance.length
+        ? promoted.thirdAdvance
+        : current.thirdAdvance;
+
+    // Nothing actually changed (everything was already official) → no write.
+    const changed =
+      added.length > 0 ||
+      thirdAdvance !== current.thirdAdvance ||
+      !sameMap(groupSecond, current.groupSecond);
+    if (!changed) return [];
+
+    const next: Results = { ...current, groupFirst, groupSecond, thirdAdvance };
+    // Guard against an inconsistent key (a team placed twice) corrupting scoring;
+    // skip rather than throw so an automated poll never hard-fails on a fluke.
+    const conflict = findStandingsConflict(next);
+    if (conflict) {
+      console.error(`promoteCompletedGroups skipped — ${conflict}`);
+      return [];
+    }
+
+    await writeAnswerKey(tournamentId, next, tx);
+    return added;
+  });
+}
+
+function sameMap(a: Record<string, string>, b: Record<string, string>): boolean {
+  const ak = Object.keys(a);
+  if (ak.length !== Object.keys(b).length) return false;
+  return ak.every((k) => a[k] === b[k]);
 }
 
 // Set tournament awards (player / young / golden boot / goal) — free text.
