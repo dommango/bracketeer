@@ -6,7 +6,7 @@
 // the still-tied subset). Inseparable teams share a rank and are flagged tied.
 
 import { GROUPS } from "@/lib/scoring/data";
-import type { GroupLetter, TeamCode } from "@/lib/scoring/types";
+import type { GroupLetter, TeamCode, Results } from "@/lib/scoring/types";
 
 export interface GroupResultRow {
   homeCode: TeamCode;
@@ -181,4 +181,55 @@ export function computeGroupTables(
     out[g] = buildTable(g, byGroup.get(g) ?? []);
   }
   return out;
+}
+
+export type ProvisionalStandings = Pick<Results, "groupFirst" | "groupSecond" | "thirdAdvance">;
+
+// The single team at a given rank, or null if that rank is shared (tied) or absent.
+function uniqueAtRank(table: GroupTableRow[], rank: number): GroupTableRow | null {
+  const at = table.filter((r) => r.rank === rank);
+  return at.length === 1 ? at[0] : null;
+}
+
+const thirdsKey = (r: GroupTableRow): string => `${r.pts}|${r.gd}|${r.gf}`;
+
+// Top `take` third-place teams by pts -> GD -> goals. If a tie group straddles
+// the cutoff (more equal teams than remaining slots), none of those tied teams
+// are included — we never guess which of equally-ranked thirds advance.
+function selectBestThirds(candidates: GroupTableRow[], take: number): TeamCode[] {
+  const sorted = [...candidates].sort(
+    (a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf,
+  );
+  const result: TeamCode[] = [];
+  let i = 0;
+  while (i < sorted.length && result.length < take) {
+    const key = thirdsKey(sorted[i]);
+    const block = sorted.filter((r) => thirdsKey(r) === key);
+    if (result.length + block.length <= take) {
+      result.push(...block.map((r) => r.code));
+      i += block.length;
+    } else {
+      break; // tie block overflows the remaining slots → drop it entirely
+    }
+  }
+  return result;
+}
+
+export function provisionalStandings(
+  tables: Record<GroupLetter, GroupTableRow[]>,
+): ProvisionalStandings {
+  const groupFirst: Record<string, TeamCode> = {};
+  const groupSecond: Record<string, TeamCode> = {};
+  const thirdCandidates: GroupTableRow[] = [];
+
+  for (const [g, table] of Object.entries(tables)) {
+    const r1 = uniqueAtRank(table, 1);
+    const r2 = uniqueAtRank(table, 2);
+    const r3 = uniqueAtRank(table, 3);
+    if (r1) groupFirst[g] = r1.code;
+    if (r2) groupSecond[g] = r2.code;
+    if (r3) thirdCandidates.push(r3);
+  }
+
+  return { groupFirst, groupSecond, thirdAdvance: selectBestThirds(thirdCandidates, 8) };
 }

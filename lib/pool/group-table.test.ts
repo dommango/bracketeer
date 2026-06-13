@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeGroupTables, type GroupResultRow } from "./group-table";
+import { provisionalStandings, type GroupTableRow } from "./group-table";
 
 // Group A = ["MEX", "RSA", "KOR", "CZE"]
 const m = (homeCode: string, awayCode: string, homeScore: number, awayScore: number): GroupResultRow => ({
@@ -69,5 +70,70 @@ describe("computeGroupTables", () => {
     expect(Object.keys(tables).sort()).toEqual(
       ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"],
     );
+  });
+});
+
+const tableRow = (over: Partial<GroupTableRow> & { code: string; rank: number }): GroupTableRow => ({
+  played: 3,
+  w: 0,
+  d: 0,
+  l: 0,
+  gf: 0,
+  ga: 0,
+  gd: 0,
+  pts: 0,
+  tied: false,
+  ...over,
+});
+
+describe("provisionalStandings", () => {
+  it("fills unique 1st/2nd and omits tied positions", () => {
+    const tables = {
+      A: [
+        tableRow({ code: "MEX", rank: 1 }),
+        tableRow({ code: "RSA", rank: 2 }),
+        tableRow({ code: "KOR", rank: 3 }),
+        tableRow({ code: "CZE", rank: 4 }),
+      ],
+      B: [
+        // 1st is a 2-way tie -> no 1st AND no 2nd derivable for B.
+        tableRow({ code: "CAN", rank: 1, tied: true }),
+        tableRow({ code: "BIH", rank: 1, tied: true }),
+        tableRow({ code: "QAT", rank: 3 }),
+        tableRow({ code: "SUI", rank: 4 }),
+      ],
+    } as Record<string, GroupTableRow[]>;
+
+    const s = provisionalStandings(tables);
+    expect(s.groupFirst.A).toBe("MEX");
+    expect(s.groupSecond.A).toBe("RSA");
+    expect(s.groupFirst.B).toBeUndefined();
+    expect(s.groupSecond.B).toBeUndefined();
+  });
+
+  it("selects the best third-place teams by pts then GD then goals", () => {
+    const tables = {
+      A: [tableRow({ code: "KOR", rank: 3, pts: 4, gd: 2, gf: 5 })],
+      B: [tableRow({ code: "QAT", rank: 3, pts: 4, gd: 1, gf: 5 })],
+      C: [tableRow({ code: "HAI", rank: 3, pts: 3, gd: 0, gf: 2 })],
+    } as Record<string, GroupTableRow[]>;
+
+    const s = provisionalStandings(tables);
+    // All 3 fit under the cap of 8; order is best-first.
+    expect(s.thirdAdvance).toEqual(["KOR", "QAT", "HAI"]);
+  });
+
+  it("drops a tie straddling the 8-team cutoff", () => {
+    // 9 third-place teams: ranks 1-7 distinct, then TWO tied on the 8th/9th key.
+    const groups = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
+    const tables: Record<string, GroupTableRow[]> = {};
+    groups.forEach((g, i) => {
+      const pts = i < 7 ? 9 - i : 1; // first 7 strictly descending; last two both pts 1
+      tables[g] = [tableRow({ code: `T${i}`, rank: 3, pts, gd: 0, gf: 0 })];
+    });
+    const s = provisionalStandings(tables);
+    // 7 clear qualifiers; the 8th slot is contested by two equal teams -> both dropped.
+    expect(s.thirdAdvance).toHaveLength(7);
+    expect(s.thirdAdvance).toEqual(["T0", "T1", "T2", "T3", "T4", "T5", "T6"]);
   });
 });
