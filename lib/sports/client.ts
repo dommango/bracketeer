@@ -5,6 +5,8 @@ import { env } from "@/lib/env";
 
 export interface FinishedFixture {
   externalId: string;
+  scheduledAt: string | null; // ISO kickoff from API
+  live: boolean;
   finished: boolean;
   homeExternalId: string;
   awayExternalId: string;
@@ -15,7 +17,7 @@ export interface FinishedFixture {
 }
 
 interface ApiFixture {
-  fixture: { id: number; status?: { short?: string } };
+  fixture: { id: number; date?: string | null; status?: { short?: string } };
   teams: { home: { id: number }; away: { id: number } };
   goals: { home: number | null; away: number | null };
   score?: { penalty?: { home: number | null; away: number | null } };
@@ -23,6 +25,8 @@ interface ApiFixture {
 
 // Statuses API-Football reports for a decided match.
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+// Statuses for a match currently in progress.
+const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "INT", "LIVE"]);
 
 export async function fetchFixtures(signal?: AbortSignal): Promise<FinishedFixture[]> {
   const url = `${env.SPORTS_API_BASE}/fixtures?league=1&season=2026`;
@@ -36,6 +40,8 @@ export async function fetchFixtures(signal?: AbortSignal): Promise<FinishedFixtu
   const json = (await res.json()) as { response?: ApiFixture[] };
   return (json.response ?? []).map((f) => ({
     externalId: String(f.fixture.id),
+    scheduledAt: f.fixture.date ?? null,
+    live: LIVE_STATUSES.has(f.fixture.status?.short ?? ""),
     finished: FINISHED_STATUSES.has(f.fixture.status?.short ?? ""),
     homeExternalId: String(f.teams.home.id),
     awayExternalId: String(f.teams.away.id),
