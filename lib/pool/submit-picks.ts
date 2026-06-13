@@ -27,9 +27,10 @@ export async function upsertUiEntry(input: SubmitPicksInput): Promise<SubmitPick
   try {
     return await writeUiEntry(input);
   } catch (err) {
-    // Two concurrent saves (double-submit) can both pass findFirst; the
-    // (poolId, userId) unique rejects the duplicate — retry once so the loser
-    // updates the winner's row instead of failing the save.
+    // The web form edits a member's single UI bracket in place (found by
+    // (poolId, userId) below). If a same-email CSV bracket with this label
+    // already exists, the (poolId, claimEmail, label) unique can reject the
+    // write — retry once so the save lands on the existing row.
     if ((err as { code?: string }).code === "P2002") {
       return writeUiEntry(input);
     }

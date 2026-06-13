@@ -232,13 +232,16 @@ model Entry {
   breakdown ScoreBreakdown?
   snapshots ScoreSnapshot[]
 
-  // Back the import/submit idempotency keys with real constraints so two
-  // concurrent writes for the same contestant can't both pass findFirst and
-  // duplicate the entry. NULLs are distinct in Postgres, so email-less CSV
-  // entries and userId-less imports are unaffected.
-  @@unique([poolId, claimEmail])
-  @@unique([poolId, userId])
+  // A pool can hold MORE THAN ONE entry per user. A user owns every entry whose
+  // claimEmail matches their account (bound on sign-in, see lib/auth/claim.ts),
+  // and may keep several brackets. So idempotency/concurrency is guarded per
+  // *bracket* — (pool, claimEmail, label) — not per user: two same-email
+  // brackets with distinct labels coexist instead of overwriting each other,
+  // and re-importing the same bracket still updates in place. NULLs are distinct
+  // in Postgres, so email-less CSV entries are unaffected.
+  @@unique([poolId, claimEmail, label])
   @@index([poolId])
+  @@index([poolId, userId])
   @@index([claimEmail])
 }
 
