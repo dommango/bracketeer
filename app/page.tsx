@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
+import { Hero } from "./Hero";
 
 // Session-aware landing. Signed-out visitors are funnelled to sign-in; signed-in
 // visitors go straight to their pool (single membership) or a pools hub.
@@ -28,51 +29,6 @@ export default async function Home() {
       name={user.name ?? user.email ?? "there"}
       pools={memberships.map((m) => ({ name: m.pool.name, joinCode: m.pool.joinCode }))}
     />
-  );
-}
-
-function Hero() {
-  return (
-    <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "url(/brand-26-pattern.avif)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      />
-      <div
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)" }}
-      />
-      <div className="relative">
-        <div
-          className="inline-block max-w-full rounded-2xl p-4"
-          style={{
-            background: "rgba(0,0,0,0.42)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
-          }}
-        >
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest</p>
-          <h1 className="mt-2.5 font-display text-[34px] leading-[1.02] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
-            Run a World Cup 2026 pool with your friends.
-          </h1>
-          <p className="mt-3.5 text-sm text-white/90">
-            Live scores, a realtime leaderboard, and group chat — all in one place.
-          </p>
-        </div>
-        <div className="mt-4 flex gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
-          <span>48 teams</span>
-          <span>·</span>
-          <span>104 matches</span>
-          <span>·</span>
-          <span>June 11</span>
-        </div>
-      </div>
-    </div>
   );
 }
 
