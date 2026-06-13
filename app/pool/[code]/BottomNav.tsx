@@ -9,7 +9,7 @@ import type { ReactNode, SVGProps } from "react";
 // a pitch-tint pill behind the icon + pitch-dark label — two reinforcing cues.
 // Home matches exactly; the other tabs match by prefix so nested children stay lit.
 
-type TabKey = "home" | "table" | "bracket" | "matches" | "chat";
+type TabKey = "home" | "bracket" | "matches" | "chat";
 
 type Tab = {
   key: TabKey;
@@ -27,16 +27,9 @@ export function BottomNav({ code }: { code: string }) {
   const tabs: Tab[] = [
     {
       key: "home",
-      label: "Home",
+      label: "Standings",
       href: base,
       isActive: (p) => p === base,
-      icon: <HomeGlyph />,
-    },
-    {
-      key: "table",
-      label: "Table",
-      href: `${base}/table`,
-      isActive: prefix(`${base}/table`),
       icon: <TableGlyph />,
     },
     {
@@ -139,15 +132,6 @@ const svgProps: SVGProps<SVGSVGElement> = {
   "aria-hidden": true,
   focusable: false,
 };
-
-function HomeGlyph() {
-  return (
-    <svg {...svgProps}>
-      <path d="M3.5 11 12 4l8.5 7" />
-      <path d="M5.5 10v8.5a1 1 0 0 0 1 1H10V14h4v5.5h3.5a1 1 0 0 0 1-1V10" />
-    </svg>
-  );
-}
 
 function TableGlyph() {
   // Podium — reads as "leaderboard" not "spreadsheet".

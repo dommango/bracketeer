@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { getPoolByCode, getHomeView } from "@/lib/pool/queries";
+import { getPoolByCode, getHomeView, getPoolView } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { Home } from "./Home";
 
-// Personalized landing — standing, today's mover, next match, chat teaser.
+// Personalized landing: your standing, slim context strip (next match + mover),
+// invite code, and the full leaderboard — the leaderboard is now the landing.
 export const dynamic = "force-dynamic";
 
 export default async function PoolHomePage({
@@ -17,17 +18,24 @@ export default async function PoolHomePage({
 
   const access = await getPoolAccess(pool.id);
   const sessionUser = access?.user ?? (await getSessionUser());
-  const isMember = Boolean(access);
 
-  const view = await getHomeView(pool.id, sessionUser?.id ?? null, isMember);
+  const [view, poolView] = await Promise.all([
+    getHomeView(pool.id, sessionUser?.id ?? null),
+    getPoolView(code),
+  ]);
+  const leaderboard = poolView?.leaderboard ?? [];
 
   return (
     <Home
       view={view}
+      leaderboard={leaderboard}
+      youUserId={sessionUser?.id}
       code={code}
       signedIn={Boolean(sessionUser)}
       startsAt={pool.tournament.startsAt.toISOString()}
       upcoming={pool.tournament.status === "UPCOMING"}
+      joinCode={pool.joinCode}
+      entryCount={leaderboard.length}
     />
   );
 }

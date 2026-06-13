@@ -91,18 +91,11 @@ export interface HomeNextMatch {
   away: string | null;
 }
 
-export interface HomeChatTeaser {
-  authorName: string;
-  body: string;
-  createdAt: string; // ISO
-}
-
 export interface HomeView {
   you: Standing | null;
   leader: HomeLeader | null;
   topMover: HomeMover | null;
   nextMatch: HomeNextMatch | null;
-  chatTeaser: HomeChatTeaser | null;
 }
 
 // Fold a computed Mover + its label into the HomeMover shape.
