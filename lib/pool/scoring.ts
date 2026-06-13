@@ -9,6 +9,7 @@ import { scorePicks, type ScoringConfig, DEFAULT_SCORING } from "@/lib/scoring/s
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
+import { assignRanks } from "@/lib/pool/rank";
 
 type Db = Prisma.TransactionClient;
 
@@ -133,5 +134,7 @@ export async function getLeaderboard(poolId: string, db: Db = prisma): Promise<L
     }))
     .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
 
-  return rows.map((r, i) => ({ rank: i + 1, ...r }));
+  // Tied entries share a place (standard competition ranking); label only orders
+  // the display within a tie, it does not break the rank.
+  return assignRanks(rows);
 }

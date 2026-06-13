@@ -33,16 +33,29 @@ describe("projectStandings", () => {
   });
 
   it("reflects the rank climb for the gainer", () => {
-    // Zoe sorts last on the base tie (both 0 pts) → base rank 2, then climbs.
+    // Base match 73 = CAN, so Ana (picked CAN) leads at 1 pt and Zoe trails at 0.
+    // Flipping the winner to MEX hands Zoe the point and she overtakes Ana.
+    const decided: Results = { ...emptyPicks(), knockout: { 73: "CAN" }, finalGoals: null };
     const rows = projectStandings(
       [entry("a", "Ana", { 73: "CAN" }), entry("z", "Zoe", { 73: "MEX" })],
-      baseResults,
+      decided,
       { matchNo: 73, winnerCode: "MEX" },
     );
     const zoe = rows.find((r) => r.entryId === "z")!;
     expect(zoe.baseRank).toBe(2);
     expect(zoe.rank).toBe(1);
     expect(zoe.rankDelta).toBe(1);
+  });
+
+  it("gives tied entries the same place (standard competition ranking)", () => {
+    // Both pick the hypothetical winner → both gain the point → both tied at 1.
+    const rows = projectStandings(
+      [entry("a", "Ana", { 73: "MEX" }), entry("z", "Zoe", { 73: "MEX" })],
+      baseResults,
+      { matchNo: 73, winnerCode: "MEX" },
+    );
+    expect(rows.map((r) => r.rank)).toEqual([1, 1]);
+    expect(rows.every((r) => r.baseRank === 1)).toBe(true);
   });
 
   it("returns rows in projected-rank order", () => {

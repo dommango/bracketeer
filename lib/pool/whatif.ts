@@ -30,9 +30,13 @@ function rankBy<T extends { entryId: string; label: string }>(
   rows: T[],
   pointsOf: (r: T) => number,
 ): Map<string, number> {
-  const order = [...rows].sort((a, b) => pointsOf(b) - pointsOf(a) || a.label.localeCompare(b.label));
+  // Standard competition ranking ("1224"): tied points share a place, matching
+  // getLeaderboard. Rank = entries strictly ahead + 1; label only orders display.
   const ranks = new Map<string, number>();
-  order.forEach((r, i) => ranks.set(r.entryId, i + 1));
+  for (const r of rows) {
+    const ahead = rows.filter((o) => pointsOf(o) > pointsOf(r)).length;
+    ranks.set(r.entryId, ahead + 1);
+  }
   return ranks;
 }
 
