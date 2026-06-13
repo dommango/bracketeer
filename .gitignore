@@ -27,6 +27,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# exported pool seed bundles — contain real contestant emails (PII)
+/prisma/seed-data/
+
 # vercel
 .vercel
 
