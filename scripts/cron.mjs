@@ -1,5 +1,6 @@
 // Railway cron entrypoint. Configure a separate Railway service that runs
-// `node scripts/cron.mjs` on a schedule (e.g. */1 * * * * during the knockouts).
+// `node scripts/cron.mjs` on a schedule (`*/5 * * * *` — Railway's minimum cron
+// interval is 5 minutes, so per-minute polling isn't possible on Railway cron).
 // It pings the score poller on the web service with the shared secret.
 const base = process.env.APP_BASE_URL;
 const secret = process.env.CRON_SECRET;
