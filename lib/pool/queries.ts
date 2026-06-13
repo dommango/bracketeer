@@ -282,7 +282,14 @@ export async function getPoolBracket(poolId: string): Promise<BracketView | null
 
   const resultRows = await prisma.result.findMany({
     where: { match: { tournamentId: pool.tournament.id } },
-    select: { homeScore: true, awayScore: true, status: true, match: { select: { matchNo: true } } },
+    select: {
+      homeTeamCode: true,
+      awayTeamCode: true,
+      homeScore: true,
+      awayScore: true,
+      status: true,
+      match: { select: { matchNo: true } },
+    },
   });
   const scores = new Map<number, MatchScore>(
     resultRows.map((r) => [
@@ -291,7 +298,19 @@ export async function getPoolBracket(poolId: string): Promise<BracketView | null
     ]),
   );
 
-  return buildBracketView(asResults(pool.tournament.officialResults), scores);
+  const groupRows: GroupResultRow[] = [];
+  for (const r of resultRows) {
+    if (r.match.matchNo > 72) continue;
+    if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
+    groupRows.push({
+      homeCode: r.homeTeamCode,
+      awayCode: r.awayTeamCode,
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+    });
+  }
+
+  return buildBracketView(asResults(pool.tournament.officialResults), scores, groupRows);
 }
 
 // Movers over a window: for each entry, the delta between its standing at `since`
