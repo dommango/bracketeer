@@ -301,6 +301,9 @@ export async function getPoolBracket(poolId: string): Promise<BracketView | null
   const groupRows: GroupResultRow[] = [];
   for (const r of resultRows) {
     if (r.match.matchNo > 72) continue;
+    // Match the leaderboard's provisional-points filter exactly (LIVE/FINAL only)
+    // so the displayed table and the ▲ live delta can never diverge.
+    if (r.status !== "LIVE" && r.status !== "FINAL") continue;
     if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
     groupRows.push({
       homeCode: r.homeTeamCode,
