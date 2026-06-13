@@ -1,4 +1,5 @@
 import type { BracketView, BracketMatch, BracketRound } from "@/lib/pool/bracket-view";
+import type { GroupTableRow } from "@/lib/pool/group-table";
 import { R16, QF, SF, FINAL } from "@/lib/scoring/data";
 import { Flag } from "./Flag";
 
@@ -218,7 +219,9 @@ export function Bracket({ view }: { view: BracketView }) {
 }
 
 export function GroupStandings({ view }: { view: BracketView }) {
-  const anySet = view.groups.some((g) => g.first || g.second) || view.thirds.length > 0;
+  const anySet =
+    view.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ||
+    view.thirds.length > 0;
   if (!anySet) {
     return (
       <p className="rounded-2xl border border-dashed border-line bg-surface p-6 text-center text-sm text-ink-3">
@@ -256,14 +259,65 @@ export function GroupStandings({ view }: { view: BracketView }) {
                     Group {g.group}
                   </span>
                 </div>
-                <p className="mt-2">
-                  <span className="font-mono text-ink-4">1.</span>{" "}
-                  <span className="font-medium text-ink">{g.first ?? "—"}</span>
-                </p>
-                <p>
-                  <span className="font-mono text-ink-4">2.</span>{" "}
-                  <span className="font-medium text-ink">{g.second ?? "—"}</span>
-                </p>
+                {g.provisional ? (
+                  <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-live-tint px-1.5 py-0.5 font-mono text-[9px] font-bold text-live">
+                    <span className="h-[4px] w-[4px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
+                    Live
+                  </span>
+                ) : null}
+                {g.table.some((r) => r.played > 0) ? (
+                  <table className="mt-2 w-full border-collapse text-[11px]">
+                    <thead>
+                      <tr className="text-ink-4">
+                        <th className="text-left font-medium">#</th>
+                        <th className="text-left font-medium">Team</th>
+                        <th className="text-right font-medium">P</th>
+                        <th className="text-right font-medium">GD</th>
+                        <th className="text-right font-medium">Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.table.map((r: GroupTableRow) => {
+                        const advancing = r.rank <= 2;
+                        const isThird = r.rank === 3;
+                        return (
+                          <tr
+                            key={r.code}
+                            className={
+                              advancing
+                                ? "font-bold text-ink"
+                                : isThird
+                                  ? "text-ink-2"
+                                  : "text-ink-4"
+                            }
+                          >
+                            <td className="py-0.5 text-left font-mono">{r.rank}</td>
+                            <td className="py-0.5 text-left">
+                              {r.code}
+                              {r.tied ? <span className="ml-1 text-ink-4">=</span> : null}
+                            </td>
+                            <td className="py-0.5 text-right tabular-nums">{r.played}</td>
+                            <td className="py-0.5 text-right tabular-nums">
+                              {r.gd > 0 ? `+${r.gd}` : r.gd}
+                            </td>
+                            <td className="py-0.5 text-right font-mono tabular-nums">{r.pts}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <>
+                    <p className="mt-2">
+                      <span className="font-mono text-ink-4">1.</span>{" "}
+                      <span className="font-medium text-ink">{g.first ?? "—"}</span>
+                    </p>
+                    <p>
+                      <span className="font-mono text-ink-4">2.</span>{" "}
+                      <span className="font-medium text-ink">{g.second ?? "—"}</span>
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           );

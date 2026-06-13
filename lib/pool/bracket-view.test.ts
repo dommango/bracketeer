@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildBracketView } from "./bracket-view";
 import { GROUPS, TEAMS, R32 } from "@/lib/scoring/data";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
+import type { GroupResultRow } from "./group-table";
 
 const groups = Object.keys(GROUPS);
 
@@ -46,5 +47,44 @@ describe("buildBracketView", () => {
     // Group A runner-up is the home side of match 73 ({pos:2, group:A}).
     const m73 = view.rounds[0].matches.find((m) => m.matchNo === R32[0].id)!;
     expect(m73.homeCode).toBe(GROUPS.A[1]);
+  });
+});
+
+const results = (over: Partial<Results> = {}): Results => ({
+  ...emptyPicks(),
+  finalGoals: null,
+  ...over,
+});
+
+describe("buildBracketView group tables", () => {
+  it("defaults to no table and non-provisional when no group rows are given", () => {
+    const view = buildBracketView(results());
+    const a = view.groups.find((g) => g.group === "A")!;
+    expect(a.table).toEqual([]);
+    expect(a.provisional).toBe(false);
+  });
+
+  it("fills provisional 1st/2nd from the live table when the group is not official", () => {
+    // Group A = MEX, RSA, KOR, CZE. MEX wins, RSA second.
+    const rows: GroupResultRow[] = [
+      { homeCode: "MEX", awayCode: "KOR", homeScore: 2, awayScore: 0 },
+      { homeCode: "RSA", awayCode: "CZE", homeScore: 1, awayScore: 0 },
+    ];
+    const view = buildBracketView(results(), new Map(), rows);
+    const a = view.groups.find((g) => g.group === "A")!;
+    expect(a.provisional).toBe(true);
+    expect(a.first).toBe("Mexico");
+    expect(a.table.length).toBe(4);
+    expect(a.table[0].code).toBe("MEX");
+  });
+
+  it("prefers the official result over the live table", () => {
+    const rows: GroupResultRow[] = [
+      { homeCode: "MEX", awayCode: "KOR", homeScore: 2, awayScore: 0 },
+    ];
+    const view = buildBracketView(results({ groupFirst: { A: "KOR" } }), new Map(), rows);
+    const a = view.groups.find((g) => g.group === "A")!;
+    expect(a.provisional).toBe(false);
+    expect(a.first).toBe("Korea Republic");
   });
 });

@@ -4,6 +4,7 @@
 
 import { resolveBracket } from "./bracket";
 import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
+import { computeGroupTables, provisionalStandings, type GroupResultRow, type GroupTableRow } from "./group-table";
 import type { Results } from "@/lib/scoring/types";
 
 export interface BracketMatch {
@@ -27,6 +28,8 @@ export interface GroupStanding {
   group: string;
   first: string | null;
   second: string | null;
+  table: GroupTableRow[];
+  provisional: boolean;
 }
 
 export interface BracketView {
@@ -48,6 +51,7 @@ const teamName = (code: string | null | undefined): string =>
 export function buildBracketView(
   results: Results,
   scores: Map<number, MatchScore> = new Map(),
+  groupRows: GroupResultRow[] = [],
 ): BracketView {
   const bracket = resolveBracket(results);
 
@@ -76,11 +80,22 @@ export function buildBracketView(
     { label: "Final", matches: [row(FINAL.id)] },
   ];
 
-  const groups: GroupStanding[] = Object.keys(GROUPS).map((g) => ({
-    group: g,
-    first: results.groupFirst?.[g] ? teamName(results.groupFirst[g]) : null,
-    second: results.groupSecond?.[g] ? teamName(results.groupSecond[g]) : null,
-  }));
+  const hasGroupRows = groupRows.length > 0;
+  const tables = hasGroupRows ? computeGroupTables(groupRows) : {};
+  const provisional = hasGroupRows ? provisionalStandings(tables) : { groupFirst: {}, groupSecond: {}, thirdAdvance: [] };
+  const groups: GroupStanding[] = Object.keys(GROUPS).map((g) => {
+    const officialFirst = results.groupFirst?.[g];
+    const isProvisional = !officialFirst && Boolean(provisional.groupFirst[g]);
+    const firstCode = officialFirst ?? provisional.groupFirst[g];
+    const secondCode = officialFirst ? results.groupSecond?.[g] : provisional.groupSecond[g];
+    return {
+      group: g,
+      first: firstCode ? teamName(firstCode) : null,
+      second: secondCode ? teamName(secondCode) : null,
+      table: tables[g] ?? [],
+      provisional: isProvisional,
+    };
+  });
 
   const thirds = (results.thirdAdvance ?? []).map((c) => teamName(c));
 
