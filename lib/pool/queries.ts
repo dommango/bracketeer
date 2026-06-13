@@ -159,6 +159,7 @@ async function provisionalGroupPoints(
   const groupResults = await prisma.result.findMany({
     where: {
       status: { in: ["LIVE", "FINAL"] },
+      // Group matches are 1–72 (see lib/pool/rounds.ts); R32 starts at 73.
       match: { tournamentId, matchNo: { lte: 72 } },
     },
     select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
