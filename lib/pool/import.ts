@@ -1,6 +1,8 @@
 // Import a contestant submission (parsed from the friend group's CSV) into a
-// pool as an Entry + Pick rows. Idempotent: re-importing the same contestant
-// replaces their entry's picks in a single transaction.
+// pool as an Entry + Pick rows. A user may own more than one bracket, so an
+// entry is identified per *bracket* by (poolId, claimEmail, label): re-importing
+// the same bracket replaces its picks in place, while a same-email submission
+// under a different label is added as a separate entry.
 
 import { prisma } from "@/lib/db";
 import { parseCsv, csvRowsToSubmission } from "@/lib/scoring/csv";
@@ -53,9 +55,9 @@ export async function importSubmission(
   try {
     return await writeSubmission(poolId, sub);
   } catch (err) {
-    // A concurrent import of the same contestant can slip past findFirst; the
-    // (poolId, claimEmail) unique rejects the duplicate — retry once so the
-    // loser updates the winner's row instead of failing the file.
+    // A concurrent import of the same bracket can slip past findFirst; the
+    // (poolId, claimEmail, label) unique rejects the duplicate — retry once so
+    // the loser updates the winner's row instead of failing the file.
     if ((err as { code?: string }).code === "P2002") {
       return writeSubmission(poolId, sub);
     }
@@ -70,8 +72,11 @@ async function writeSubmission(poolId: string, sub: Submission): Promise<ImportR
   const pickRows = submissionToPickRows(sub);
 
   return prisma.$transaction(async (tx) => {
+    // Identify the bracket by (pool, claimEmail, label) so a user's other
+    // same-email brackets aren't overwritten. claimEmail may be null (email-less
+    // CSV) — Prisma renders that as `claimEmail IS NULL`, matching on label.
     const existing = await tx.entry.findFirst({
-      where: claimEmail ? { poolId, claimEmail } : { poolId, label },
+      where: { poolId, claimEmail, label },
     });
 
     if (existing) {
