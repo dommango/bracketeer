@@ -5,7 +5,7 @@
   },
   "deploy": {
     "startCommand": "npm run cron",
-    "cronSchedule": "*/5 * * * *",
+    "cronSchedule": "* * * * *",
     "restartPolicyType": "NEVER"
   }
 }
