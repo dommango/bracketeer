@@ -7,8 +7,9 @@ describe("slotLabel", () => {
     expect(slotLabel("2F")).toBe("2F");
   });
 
-  it("collapses the third-place pool to '3rd'", () => {
-    expect(slotLabel("3rd:ABCDF")).toBe("3rd");
+  it("names the advancing third-place pool by its candidate groups", () => {
+    expect(slotLabel("3rd:ABCDF")).toBe("3rd A/B/C/D/F");
+    expect(slotLabel("3rd")).toBe("3rd");
   });
 
   it("labels winners by their source round + index", () => {
@@ -43,10 +44,10 @@ describe("KNOCKOUT_SLOT_REFS", () => {
   });
 
   it("R32 uses group-position refs", () => {
-    // Every R32 ref is a group slot (1A/2B) or a third-place pool (3rd).
+    // Every R32 ref is a group slot (1A/2B) or a third-place pool (3rd A/B/…).
     for (const m of [73, 80, 88]) {
       for (const ref of KNOCKOUT_SLOT_REFS[m]) {
-        expect(slotLabel(ref)).toMatch(/^([12][A-L]|3rd)$/);
+        expect(slotLabel(ref)).toMatch(/^([12][A-L]|3rd( [A-L](\/[A-L])*)?)$/);
       }
     }
   });

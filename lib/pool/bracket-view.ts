@@ -6,6 +6,7 @@ import { resolveBracket } from "./bracket";
 import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { computeGroupTables, provisionalStandings, type GroupResultRow, type GroupTableRow } from "./group-table";
 import { slotLabel, KNOCKOUT_SLOT_REFS } from "./slot-label";
+import { matchTag } from "./rounds";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import type { Results } from "@/lib/scoring/types";
 
@@ -31,6 +32,8 @@ export interface BracketMatch {
   homeScore: number | null;
   awayScore: number | null;
   live: boolean;
+  tag: string; // per-match knockout tag, e.g. "R32-1"
+  scheduledAt: string | null; // ISO kickoff
 }
 
 export interface BracketRound {
@@ -86,6 +89,8 @@ export function buildBracketView(
       homeScore: s?.homeScore ?? null,
       awayScore: s?.awayScore ?? null,
       live: s?.status === "LIVE",
+      tag: matchTag(matchNo),
+      scheduledAt: kickoffFor(matchNo)?.toISOString() ?? null,
     };
   };
 
