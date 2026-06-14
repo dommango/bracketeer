@@ -29,6 +29,11 @@ describe("schedule", () => {
     expect(v!.cityToken in HOST_CITIES).toBe(true);
     expect(venueFor(999)).toBeNull();
   });
+  it("places Group G's BEL–EGY (37) at Lumen Field, Seattle", () => {
+    // Regression guard: this fixture was previously mis-mapped to Vancouver.
+    expect(venueFor(37)?.cityToken).toBe("seattle");
+    expect(venueFor(41)?.cityToken).toBe("vancouver"); // EGY–NZL stays Vancouver
+  });
   it("defines a kickoff instant for every match 1–104, all in the tournament window", () => {
     expect(Object.keys(MATCH_KICKOFF_UTC)).toHaveLength(104);
     // Opener (match 1) and final (match 104) anchor the window.
