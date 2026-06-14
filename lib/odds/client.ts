@@ -53,6 +53,7 @@ export async function fetchOddsEvents(signal?: AbortSignal): Promise<OddsEvent[]
     `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=h2h&oddsFormat=decimal`;
   const res = await fetch(url, { cache: "no-store", signal });
   if (!res.ok) throw new Error(`Odds API responded ${res.status}`);
-  const json = (await res.json()) as ApiEvent[];
-  return parseOddsEvents(json);
+  const json = await res.json();
+  if (!Array.isArray(json)) throw new Error("Odds API: unexpected response shape");
+  return parseOddsEvents(json as ApiEvent[]);
 }
