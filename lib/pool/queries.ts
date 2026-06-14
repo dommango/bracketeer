@@ -496,6 +496,7 @@ export async function getNextMatch(
     full?.result?.homeTeamCode ?? (isGroup ? full?.homeSlotRef : resolved[picked.matchNo]?.home) ?? null;
   const away =
     full?.result?.awayTeamCode ?? (isGroup ? full?.awaySlotRef : resolved[picked.matchNo]?.away) ?? null;
+  const v = venueFor(picked.matchNo);
   return {
     matchNo: picked.matchNo,
     roundCode: picked.roundCode,
@@ -503,6 +504,9 @@ export async function getNextMatch(
     home,
     away,
     yourPick,
+    venue: v?.venue ?? null,
+    city: v?.city ?? null,
+    cityToken: v?.cityToken ?? null,
   };
 }
 

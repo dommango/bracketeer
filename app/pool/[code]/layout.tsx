@@ -9,19 +9,6 @@ import { BottomNav } from "./BottomNav";
 // Hero reflects request-time session + entry count.
 export const dynamic = "force-dynamic";
 
-const STATUS_LABEL: Record<string, string> = {
-  UPCOMING: "Upcoming",
-  LIVE: "Live",
-  COMPLETE: "Final",
-};
-
-// Badge styling per tournament status: gold for upcoming, red for live, neutral for final.
-const STATUS_BADGE: Record<string, string> = {
-  UPCOMING: "bg-gold text-pitch-deep",
-  LIVE: "bg-live text-white",
-  COMPLETE: "bg-white/15 text-white",
-};
-
 // Buttons floating over the hero artwork share the frosted-dark vocabulary.
 const FROSTED_BUTTON: React.CSSProperties = {
   background: "rgba(0,0,0,0.45)",
@@ -73,25 +60,13 @@ export default async function PoolLayout({
             }}
           />
           <div className="relative">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
-                  {pool.tournamentName}
-                </p>
-                <h1 className="mt-1 break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
-                  {pool.name}
-                </h1>
-              </div>
-              <span
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] ${
-                  STATUS_BADGE[pool.tournamentStatus] ?? "bg-white/15 text-white"
-                }`}
-              >
-                {pool.tournamentStatus === "LIVE" ? (
-                  <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-                ) : null}
-                {STATUS_LABEL[pool.tournamentStatus] ?? pool.tournamentStatus}
-              </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
+                {pool.tournamentName}
+              </p>
+              <h1 className="mt-1 break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+                {pool.name}
+              </h1>
             </div>
 
             <div className="mt-4 text-sm text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]">

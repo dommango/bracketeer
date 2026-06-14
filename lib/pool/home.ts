@@ -121,6 +121,9 @@ export interface HomeNextMatch {
   home: string | null; // team code, once known
   away: string | null;
   yourPick: { code: string; name: string } | null; // your winner pick (scored KO only)
+  venue: string | null;
+  city: string | null;
+  cityToken: string | null;
 }
 
 // Your headline numbers for the dashboard, drawn from your primary entry's

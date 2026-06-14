@@ -44,7 +44,7 @@ const teamName = (code: string | null): string =>
   (code && TEAMS[code as keyof typeof TEAMS]) || "TBD";
 
 const CARD_CLASS =
-  "block rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch";
+  "flex h-full flex-col rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch";
 
 function LiveBadge({ minute }: { minute?: number | null }) {
   return (
@@ -115,7 +115,7 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
           </span>
         </div>
       ) : null}
-      <div className="mt-2">
+      <div className="mt-auto pt-2">
         <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
       </div>
     </Link>
@@ -145,6 +145,9 @@ function NextMatchCard({ match, code }: { match: HomeNextMatch; code: string }) 
           </span>
         </div>
       ) : null}
+      <div className="mt-auto pt-2">
+        <VenueLine venue={match.venue} city={match.city} cityToken={match.cityToken} />
+      </div>
     </Link>
   );
 }

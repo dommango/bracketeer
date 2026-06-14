@@ -91,12 +91,12 @@ function StandingCard({
       <p className={LABEL}>Your standing</p>
       <div className="mt-2 flex items-end gap-4">
         <div className="leading-none">
-          <span className="font-display text-[44px] text-ink">#{you.rank}</span>
+          <span className="font-display text-[40px] text-ink">#{you.rank}</span>
           <span className="ml-1.5 text-sm text-ink-3">of {you.entryCount}</span>
         </div>
         <div className="ml-auto text-right leading-none">
-          <CountUp value={you.total} className="font-display text-[32px] tabular-nums text-ink" />
-          <span className="text-xs text-ink-3"> pts</span>
+          <CountUp value={you.total} className="font-display text-[40px] tabular-nums text-ink" />
+          <span className="ml-1.5 text-sm text-ink-3">pts</span>
         </div>
       </div>
       <p className="mt-3 text-sm text-ink-2">
