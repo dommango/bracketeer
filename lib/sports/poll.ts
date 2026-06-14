@@ -150,6 +150,8 @@ export async function pollScores(): Promise<PollSummary> {
       winnerCode,
       homeScore: f.homeGoals,
       awayScore: f.awayGoals,
+      homePens: f.homePens,
+      awayPens: f.awayPens,
       final: true,
     });
     if (didApply) applied += 1;

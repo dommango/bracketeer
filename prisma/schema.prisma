@@ -152,6 +152,8 @@ model Result {
   awayTeamCode String?
   homeScore    Int?
   awayScore    Int?
+  homePens     Int?
+  awayPens     Int?
   winnerCode   String?
   elapsed      Int?
   status       ResultStatus @default(SCHEDULED)

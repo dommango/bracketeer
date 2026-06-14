@@ -86,6 +86,8 @@ interface ResolvableMatch {
     winnerCode: string | null;
     status: string | null;
     elapsed: number | null;
+    homePens: number | null;
+    awayPens: number | null;
   } | null;
 }
 
@@ -114,6 +116,8 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
     winnerCode: m.result?.winnerCode ?? r?.winner ?? null,
     resultStatus: (m.result?.status as MatchStatus | undefined) ?? null,
     elapsed: m.result?.elapsed ?? null,
+    homePens: m.result?.homePens ?? null,
+    awayPens: m.result?.awayPens ?? null,
   };
 }
 
@@ -529,6 +533,8 @@ export async function getMatchCenter(
           winnerCode: true,
           status: true,
           elapsed: true,
+          homePens: true,
+          awayPens: true,
         },
       },
     },
@@ -563,6 +569,8 @@ export async function getLastMatch(
       winnerCode: true,
       status: true,
       elapsed: true,
+      homePens: true,
+      awayPens: true,
       match: {
         select: {
           matchNo: true,
@@ -593,6 +601,8 @@ export async function getLastMatch(
       winnerCode: result.winnerCode,
       status: result.status,
       elapsed: result.elapsed,
+      homePens: result.homePens,
+      awayPens: result.awayPens,
     },
   };
 
@@ -631,6 +641,8 @@ export async function getLiveMatches(
           winnerCode: true,
           status: true,
           elapsed: true,
+          homePens: true,
+          awayPens: true,
         },
       },
     },
@@ -711,6 +723,8 @@ export interface MatchDetail {
   scheduledAt: string | null;
   status: MatchStatus;
   elapsed: number | null; // live match minute when LIVE, else null
+  homePens: number | null; // shootout score when the tie went to penalties
+  awayPens: number | null;
   home: MatchDetailSide;
   away: MatchDetailSide;
   winnerCode: string | null;
@@ -754,6 +768,8 @@ export async function getMatchDetail(
           winnerCode: true,
           status: true,
           elapsed: true,
+          homePens: true,
+          awayPens: true,
         },
       },
     },
@@ -814,6 +830,8 @@ export async function getMatchDetail(
     scheduledAt: match.scheduledAt ? match.scheduledAt.toISOString() : null,
     status,
     elapsed: status === "LIVE" ? (match.result?.elapsed ?? null) : null,
+    homePens: match.result?.homePens ?? null,
+    awayPens: match.result?.awayPens ?? null,
     home: { code: homeCode, name: teamName(homeCode), score: match.result?.homeScore ?? null },
     away: { code: awayCode, name: teamName(awayCode), score: match.result?.awayScore ?? null },
     winnerCode,
@@ -934,6 +952,8 @@ export async function getGroupMatchCenter(
           winnerCode: true,
           status: true,
           elapsed: true,
+          homePens: true,
+          awayPens: true,
         },
       },
     },

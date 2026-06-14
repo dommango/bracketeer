@@ -51,6 +51,8 @@ export interface KnockoutInput {
   winnerCode: TeamCode;
   homeScore?: number | null;
   awayScore?: number | null;
+  homePens?: number | null; // shootout score when the tie went to penalties
+  awayPens?: number | null;
   final?: boolean; // default true; false marks the match LIVE rather than FINAL
   source?: "API" | "MANUAL"; // default MANUAL
 }
@@ -91,6 +93,8 @@ async function setKnockoutResultLocked(
     awayTeamCode: slot?.away ?? null,
     homeScore: input.homeScore ?? null,
     awayScore: input.awayScore ?? null,
+    homePens: input.homePens ?? null,
+    awayPens: input.awayPens ?? null,
     winnerCode: winner,
     final: input.final ?? true,
     source: input.source ?? "MANUAL",
@@ -402,6 +406,8 @@ interface ResultRowData {
   awayTeamCode: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  homePens?: number | null;
+  awayPens?: number | null;
   winnerCode: string;
   final: boolean;
   source: "API" | "MANUAL";
@@ -430,6 +436,8 @@ async function mirrorResultRow(
       awayTeamCode: data.awayTeamCode,
       homeScore: data.homeScore,
       awayScore: data.awayScore,
+      homePens: data.homePens ?? null,
+      awayPens: data.awayPens ?? null,
       winnerCode: data.winnerCode,
       status,
       source: data.source,
@@ -440,6 +448,8 @@ async function mirrorResultRow(
       awayTeamCode: data.awayTeamCode,
       homeScore: data.homeScore,
       awayScore: data.awayScore,
+      homePens: data.homePens ?? null,
+      awayPens: data.awayPens ?? null,
       winnerCode: data.winnerCode,
       status,
       source: data.source,

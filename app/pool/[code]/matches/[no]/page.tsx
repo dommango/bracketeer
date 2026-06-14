@@ -14,10 +14,12 @@ export const dynamic = "force-dynamic";
 
 function TeamRow({
   side,
+  pens,
   isWinner,
   decided,
 }: {
   side: MatchDetail["home"];
+  pens: number | null;
   isWinner: boolean;
   decided: boolean;
 }) {
@@ -29,6 +31,9 @@ function TeamRow({
         {side.name}
         {side.code ? <span className="ml-2 font-mono text-xs text-ink-3">{side.code}</span> : null}
       </span>
+      {pens != null ? (
+        <span className="font-mono text-xs font-semibold tabular-nums text-ink-3">({pens} pens)</span>
+      ) : null}
       {side.score !== null ? (
         <span className="font-display text-2xl tabular-nums">{side.score}</span>
       ) : null}
@@ -158,9 +163,9 @@ export default async function MatchDetailPage({
             </span>
           ) : null}
         </div>
-        <TeamRow side={detail.home} isWinner={decided && detail.winnerCode === detail.home.code} decided={decided} />
+        <TeamRow side={detail.home} pens={detail.homePens} isWinner={decided && detail.winnerCode === detail.home.code} decided={decided} />
         <div className="h-px bg-line-soft" />
-        <TeamRow side={detail.away} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
+        <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
       </div>
 
       <MatchTimeline items={detail.timeline} />

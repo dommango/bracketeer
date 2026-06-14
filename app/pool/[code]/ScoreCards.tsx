@@ -44,11 +44,13 @@ function TeamRow({
   code,
   name,
   score,
+  pens,
   bold,
 }: {
   code: string | null;
   name: string;
   score: number | null;
+  pens?: number | null;
   bold: boolean;
 }) {
   return (
@@ -58,6 +60,9 @@ function TeamRow({
         {name}
         {code ? <span className="ml-1.5 font-mono text-[10px] text-ink-3">{code}</span> : null}
       </span>
+      {pens != null ? (
+        <span className="font-mono text-[11px] font-semibold tabular-nums text-ink-3">({pens})</span>
+      ) : null}
       {score !== null ? (
         <span className="font-mono text-2xl font-bold tabular-nums text-ink">{score}</span>
       ) : null}
@@ -85,9 +90,9 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
           </span>
         )}
       </div>
-      <TeamRow code={row.home.code} name={row.home.name} score={row.home.score} bold={homeWins} />
+      <TeamRow code={row.home.code} name={row.home.name} score={row.home.score} pens={row.homePens} bold={homeWins} />
       <div className="my-0.5 h-px bg-line-soft" />
-      <TeamRow code={row.away.code} name={row.away.name} score={row.away.score} bold={awayWins} />
+      <TeamRow code={row.away.code} name={row.away.name} score={row.away.score} pens={row.awayPens} bold={awayWins} />
       {row.yourPick ? (
         <div className="mt-2">
           <span className="inline-flex items-center rounded-full bg-pitch-tint px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-pitch-dark">
