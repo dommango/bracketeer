@@ -16,5 +16,18 @@ const res = await fetch(`${base}/api/cron/poll-scores`, {
 });
 
 const body = await res.text();
-console.log(`cron ${res.status}: ${body}`);
+console.log(`poll-scores ${res.status}: ${body}`);
+
+// Odds poll is best-effort: a failure here does not affect the score poll exit code.
+try {
+  const oddsRes = await fetch(`${base}/api/cron/poll-odds`, {
+    method: "POST",
+    headers: { "x-cron-secret": secret },
+  });
+  const oddsBody = await oddsRes.text();
+  console.log(`poll-odds ${oddsRes.status}: ${oddsBody}`);
+} catch (err) {
+  console.error("poll-odds fetch failed:", err);
+}
+
 process.exit(res.ok ? 0 : 1);
