@@ -30,6 +30,7 @@ import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { TEAMS } from "@/lib/scoring/data";
+import type { ImpliedProbs } from "@/lib/odds/map";
 import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone } from "@/lib/tz";
 import type { Picks, Results } from "@/lib/scoring/types";
@@ -81,7 +82,7 @@ interface ResolvableMatch {
   awaySlotRef: string | null;
   venue: string | null;
   city: string | null;
-  odds: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
+  odds: ImpliedProbs | null;
   result: {
     homeTeamCode: string | null;
     awayTeamCode: string | null;
@@ -770,7 +771,7 @@ export interface MatchDetail {
   yourPick: { code: string; name: string; correct: boolean | null } | null;
   timeline: TimelineItem[]; // goal/card events (empty when none fed)
   stats: StatBar[]; // paired team stats (empty when none fed)
-  odds: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
+  odds: ImpliedProbs | null;
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split

@@ -1,9 +1,12 @@
-type Probs = { homeWinProb: number; drawProb: number; awayWinProb: number };
+import type { ImpliedProbs } from "@/lib/odds/map";
+
 const pct = (x: number) => Math.round(x * 100);
 
-export function WinProbBar({ odds }: { odds: Probs | null }) {
+export function WinProbBar({ odds }: { odds: ImpliedProbs | null }) {
   if (!odds) return null;
-  const h = pct(odds.homeWinProb), d = pct(odds.drawProb), a = pct(odds.awayWinProb);
+  const h = pct(odds.homeWinProb);
+  const d = pct(odds.drawProb);
+  const a = 100 - h - d;
   return (
     <div className="mt-1.5">
       <div className="flex h-1.5 overflow-hidden rounded-full">

@@ -7,6 +7,7 @@
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { ROUND_ORDER, roundLabel, isScoredKnockout, type RoundCode } from "@/lib/pool/rounds";
 import { slotLabel } from "@/lib/pool/slot-label";
+import type { ImpliedProbs } from "@/lib/odds/map";
 
 export type MatchStatus = "SCHEDULED" | "LIVE" | "FINAL";
 
@@ -38,7 +39,7 @@ export interface MatchInput {
   venue?: string | null;
   city?: string | null;
   cityToken?: string | null;
-  odds?: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
+  odds?: ImpliedProbs | null;
 }
 
 export interface MatchCenterSide {
@@ -68,7 +69,7 @@ export interface MatchCenterRow {
   venue: string | null;
   city: string | null;
   cityToken: string | null;
-  odds: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
+  odds: ImpliedProbs | null;
 }
 
 export interface MatchCenterSection {
