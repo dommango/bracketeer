@@ -1,7 +1,7 @@
 import type { BracketView, BracketMatch, BracketRound } from "@/lib/pool/bracket-view";
 import type { GroupTableRow } from "@/lib/pool/group-table";
 import { R16, QF, SF, FINAL } from "@/lib/scoring/data";
-import { formatMatchDate } from "@/lib/pool/format";
+import { formatMatchDate, formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
 
 // Pre-order DFS from the Final (a-branch before b-branch) gives every knockout
@@ -93,20 +93,25 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
       className="rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm"
       style={{ borderLeft: `4px solid ${accent}` }}
     >
-      {m.live || decided ? (
-        <div className="mb-1 flex items-center justify-end">
-          {m.live ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
-              <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-              Live
-            </span>
-          ) : (
-            <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
-              Final
-            </span>
-          )}
-        </div>
-      ) : null}
+      <div className="mb-1 flex items-center justify-between gap-2">
+        {m.tag ? (
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-ink-4">
+            {m.tag}
+          </span>
+        ) : <span />}
+        {m.live ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
+            <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
+            Live
+          </span>
+        ) : decided ? (
+          <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
+            Final
+          </span>
+        ) : m.scheduledAt ? (
+          <span className="font-mono text-[10px] text-ink-3">{formatKickoff(m.scheduledAt)}</span>
+        ) : null}
+      </div>
       <Side
         name={m.home}
         code={m.homeCode}
