@@ -16,6 +16,8 @@ describe("normalizeTeam", () => {
     expect(normalizeTeam("South Korea")).toBe("KOR");
     expect(normalizeTeam("United States")).toBe("USA");
     expect(normalizeTeam("Ivory Coast")).toBe("CIV");
+    expect(normalizeTeam("Czech Republic")).toBe("CZE");
+    expect(normalizeTeam("Turkey")).toBe("TUR");
   });
   it("returns null for unknown", () => {
     expect(normalizeTeam("Atlantis")).toBeNull();
