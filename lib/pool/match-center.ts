@@ -66,6 +66,7 @@ export interface MatchCenterRow {
   yourPick: YourPick | null;
   venue: string | null;
   city: string | null;
+  cityToken: string | null;
 }
 
 export interface MatchCenterSection {
@@ -112,6 +113,7 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
     yourPick,
     venue: m.venue ?? null,
     city: m.city ?? null,
+    cityToken: m.cityToken ?? null,
   };
 }
 

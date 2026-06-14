@@ -30,6 +30,7 @@ import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { TEAMS } from "@/lib/scoring/data";
+import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone } from "@/lib/tz";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
@@ -124,6 +125,7 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
     awayRef: m.awaySlotRef,
     venue: m.venue ?? null,
     city: m.city ?? null,
+    cityToken: venueFor(m.matchNo)?.cityToken ?? null,
   };
 }
 
@@ -747,6 +749,7 @@ export interface MatchDetail {
   roundLabel: string;
   venue: string | null;
   city: string | null;
+  cityToken: string | null;
   scheduledAt: string | null;
   status: MatchStatus;
   elapsed: number | null; // live match minute when LIVE, else null
@@ -858,6 +861,7 @@ export async function getMatchDetail(
     roundLabel: roundLabel(match.roundCode),
     venue: match.venue ?? null,
     city: match.city ?? null,
+    cityToken: venueFor(matchNo)?.cityToken ?? null,
     scheduledAt: match.scheduledAt ? match.scheduledAt.toISOString() : null,
     status,
     elapsed: status === "LIVE" ? (match.result?.elapsed ?? null) : null,

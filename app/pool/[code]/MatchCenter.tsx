@@ -94,7 +94,7 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
         </div>
       ) : null}
       <div className="mt-1.5">
-        <VenueLine venue={row.venue} city={row.city} />
+        <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
       </div>
     </Link>
   );

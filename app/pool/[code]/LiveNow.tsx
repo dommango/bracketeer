@@ -74,7 +74,7 @@ function LiveCard({ row, code }: { row: MatchCenterRow; code: string }) {
         </div>
       ) : null}
       <div className="mt-2">
-        <VenueLine venue={row.venue} city={row.city} />
+        <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
       </div>
     </Link>
   );

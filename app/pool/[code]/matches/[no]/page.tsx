@@ -168,7 +168,7 @@ export default async function MatchDetailPage({
         <div className="h-px bg-line-soft" />
         <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
         <div className="mt-3">
-          <VenueLine venue={detail.venue} city={detail.city} />
+          <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} />
         </div>
       </div>
 
