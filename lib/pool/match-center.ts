@@ -35,6 +35,8 @@ export interface MatchInput {
   awayPens?: number | null;
   homeRef?: string | null; // feeder slot ref, for the placeholder name when unresolved
   awayRef?: string | null;
+  venue?: string | null;
+  city?: string | null;
 }
 
 export interface MatchCenterSide {
@@ -61,6 +63,8 @@ export interface MatchCenterRow {
   away: MatchCenterSide;
   winnerCode: string | null;
   yourPick: YourPick | null;
+  venue: string | null;
+  city: string | null;
 }
 
 export interface MatchCenterSection {
@@ -105,6 +109,8 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
     away: { code: m.awayCode, name: sideName(m.awayCode, m.awayRef), score: m.awayScore },
     winnerCode: m.winnerCode,
     yourPick,
+    venue: m.venue ?? null,
+    city: m.city ?? null,
   };
 }
 

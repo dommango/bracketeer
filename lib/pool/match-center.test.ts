@@ -95,4 +95,18 @@ describe("buildMatchCenter", () => {
       expect(sec.matches[0].yourPick).toBeNull();
     });
   });
+
+  it("carries venue and city onto the row", () => {
+    const sections = buildMatchCenter([
+      {
+        matchNo: 1, roundCode: "GROUP", scheduledAt: null,
+        homeCode: "MEX", awayCode: "BRA",
+        homeScore: null, awayScore: null, winnerCode: null, resultStatus: null,
+        venue: "Estadio Azteca", city: "Mexico City",
+      },
+    ]);
+    const row = sections[0].matches[0];
+    expect(row.venue).toBe("Estadio Azteca");
+    expect(row.city).toBe("Mexico City");
+  });
 });

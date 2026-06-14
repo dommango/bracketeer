@@ -78,6 +78,8 @@ interface ResolvableMatch {
   scheduledAt: Date | null;
   homeSlotRef: string | null;
   awaySlotRef: string | null;
+  venue: string | null;
+  city: string | null;
   result: {
     homeTeamCode: string | null;
     awayTeamCode: string | null;
@@ -120,6 +122,8 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
     awayPens: m.result?.awayPens ?? null,
     homeRef: m.homeSlotRef,
     awayRef: m.awaySlotRef,
+    venue: m.venue ?? null,
+    city: m.city ?? null,
   };
 }
 
@@ -535,6 +539,8 @@ export async function getMatchCenter(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
       result: {
@@ -589,6 +595,8 @@ export async function getLastMatch(
           matchNo: true,
           roundCode: true,
           scheduledAt: true,
+          venue: true,
+          city: true,
           homeSlotRef: true,
           awaySlotRef: true,
         },
@@ -604,6 +612,8 @@ export async function getLastMatch(
     matchNo: result.match.matchNo,
     roundCode: result.match.roundCode,
     scheduledAt: result.match.scheduledAt,
+    venue: result.match.venue ?? null,
+    city: result.match.city ?? null,
     homeSlotRef: result.match.homeSlotRef,
     awaySlotRef: result.match.awaySlotRef,
     result: {
@@ -643,6 +653,8 @@ export async function getLiveMatches(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
       result: {
@@ -733,6 +745,8 @@ export interface MatchDetail {
   matchNo: number;
   roundCode: string;
   roundLabel: string;
+  venue: string | null;
+  city: string | null;
   scheduledAt: string | null;
   status: MatchStatus;
   elapsed: number | null; // live match minute when LIVE, else null
@@ -770,6 +784,8 @@ export async function getMatchDetail(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
       result: {
@@ -840,6 +856,8 @@ export async function getMatchDetail(
     matchNo,
     roundCode: match.roundCode,
     roundLabel: roundLabel(match.roundCode),
+    venue: match.venue ?? null,
+    city: match.city ?? null,
     scheduledAt: match.scheduledAt ? match.scheduledAt.toISOString() : null,
     status,
     elapsed: status === "LIVE" ? (match.result?.elapsed ?? null) : null,
@@ -954,6 +972,8 @@ export async function getGroupMatchCenter(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
       result: {
