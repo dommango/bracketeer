@@ -119,7 +119,6 @@ async function main() {
       name: "FIFA World Cup 2026",
       sport: "football",
       startsAt: new Date(Date.UTC(2026, 5, 11, 19, 0, 0)),
-      status: "UPCOMING",
       scoringConfig: DEFAULT_SCORING,
     },
   });

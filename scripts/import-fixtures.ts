@@ -28,7 +28,7 @@ async function main() {
   const tournament = await prisma.tournament.findUniqueOrThrow({ where: { slug: "wc2026" } });
   await prisma.tournament.update({
     where: { id: tournament.id },
-    data: { officialResults: answer as unknown as object, status: "LIVE" },
+    data: { officialResults: answer as unknown as object },
   });
 
   const owner = await prisma.user.upsert({

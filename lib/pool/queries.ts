@@ -107,6 +107,19 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
   };
 }
 
+// Tournament status is derived, not stored: UPCOMING before kickoff, COMPLETE
+// once the final (match 104) is decided, LIVE in between. (The old stored
+// Tournament.status was never transitioned off UPCOMING, so the header badge
+// read "Upcoming" all tournament — deriving it keeps the badge honest.)
+async function deriveTournamentStatus(tournamentId: string, startsAt: Date): Promise<string> {
+  if (new Date() < startsAt) return "UPCOMING";
+  const final = await prisma.result.findFirst({
+    where: { status: "FINAL", match: { tournamentId, matchNo: 104 } },
+    select: { id: true },
+  });
+  return final ? "COMPLETE" : "LIVE";
+}
+
 export interface PoolHeader {
   id: string;
   name: string;
@@ -121,13 +134,16 @@ export interface PoolHeader {
 export async function getPoolHeader(code: string): Promise<PoolHeader | null> {
   const pool = await getPoolByCode(code);
   if (!pool) return null;
-  const entryCount = await prisma.entry.count({ where: { poolId: pool.id } });
+  const [entryCount, tournamentStatus] = await Promise.all([
+    prisma.entry.count({ where: { poolId: pool.id } }),
+    deriveTournamentStatus(pool.tournament.id, pool.tournament.startsAt),
+  ]);
   return {
     id: pool.id,
     name: pool.name,
     joinCode: pool.joinCode,
     tournamentName: pool.tournament.name,
-    tournamentStatus: pool.tournament.status,
+    tournamentStatus,
     entryCount,
   };
 }
@@ -284,13 +300,16 @@ const liveLeaderboard = cache(async (poolId: string): Promise<LeaderboardRow[]> 
 export async function getPoolView(code: string): Promise<PoolView | null> {
   const pool = await getPoolByCode(code);
   if (!pool) return null;
-  const leaderboard = await liveLeaderboard(pool.id);
+  const [leaderboard, tournamentStatus] = await Promise.all([
+    liveLeaderboard(pool.id),
+    deriveTournamentStatus(pool.tournament.id, pool.tournament.startsAt),
+  ]);
   return {
     id: pool.id,
     name: pool.name,
     joinCode: pool.joinCode,
     tournamentName: pool.tournament.name,
-    tournamentStatus: pool.tournament.status,
+    tournamentStatus,
     leaderboard,
   };
 }

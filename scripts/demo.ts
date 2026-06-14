@@ -64,7 +64,7 @@ async function main() {
   // Set the official answer key.
   await prisma.tournament.update({
     where: { id: tournament.id },
-    data: { officialResults: answer as unknown as object, status: "LIVE" },
+    data: { officialResults: answer as unknown as object },
   });
 
   // A throwaway owner + pool.

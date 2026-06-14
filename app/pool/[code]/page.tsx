@@ -44,7 +44,7 @@ export default async function PoolHomePage({
       code={code}
       signedIn={Boolean(sessionUser)}
       startsAt={pool.tournament.startsAt.toISOString()}
-      upcoming={pool.tournament.status === "UPCOMING"}
+      upcoming={new Date() < pool.tournament.startsAt}
       entryCount={fullBoard.length}
       hasMore={hasMore}
     />

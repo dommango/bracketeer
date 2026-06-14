@@ -73,19 +73,12 @@ model VerificationToken {
 // Tournament definition (generic; WC2026 is one seeded row)
 // ---------------------------------------------------------------------------
 
-enum TournamentStatus {
-  UPCOMING
-  LIVE
-  COMPLETE
-}
-
 model Tournament {
   id               String           @id @default(cuid())
   slug             String           @unique
   name             String
   sport            String           @default("football")
   startsAt         DateTime
-  status           TournamentStatus @default(UPCOMING)
   // Point values consumed by the scoring engine (groupExact, groupPartial, …).
   scoringConfig    Json
   // Optional structural metadata (round defs, labels) for generic tournaments.
