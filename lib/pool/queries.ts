@@ -23,6 +23,7 @@ import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { TEAMS } from "@/lib/scoring/data";
+import { startOfDayInZone } from "@/lib/tz";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
 import {
@@ -385,8 +386,9 @@ export async function getMovers(poolId: string, since: Date): Promise<Mover[]> {
 // null until there's a pre-today baseline so day-one imports don't masquerade as
 // "movement today" (the whole leaderboard would read as gained-from-zero).
 export async function getTodaysMover(poolId: string): Promise<HomeMover | null> {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  // "Today" rolls over at Eastern midnight (the pool's display zone), not the
+  // server's UTC midnight — see lib/tz.
+  const startOfDay = startOfDayInZone();
 
   const priorCount = await prisma.scoreSnapshot.count({
     where: { poolId, capturedAt: { lt: startOfDay } },
