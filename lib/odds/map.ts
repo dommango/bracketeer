@@ -35,6 +35,8 @@ const ALIASES: Record<string, string> = {
   "South Africa": "RSA",
   "Saudi Arabia": "KSA",
   "New Zealand": "NZL",
+  "Czech Republic": "CZE",
+  "Turkey": "TUR",
 };
 
 const NAME_TO_CODE: Record<string, string> = (() => {
