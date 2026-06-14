@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPoolByCode, getHomeView, getPoolView } from "@/lib/pool/queries";
+import { getPoolByCode, getHomeView, getPoolView, getPoolBracket } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { Home } from "./Home";
 
@@ -21,9 +21,10 @@ export default async function PoolHomePage({
   const access = await getPoolAccess(pool.id);
   const sessionUser = access?.user ?? (await getSessionUser());
 
-  const [view, poolView] = await Promise.all([
+  const [view, poolView, bracket] = await Promise.all([
     getHomeView(pool.id, sessionUser?.id ?? null),
     getPoolView(code),
+    getPoolBracket(pool.id),
   ]);
   const fullBoard = poolView?.leaderboard ?? [];
 
@@ -47,6 +48,7 @@ export default async function PoolHomePage({
       upcoming={new Date() < pool.tournament.startsAt}
       entryCount={fullBoard.length}
       hasMore={hasMore}
+      bracket={bracket}
     />
   );
 }

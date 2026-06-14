@@ -3,8 +3,10 @@ import { CountUp } from "./CountUp";
 import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
 import { ScoreCards } from "./ScoreCards";
+import { GroupStandings } from "./Bracket";
 import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
+import type { BracketView } from "@/lib/pool/bracket-view";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
@@ -220,6 +222,7 @@ export function Home({
   upcoming,
   entryCount,
   hasMore,
+  bracket,
 }: {
   view: HomeView;
   // Already truncated to the top rows (+ your row when you're below it).
@@ -232,6 +235,8 @@ export function Home({
   entryCount: number;
   // True when the pool has more entries than the truncated top rows shown here.
   hasMore: boolean;
+  // Live group standings + knockout bracket (null only if the pool has no tournament).
+  bracket: BracketView | null;
 }) {
   return (
     <div className="space-y-4">
@@ -273,6 +278,26 @@ export function Home({
           <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} />
         </div>
       </section>
+
+      {bracket &&
+      bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (
+        <section>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+              Group standings
+            </h2>
+            <Link
+              href={`/pool/${code}/bracket`}
+              className="text-xs font-semibold text-pitch hover:underline"
+            >
+              Full bracket →
+            </Link>
+          </div>
+          <div className="mt-2.5">
+            <GroupStandings view={bracket} />
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -66,6 +66,16 @@ export function Leaderboard({
 
   return (
     <>
+      {hasLive ? (
+        <div className="mb-3 flex items-start gap-2.5 rounded-2xl border border-gold/40 bg-gold-tint px-4 py-3">
+          <span aria-hidden className="mt-px text-base leading-none">⚡</span>
+          <p className="text-[13px] leading-snug text-ink-2">
+            <span className="font-bold text-ink">Standings are provisional.</span> Live points
+            from in-progress matches and unsettled groups update as results come in, and aren't
+            final until the group stage ends.
+          </p>
+        </div>
+      ) : null}
       <ol className="space-y-2">
       {rows.map((row) => {
         const b = (row.breakdown ?? {}) as Record<string, number>;
@@ -108,11 +118,6 @@ export function Leaderboard({
                   {row.total + (row.projected ?? 0)}
                 </span>
                 <span className="text-xs text-ink-3"> pts</span>
-                {row.projected ? (
-                  <span className="block font-mono text-[11px] tabular-nums text-positive">
-                    ▲ {row.projected} live
-                  </span>
-                ) : null}
               </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5 pl-[76px]">
@@ -150,13 +155,6 @@ export function Leaderboard({
         );
       })}
       </ol>
-      {hasLive ? (
-        <p className="mt-3 px-1 text-[11px] leading-relaxed text-ink-3">
-          <span className="font-mono text-positive">▲ live</span> points are provisional —
-          they reflect in-progress matches and not-yet-final group standings, and update as
-          results come in. Only finalized results count toward official scoring.
-        </p>
-      ) : null}
     </>
   );
 }

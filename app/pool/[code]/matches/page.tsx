@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getPoolByCode, getGroupMatchCenter } from "@/lib/pool/queries";
+import { getPoolByCode, getGroupMatchCenter, getPoolBracket } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
 import { MatchCenter } from "../MatchCenter";
+import { GroupStandings } from "../Bracket";
 
 // Fixtures + live status change at request time.
 export const dynamic = "force-dynamic";
@@ -16,14 +17,30 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const sections = await getGroupMatchCenter(pool.id, sessionUser?.id ?? null);
+  const [sections, bracket] = await Promise.all([
+    getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
+    getPoolBracket(pool.id),
+  ]);
 
   return (
-    <section>
-      <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Match center</h2>
-      <div className="mt-2.5">
-        <MatchCenter sections={sections} code={code} />
-      </div>
-    </section>
+    <div className="space-y-6">
+      {bracket ? (
+        <section>
+          <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+            Group standings
+          </h2>
+          <div className="mt-2.5">
+            <GroupStandings view={bracket} />
+          </div>
+        </section>
+      ) : null}
+
+      <section>
+        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Match center</h2>
+        <div className="mt-2.5">
+          <MatchCenter sections={sections} code={code} />
+        </div>
+      </section>
+    </div>
   );
 }
