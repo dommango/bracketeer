@@ -54,7 +54,7 @@ export default async function SignInPage({
               boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
             }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">Bracketeer</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest 2026</p>
             <h1 className="mt-2.5 font-display text-2xl [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
               Sign in
             </h1>

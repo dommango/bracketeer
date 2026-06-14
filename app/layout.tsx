@@ -9,7 +9,7 @@ const body = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
 
 export const metadata: Metadata = {
-  title: "Bracketeer — FIFA World Cup 2026 Pool",
+  title: "HessFest 2026 — FIFA World Cup Pool",
   description: "Live scores, leaderboard, and chat for your FIFA World Cup 2026 bracket pool.",
   manifest: "/manifest.webmanifest",
 };
