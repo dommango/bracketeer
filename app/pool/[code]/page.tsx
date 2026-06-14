@@ -49,6 +49,7 @@ export default async function PoolHomePage({
       entryCount={fullBoard.length}
       hasMore={hasMore}
       bracket={bracket}
+      showMedals={poolView?.groupStageComplete ?? false}
     />
   );
 }

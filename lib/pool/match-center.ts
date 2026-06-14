@@ -6,11 +6,17 @@
 
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { ROUND_ORDER, roundLabel, isScoredKnockout, type RoundCode } from "@/lib/pool/rounds";
+import { slotLabel } from "@/lib/pool/slot-label";
 
 export type MatchStatus = "SCHEDULED" | "LIVE" | "FINAL";
 
 const teamName = (code: string | null | undefined): string =>
   code && TEAMS[code] ? TEAMS[code] : "TBD";
+
+// A side's display name: the real team once known, else the humanized feeder
+// slot ("1A", "SF1", …) rather than a bare "TBD".
+const sideName = (code: string | null | undefined, ref: string | null | undefined): string =>
+  code && TEAMS[code] ? TEAMS[code] : slotLabel(ref);
 
 // One resolved match as it comes out of the DB layer (teams already resolved to
 // codes; scores/status from the Result row when present).
@@ -27,6 +33,8 @@ export interface MatchInput {
   elapsed?: number | null; // live match minute (from the API feed)
   homePens?: number | null; // shootout score when the tie went to penalties
   awayPens?: number | null;
+  homeRef?: string | null; // feeder slot ref, for the placeholder name when unresolved
+  awayRef?: string | null;
 }
 
 export interface MatchCenterSide {
@@ -93,8 +101,8 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
     elapsed: status === "LIVE" ? (m.elapsed ?? null) : null,
     homePens: m.homePens ?? null,
     awayPens: m.awayPens ?? null,
-    home: { code: m.homeCode, name: teamName(m.homeCode), score: m.homeScore },
-    away: { code: m.awayCode, name: teamName(m.awayCode), score: m.awayScore },
+    home: { code: m.homeCode, name: sideName(m.homeCode, m.homeRef), score: m.homeScore },
+    away: { code: m.awayCode, name: sideName(m.awayCode, m.awayRef), score: m.awayScore },
     winnerCode: m.winnerCode,
     yourPick,
   };

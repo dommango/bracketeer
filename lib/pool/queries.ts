@@ -118,6 +118,8 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
     elapsed: m.result?.elapsed ?? null,
     homePens: m.result?.homePens ?? null,
     awayPens: m.result?.awayPens ?? null,
+    homeRef: m.homeSlotRef,
+    awayRef: m.awaySlotRef,
   };
 }
 
@@ -168,8 +170,17 @@ export interface PoolView {
   joinCode: string;
   tournamentName: string;
   tournamentStatus: string;
+  groupStageComplete: boolean;
   leaderboard: LeaderboardRow[];
 }
+
+// True once all 72 group matches are FINAL — gates medals + the knockouts default.
+export const isGroupStageComplete = cache(async (tournamentId: string): Promise<boolean> => {
+  const finalGroupMatches = await prisma.match.count({
+    where: { tournamentId, roundCode: "GROUP", result: { status: "FINAL" } },
+  });
+  return finalGroupMatches >= 72;
+});
 
 // Knockout pick rows carry the match id in their CSV-mirrored category ("M73").
 const KNOCKOUT_PICK_SECTIONS = [
@@ -314,9 +325,10 @@ export const liveLeaderboard = cache(async (poolId: string): Promise<Leaderboard
 export async function getPoolView(code: string): Promise<PoolView | null> {
   const pool = await getPoolByCode(code);
   if (!pool) return null;
-  const [leaderboard, tournamentStatus] = await Promise.all([
+  const [leaderboard, tournamentStatus, groupStageComplete] = await Promise.all([
     liveLeaderboard(pool.id),
     deriveTournamentStatus(pool.tournament.id, pool.tournament.startsAt),
+    isGroupStageComplete(pool.tournament.id),
   ]);
   return {
     id: pool.id,
@@ -324,6 +336,7 @@ export async function getPoolView(code: string): Promise<PoolView | null> {
     joinCode: pool.joinCode,
     tournamentName: pool.tournament.name,
     tournamentStatus,
+    groupStageComplete,
     leaderboard,
   };
 }

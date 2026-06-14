@@ -223,6 +223,7 @@ export function Home({
   entryCount,
   hasMore,
   bracket,
+  showMedals,
 }: {
   view: HomeView;
   // Already truncated to the top rows (+ your row when you're below it).
@@ -237,6 +238,8 @@ export function Home({
   hasMore: boolean;
   // Live group standings + knockout bracket (null only if the pool has no tournament).
   bracket: BracketView | null;
+  // Show leaderboard medals (only after the group stage completes).
+  showMedals: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -275,7 +278,7 @@ export function Home({
           ) : null}
         </div>
         <div className="mt-2.5">
-          <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} />
+          <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} showMedals={showMedals} />
         </div>
       </section>
 
@@ -287,7 +290,7 @@ export function Home({
               Group standings
             </h2>
             <Link
-              href={`/pool/${code}/bracket`}
+              href={`/pool/${code}/matches?view=knockouts`}
               className="text-xs font-semibold text-pitch hover:underline"
             >
               Full bracket →

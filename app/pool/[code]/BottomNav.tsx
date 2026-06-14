@@ -9,7 +9,7 @@ import type { ReactNode, SVGProps } from "react";
 // a pitch-tint pill behind the icon + pitch-dark label — two reinforcing cues.
 // Home matches exactly; the other tabs match by prefix so nested children stay lit.
 
-type TabKey = "home" | "bracket" | "matches" | "chat";
+type TabKey = "home" | "matches" | "chat";
 
 type Tab = {
   key: TabKey;
@@ -34,17 +34,10 @@ export function BottomNav({ code }: { code: string }) {
     },
     {
       key: "matches",
-      label: "Matches",
+      label: "Fixtures",
       href: `${base}/matches`,
       isActive: prefix(`${base}/matches`),
       icon: <MatchesGlyph />,
-    },
-    {
-      key: "bracket",
-      label: "Bracket",
-      href: `${base}/bracket`,
-      isActive: prefix(`${base}/bracket`),
-      icon: <BracketGlyph />,
     },
     {
       key: "chat",
@@ -140,19 +133,6 @@ function HomeGlyph() {
       <path d="M4 10.5 12 4l8 6.5" />
       <path d="M5.5 9.5V20h13V9.5" />
       <path d="M10 20v-5h4v5" />
-    </svg>
-  );
-}
-
-function BracketGlyph() {
-  // Two halves of a knockout tree meeting in the middle.
-  return (
-    <svg {...svgProps}>
-      <path d="M3 5h2.5v6H10" />
-      <path d="M3 19h2.5v-6H10" />
-      <path d="M21 5h-2.5v6H14" />
-      <path d="M21 19h-2.5v-6H14" />
-      <path d="M10 12h4" />
     </svg>
   );
 }

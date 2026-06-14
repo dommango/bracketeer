@@ -2,8 +2,22 @@ import Link from "next/link";
 import type { MatchCenterRow } from "@/lib/pool/match-center";
 import type { HomeNextMatch } from "@/lib/pool/home";
 import { Flag } from "./Flag";
-import { TEAMS } from "@/lib/scoring/data";
+import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { formatKickoff } from "@/lib/pool/format";
+
+// code → group letter, for labelling a group match by its actual group (A–L).
+const TEAM_GROUP: Record<string, string> = Object.fromEntries(
+  Object.entries(GROUPS).flatMap(([letter, codes]) => codes.map((c) => [c, letter])),
+);
+
+// Round label, but a group match reads as its specific group ("Group A").
+function roundLabelFor(roundCode: string, homeCode: string | null, awayCode: string | null): string {
+  if (roundCode === "GROUP") {
+    const letter = TEAM_GROUP[homeCode ?? ""] ?? TEAM_GROUP[awayCode ?? ""];
+    if (letter) return `Group ${letter}`;
+  }
+  return ROUND_LABEL[roundCode] ?? roundCode;
+}
 
 const ROUND_ACCENT: Record<string, string> = {
   GROUP: "var(--pitch)",
@@ -80,7 +94,7 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
-          {ROUND_LABEL[row.roundCode] ?? row.roundCode}
+          {roundLabelFor(row.roundCode, row.home.code, row.away.code)}
         </span>
         {row.status === "LIVE" ? (
           <LiveBadge minute={row.elapsed} />
@@ -111,7 +125,7 @@ function NextMatchCard({ match, code }: { match: HomeNextMatch; code: string }) 
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
-          {ROUND_LABEL[match.roundCode] ?? match.roundCode}
+          {roundLabelFor(match.roundCode, match.home, match.away)}
         </span>
         <span className="font-mono text-xs text-ink-3">
           {match.scheduledAt ? formatKickoff(match.scheduledAt) : "TBD"}

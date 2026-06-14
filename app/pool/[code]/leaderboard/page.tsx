@@ -38,7 +38,12 @@ export default async function LeaderboardPage({
         ) : null}
       </div>
       <div className="mt-2.5">
-        <Leaderboard rows={leaderboard} youUserId={sessionUser?.id} code={code} />
+        <Leaderboard
+          rows={leaderboard}
+          youUserId={sessionUser?.id}
+          code={code}
+          showMedals={poolView?.groupStageComplete ?? false}
+        />
       </div>
     </section>
   );

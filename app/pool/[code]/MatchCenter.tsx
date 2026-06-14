@@ -78,16 +78,11 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
       className="block rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
       style={{ borderLeft: `4px solid ${accent}` }}
     >
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="font-mono text-[11px] font-bold text-ink-3">M{row.matchNo}</span>
-        <div className="flex items-center gap-2">
-          <StatusBadge status={row.status} />
-          {row.status === "SCHEDULED" ? (
-            <span className="font-mono text-[10px] text-ink-3">
-              {row.scheduledAt ? formatKickoff(row.scheduledAt) : "TBD"}
-            </span>
-          ) : null}
-        </div>
+      <div className="mb-1 flex items-center justify-end gap-2">
+        <StatusBadge status={row.status} />
+        {row.status === "SCHEDULED" && row.scheduledAt ? (
+          <span className="font-mono text-[10px] text-ink-3">{formatKickoff(row.scheduledAt)}</span>
+        ) : null}
       </div>
       <Side side={row.home} isWinner={decided && row.winnerCode === row.home.code} decided={decided} />
       <div className="my-0.5 h-px bg-line-soft" />

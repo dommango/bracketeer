@@ -120,7 +120,7 @@ export default async function MatchDetailPage({
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-          {detail.roundLabel} · M{detail.matchNo}
+          {detail.roundLabel}
         </h2>
         <Link
           href={`/pool/${code}/matches`}

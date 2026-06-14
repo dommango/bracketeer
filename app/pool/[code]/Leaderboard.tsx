@@ -48,11 +48,14 @@ export function Leaderboard({
   rows,
   youUserId,
   code,
+  showMedals = false,
 }: {
   rows: LeaderboardRow[];
   youUserId?: string | null;
   // When provided, each row links to that entry's player profile.
   code?: string;
+  // Medals only make sense once standings settle — shown after the group stage.
+  showMedals?: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -70,18 +73,16 @@ export function Leaderboard({
         <div className="mb-3 flex items-start gap-2.5 rounded-2xl border border-gold/40 bg-gold-tint px-4 py-3">
           <span aria-hidden className="mt-px text-base leading-none">⚡</span>
           <p className="text-[13px] leading-snug text-ink-2">
-            <span className="font-bold text-ink">Standings are provisional.</span> Live points
-            from in-progress matches and unsettled groups update as results come in, and aren’t
-            final until the group stage ends.
+            <span className="font-bold text-ink">Live points stay dynamic</span> until the group
+            stage is complete — totals shift as in-progress matches and group standings settle.
           </p>
         </div>
       ) : null}
       <ol className="space-y-2">
       {rows.map((row) => {
         const b = (row.breakdown ?? {}) as Record<string, number>;
-        const isLeader = row.rank === 1;
         const isYou = Boolean(youUserId && row.userId === youUserId);
-        const m = medal(row.rank);
+        const m = showMedals ? medal(row.rank) : "";
         const content = (
           <>
             <div className="flex items-center gap-3">
@@ -136,8 +137,8 @@ export function Leaderboard({
           <li
             key={row.entryId}
             className={`rounded-2xl border bg-surface ${
-              isLeader
-                ? "border-gold shadow-[var(--shadow-ring-gold)]"
+              isYou
+                ? "border-pitch shadow-[0_0_0_2px_var(--pitch-tint)]"
                 : "border-line shadow-[var(--shadow-xs)]"
             }`}
           >

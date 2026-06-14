@@ -92,19 +92,20 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
       className="rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm"
       style={{ borderLeft: `4px solid ${accent}` }}
     >
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="font-mono text-[11px] font-bold text-ink-3">M{m.matchNo}</span>
-        {m.live ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
-            <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-            Live
-          </span>
-        ) : decided ? (
-          <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
-            Final
-          </span>
-        ) : null}
-      </div>
+      {m.live || decided ? (
+        <div className="mb-1 flex items-center justify-end">
+          {m.live ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
+              <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
+              Live
+            </span>
+          ) : (
+            <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
+              Final
+            </span>
+          )}
+        </div>
+      ) : null}
       <Side
         name={m.home}
         code={m.homeCode}
@@ -219,9 +220,9 @@ export function Bracket({ view }: { view: BracketView }) {
 }
 
 export function GroupStandings({ view }: { view: BracketView }) {
-  const anySet =
-    view.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ||
-    view.thirds.length > 0;
+  // Tables are always populated (all 4 teams, 0–0 before play), so every group
+  // renders the same full-size table; the empty state only shows pre-seed.
+  const anySet = view.groups.some((g) => g.table.length > 0) || view.thirds.length > 0;
   if (!anySet) {
     return (
       <p className="rounded-2xl border border-dashed border-line bg-surface p-6 text-center text-sm text-ink-3">
@@ -265,7 +266,7 @@ export function GroupStandings({ view }: { view: BracketView }) {
                     Live
                   </span>
                 ) : null}
-                {g.table.some((r) => r.played > 0) ? (
+                {g.table.length > 0 ? (
                   <table className="mt-2 w-full border-collapse text-[11px]">
                     <thead>
                       <tr className="text-ink-4">

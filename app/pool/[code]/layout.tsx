@@ -96,22 +96,12 @@ export default async function PoolLayout({
 
             <div className="mt-4 text-sm text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]">
               {sessionUser ? (
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/account"
-                    className="truncate font-medium underline-offset-2 hover:underline"
-                  >
-                    {sessionUser.email ?? sessionUser.name}
-                  </Link>
-                  <form action={signOutAction}>
-                    <button
-                      className="rounded-full px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-black/60"
-                      style={FROSTED_BUTTON}
-                    >
-                      Sign out
-                    </button>
-                  </form>
-                </div>
+                <Link
+                  href="/account"
+                  className="block truncate font-medium underline-offset-2 hover:underline"
+                >
+                  {sessionUser.email ?? sessionUser.name}
+                </Link>
               ) : (
                 <Link
                   href="/signin"
@@ -122,22 +112,35 @@ export default async function PoolLayout({
               )}
             </div>
 
+            {/* Action buttons share one size and sit on the same row. */}
+            {sessionUser ? (
+              <div className="mt-3 flex items-center gap-2">
+                {canManage ? (
+                  <Link
+                    href={`/pool/${code}/manage`}
+                    className="inline-flex h-9 items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition-colors hover:bg-black/60"
+                    style={FROSTED_BUTTON}
+                  >
+                    Manage pool
+                  </Link>
+                ) : null}
+                <form action={signOutAction}>
+                  <button
+                    className="inline-flex h-9 items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition-colors hover:bg-black/60"
+                    style={FROSTED_BUTTON}
+                  >
+                    Sign out
+                  </button>
+                </form>
+              </div>
+            ) : null}
+
             {sessionUser && !isMember ? (
               <Link
                 href={`/join?code=${pool.joinCode}`}
-                className="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-gold px-4 text-sm font-bold text-pitch-deep transition-colors hover:bg-gold-dark"
+                className="mt-3 inline-flex h-9 items-center justify-center rounded-full bg-gold px-4 text-sm font-bold text-pitch-deep transition-colors hover:bg-gold-dark"
               >
                 Join this pool →
-              </Link>
-            ) : null}
-
-            {canManage ? (
-              <Link
-                href={`/pool/${code}/manage`}
-                className="mt-3 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition-colors hover:bg-black/60"
-                style={FROSTED_BUTTON}
-              >
-                Manage pool →
               </Link>
             ) : null}
           </div>

@@ -5,6 +5,7 @@
 import { resolveBracket } from "./bracket";
 import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { computeGroupTables, provisionalStandings, type GroupResultRow, type GroupTableRow } from "./group-table";
+import { slotLabel, KNOCKOUT_SLOT_REFS } from "./slot-label";
 import type { Results } from "@/lib/scoring/types";
 
 export interface BracketMatch {
@@ -58,12 +59,14 @@ export function buildBracketView(
   const row = (matchNo: number): BracketMatch => {
     const m = bracket[matchNo];
     const s = scores.get(matchNo);
+    const refs = KNOCKOUT_SLOT_REFS[matchNo];
     return {
       matchNo,
       homeCode: m?.home ?? null,
       awayCode: m?.away ?? null,
-      home: teamName(m?.home),
-      away: teamName(m?.away),
+      // Real team once known, else the humanized feeder slot ("1A", "SF1") not "TBD".
+      home: m?.home ? teamName(m.home) : slotLabel(refs?.[0]),
+      away: m?.away ? teamName(m.away) : slotLabel(refs?.[1]),
       winnerCode: m?.winner ?? null,
       homeScore: s?.homeScore ?? null,
       awayScore: s?.awayScore ?? null,
@@ -80,9 +83,10 @@ export function buildBracketView(
     { label: "Final", matches: [row(FINAL.id)] },
   ];
 
-  const hasGroupRows = groupRows.length > 0;
-  const tables = hasGroupRows ? computeGroupTables(groupRows) : {};
-  const provisional = hasGroupRows ? provisionalStandings(tables) : { groupFirst: {}, groupSecond: {}, thirdAdvance: [] };
+  // Always compute tables (computeGroupTables seeds all 4 teams at 0 with no rows),
+  // so every group renders a full, same-size table whether it has played or not.
+  const tables = computeGroupTables(groupRows);
+  const provisional = provisionalStandings(tables);
   const groups: GroupStanding[] = Object.keys(GROUPS).map((g) => {
     const officialFirst = results.groupFirst?.[g];
     const isProvisional = !officialFirst && Boolean(provisional.groupFirst[g]);

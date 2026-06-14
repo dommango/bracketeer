@@ -31,15 +31,16 @@ describe("buildBracketView", () => {
     expect(groupA.second).toBe(TEAMS[GROUPS.A[1]]);
   });
 
-  it("shows TBD for unresolved slots and surfaces scores", () => {
+  it("shows feeder slot labels for unresolved slots and surfaces scores", () => {
     const view = buildBracketView(chalk(), new Map([[73, { homeScore: 2, awayScore: 1 }]]));
     const r32 = view.rounds[0].matches.find((m) => m.matchNo === 73)!;
     // R32 teams resolve from standings; the score is attached.
     expect(r32.homeScore).toBe(2);
     expect(r32.away).not.toBe("");
-    // A later round with no feeders resolved is TBD.
+    // A later round with no feeders resolved shows the feeder labels, not "TBD".
     const final = view.rounds[5].matches[0];
-    expect(final.home).toBe("TBD");
+    expect(final.home).toBe("SF1");
+    expect(final.away).toBe("SF2");
   });
 
   it("keeps R32 home/away aligned with the resolver", () => {
@@ -57,10 +58,12 @@ const results = (over: Partial<Results> = {}): Results => ({
 });
 
 describe("buildBracketView group tables", () => {
-  it("defaults to no table and non-provisional when no group rows are given", () => {
+  it("prepopulates a full 4-team table (non-provisional) when no group rows are given", () => {
     const view = buildBracketView(results());
     const a = view.groups.find((g) => g.group === "A")!;
-    expect(a.table).toEqual([]);
+    // Tables are always seeded (all 4 teams at 0) so every group renders same-size.
+    expect(a.table).toHaveLength(4);
+    expect(a.table.every((r) => r.played === 0)).toBe(true);
     expect(a.provisional).toBe(false);
   });
 
