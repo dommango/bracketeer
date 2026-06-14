@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { HOST_CITIES, MATCH_CITY, venueFor } from "./schedule";
+import { HOST_CITIES, MATCH_CITY, MATCH_KICKOFF_UTC, venueFor, kickoffFor } from "./schedule";
 
 const PALETTE_TOKENS = [
   "atlanta", "boston", "dallas", "guadalajara", "houston", "kansas-city",
@@ -28,5 +28,28 @@ describe("schedule", () => {
     expect(v).not.toBeNull();
     expect(v!.cityToken in HOST_CITIES).toBe(true);
     expect(venueFor(999)).toBeNull();
+  });
+  it("defines a kickoff instant for every match 1–104, all in the tournament window", () => {
+    expect(Object.keys(MATCH_KICKOFF_UTC)).toHaveLength(104);
+    // Opener (match 1) and final (match 104) anchor the window.
+    const open = new Date("2026-06-11T00:00:00Z").getTime();
+    const close = new Date("2026-07-20T00:00:00Z").getTime();
+    for (let n = 1; n <= 104; n++) {
+      const d = kickoffFor(n);
+      expect(d, `match ${n} missing kickoff`).not.toBeNull();
+      expect(Number.isNaN(d!.getTime()), `match ${n} invalid date`).toBe(false);
+      expect(d!.getTime(), `match ${n} outside window`).toBeGreaterThanOrEqual(open);
+      expect(d!.getTime(), `match ${n} outside window`).toBeLessThan(close);
+    }
+    // Matches are non-decreasing by matchNo within the group stage roll-out is
+    // not guaranteed, but the final must be the last kickoff.
+    const finalTs = kickoffFor(104)!.getTime();
+    for (let n = 1; n < 104; n++) {
+      expect(kickoffFor(n)!.getTime(), `match ${n} after final`).toBeLessThanOrEqual(finalTs);
+    }
+  });
+  it("kickoffFor returns null for unknown match numbers", () => {
+    expect(kickoffFor(0)).toBeNull();
+    expect(kickoffFor(999)).toBeNull();
   });
 });
