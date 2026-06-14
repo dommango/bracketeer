@@ -75,6 +75,11 @@ export function Profile({ profile }: { profile: ProfileData }) {
           <div className="ml-auto text-right leading-none">
             <span className="font-display text-[32px] tabular-nums text-ink">{profile.total}</span>
             <span className="text-xs text-ink-3"> pts</span>
+            {profile.projected ? (
+              <span className="mt-1 block font-mono text-[11px] tabular-nums text-positive">
+                ▲ {profile.projected} live
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

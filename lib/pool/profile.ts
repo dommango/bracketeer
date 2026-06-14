@@ -54,8 +54,9 @@ export interface BoldestCall {
 export interface Profile {
   entryId: string;
   label: string;
-  total: number;
-  rank: number;
+  total: number; // live total (official + provisional), to match the leaderboard
+  rank: number; // live rank
+  projected?: number; // provisional portion of `total`, for the "▲ N live" badge
   entryCount: number;
   accuracy: Accuracy;
   hitGrid: KnockoutHit[];
@@ -85,6 +86,7 @@ export interface ProfileInput {
   label: string;
   total: number;
   rank: number;
+  projected?: number;
   entryCount: number;
   picks: Picks;
   results: Results;
@@ -158,6 +160,7 @@ export function buildProfile(input: ProfileInput): Profile {
     label: input.label,
     total: input.total,
     rank: input.rank,
+    projected: input.projected,
     entryCount: input.entryCount,
     accuracy,
     hitGrid,

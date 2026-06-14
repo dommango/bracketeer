@@ -3,13 +3,15 @@
 
 import { prisma } from "@/lib/db";
 import { asResults, asScoringConfig } from "@/lib/pool/scoring";
+import { liveLeaderboard } from "@/lib/pool/queries";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { championStatus, knockoutDivergences, type ChampionStatus, type Divergence } from "@/lib/pool/compare";
 
 export interface CompareSide {
   entryId: string;
   label: string;
-  total: number;
+  total: number; // live total (official + provisional), matching the leaderboard
+  projected?: number; // provisional portion of `total`
   byCategory: Record<string, number>;
   champion: ChampionStatus;
 }
@@ -27,7 +29,7 @@ export async function getComparison(
 ): Promise<Comparison | null> {
   if (aId === bId) return null;
 
-  const [pool, entries] = await Promise.all([
+  const [pool, entries, live] = await Promise.all([
     prisma.pool.findUnique({
       where: { id: poolId },
       include: { tournament: true },
@@ -36,8 +38,11 @@ export async function getComparison(
       where: { id: { in: [aId, bId] }, poolId },
       include: { picks: true, breakdown: true },
     }),
+    liveLeaderboard(poolId),
   ]);
   if (!pool) return null;
+
+  const liveById = new Map(live.map((r) => [r.entryId, r]));
 
   const byId = new Map(entries.map((e) => [e.id, e]));
   const ea = byId.get(aId);
@@ -49,13 +54,19 @@ export async function getComparison(
   const aPicks = pickRowsToSubmission(ea.picks).picks;
   const bPicks = pickRowsToSubmission(eb.picks).picks;
 
-  const side = (e: typeof ea, picks: typeof aPicks): CompareSide => ({
-    entryId: e.id,
-    label: e.label,
-    total: e.breakdown?.totalPoints ?? 0,
-    byCategory: (e.breakdown?.byCategory ?? {}) as Record<string, number>,
-    champion: championStatus(picks, results),
-  });
+  const side = (e: typeof ea, picks: typeof aPicks): CompareSide => {
+    const lr = liveById.get(e.id);
+    const projected = lr?.projected ?? 0;
+    return {
+      entryId: e.id,
+      label: e.label,
+      // Live total (official + provisional), to match the leaderboard.
+      total: (lr?.total ?? e.breakdown?.totalPoints ?? 0) + projected,
+      projected: projected > 0 ? projected : undefined,
+      byCategory: (e.breakdown?.byCategory ?? {}) as Record<string, number>,
+      champion: championStatus(picks, results),
+    };
+  };
 
   return {
     a: side(ea, aPicks),

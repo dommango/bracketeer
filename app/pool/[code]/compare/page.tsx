@@ -101,6 +101,11 @@ export default async function ComparePage({
             <p className="font-display text-3xl tabular-nums">
               {s.total}
               <span className="ml-1 text-sm font-medium text-white/70">pts</span>
+              {s.projected ? (
+                <span className="ml-1.5 font-mono text-xs font-bold text-white/80">
+                  ▲ {s.projected} live
+                </span>
+              ) : null}
             </p>
             {s.champion.code ? (
               <p className="mt-1 flex items-center gap-1.5 text-xs text-white/80">

@@ -284,7 +284,7 @@ async function withProjectedPoints(
 // The live leaderboard for a pool: the cached official board re-ranked by live
 // (official + provisional) points. Shared by getPoolView and getHomeView via the
 // per-request cache so both surfaces show the same order.
-const liveLeaderboard = cache(async (poolId: string): Promise<LeaderboardRow[]> => {
+export const liveLeaderboard = cache(async (poolId: string): Promise<LeaderboardRow[]> => {
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
     select: { tournamentId: true, tournament: { select: { scoringConfig: true } } },
@@ -416,7 +416,7 @@ export async function getNextMatch(
 ): Promise<HomeNextMatch | null> {
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
-    select: { tournamentId: true },
+    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
   });
   if (!pool) return null;
 
@@ -427,6 +427,8 @@ export async function getNextMatch(
       roundCode: true,
       scheduledAt: true,
       scored: true,
+      homeSlotRef: true,
+      awaySlotRef: true,
       result: { select: { homeTeamCode: true, awayTeamCode: true } },
     },
   });
@@ -450,12 +452,21 @@ export async function getNextMatch(
   }
 
   const full = matches.find((m) => m.matchNo === picked.matchNo);
+  // Resolve teams like the match center does so the card shows flags pre-kickoff:
+  // group teams come from the fixed draw slot ref (known before any result),
+  // knockout teams from the resolved answer-key bracket.
+  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const isGroup = picked.roundCode === "GROUP";
+  const home =
+    full?.result?.homeTeamCode ?? (isGroup ? full?.homeSlotRef : resolved[picked.matchNo]?.home) ?? null;
+  const away =
+    full?.result?.awayTeamCode ?? (isGroup ? full?.awaySlotRef : resolved[picked.matchNo]?.away) ?? null;
   return {
     matchNo: picked.matchNo,
     roundCode: picked.roundCode,
     scheduledAt: picked.scheduledAt ? picked.scheduledAt.toISOString() : null,
-    home: full?.result?.homeTeamCode ?? null,
-    away: full?.result?.awayTeamCode ?? null,
+    home,
+    away,
     yourPick,
   };
 }
@@ -793,19 +804,22 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
   });
   if (!pool) return null;
 
-  // cachedLeaderboard, not getLeaderboard: on the Home route getHomeView already
-  // computed it, so the dashboard's stats strip reuses it instead of re-scoring
-  // the whole pool a second time.
+  // liveLeaderboard (the official board re-ranked by live total), so the profile's
+  // headline total + rank match the leaderboard and Home standing card exactly.
+  // It's per-request cached, so on the Home route getHomeView already computed it.
   const [leaderboard, allEntries] = await Promise.all([
-    cachedLeaderboard(poolId),
+    liveLeaderboard(poolId),
     getEntriesWithPicks(poolId),
   ]);
   const row = leaderboard.find((r) => r.entryId === entryId);
+  const projected = row?.projected ?? 0;
 
   return buildProfile({
     entryId: entry.id,
     label: entry.label,
-    total: row?.total ?? 0,
+    // Live total (official + provisional), to match every other surface.
+    total: (row?.total ?? 0) + projected,
+    projected: projected > 0 ? projected : undefined,
     // Fall back to last place, but never report a rank beyond the field size.
     rank: row?.rank ?? Math.max(1, leaderboard.length),
     entryCount: leaderboard.length,
