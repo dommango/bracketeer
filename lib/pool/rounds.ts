@@ -21,6 +21,20 @@ export function roundLabel(code: string): string {
   return ROUND_LABEL[code] ?? code;
 }
 
+// A short per-match tag for knockout fixtures, e.g. 73 → "R32-1", 89 → "R16-1",
+// 97 → "QF1", 101 → "SF1", 103 → "3rd Place", 104 → "Final". R32/R16 take a dash
+// so "R32" + "1" doesn't read as "R321"; QF/SF are tight (no trailing digit to
+// mash with). Group matches return "" (they're labelled by group elsewhere).
+export function matchTag(matchNo: number): string {
+  if (matchNo >= 73 && matchNo <= 88) return `R32-${matchNo - 72}`;
+  if (matchNo >= 89 && matchNo <= 96) return `R16-${matchNo - 88}`;
+  if (matchNo >= 97 && matchNo <= 100) return `QF${matchNo - 96}`;
+  if (matchNo === 101 || matchNo === 102) return `SF${matchNo - 100}`;
+  if (matchNo === 103) return "3rd Place";
+  if (matchNo === 104) return "Final";
+  return "";
+}
+
 // The round a match number belongs to.
 export function roundOf(matchNo: number): RoundCode {
   if (matchNo <= 72) return "GROUP";

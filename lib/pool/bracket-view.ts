@@ -6,7 +6,21 @@ import { resolveBracket } from "./bracket";
 import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { computeGroupTables, provisionalStandings, type GroupResultRow, type GroupTableRow } from "./group-table";
 import { slotLabel, KNOCKOUT_SLOT_REFS } from "./slot-label";
+import { matchTag } from "./rounds";
+import { kickoffFor } from "@/lib/scoring/schedule";
 import type { Results } from "@/lib/scoring/types";
+
+// Earliest kickoff among a group's six matches. Groups are laid out A–L with six
+// matches each in matchNo order (group at index i owns matchNos i*6+1 … i*6+6),
+// matching the seed. Returns an ISO string, or null if none are scheduled.
+function groupFirstMatchAt(groupIndex: number): string | null {
+  let earliest: number | null = null;
+  for (let n = groupIndex * 6 + 1; n <= groupIndex * 6 + 6; n++) {
+    const d = kickoffFor(n);
+    if (d && (earliest === null || d.getTime() < earliest)) earliest = d.getTime();
+  }
+  return earliest === null ? null : new Date(earliest).toISOString();
+}
 
 export interface BracketMatch {
   matchNo: number;
@@ -18,6 +32,8 @@ export interface BracketMatch {
   homeScore: number | null;
   awayScore: number | null;
   live: boolean;
+  tag: string; // per-match knockout tag, e.g. "R32-1"
+  scheduledAt: string | null; // ISO kickoff
 }
 
 export interface BracketRound {
@@ -31,6 +47,8 @@ export interface GroupStanding {
   second: string | null;
   table: GroupTableRow[];
   provisional: boolean;
+  started: boolean; // any match in the group has been played
+  firstMatchAt: string | null; // ISO kickoff of the group's earliest match
 }
 
 export interface BracketView {
@@ -71,6 +89,8 @@ export function buildBracketView(
       homeScore: s?.homeScore ?? null,
       awayScore: s?.awayScore ?? null,
       live: s?.status === "LIVE",
+      tag: matchTag(matchNo),
+      scheduledAt: kickoffFor(matchNo)?.toISOString() ?? null,
     };
   };
 
@@ -87,17 +107,20 @@ export function buildBracketView(
   // so every group renders a full, same-size table whether it has played or not.
   const tables = computeGroupTables(groupRows);
   const provisional = provisionalStandings(tables);
-  const groups: GroupStanding[] = Object.keys(GROUPS).map((g) => {
+  const groups: GroupStanding[] = Object.keys(GROUPS).map((g, i) => {
     const officialFirst = results.groupFirst?.[g];
     const isProvisional = !officialFirst && Boolean(provisional.groupFirst[g]);
     const firstCode = officialFirst ?? provisional.groupFirst[g];
     const secondCode = officialFirst ? results.groupSecond?.[g] : provisional.groupSecond[g];
+    const table = tables[g] ?? [];
     return {
       group: g,
       first: firstCode ? teamName(firstCode) : null,
       second: secondCode ? teamName(secondCode) : null,
-      table: tables[g] ?? [],
+      table,
       provisional: isProvisional,
+      started: table.some((r) => r.played > 0),
+      firstMatchAt: groupFirstMatchAt(i),
     };
   });
 
