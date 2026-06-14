@@ -8,6 +8,7 @@ import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "../../Flag";
 import { WhatIf } from "../../WhatIf";
 import { Chat } from "../../Chat";
+import { MatchTimeline, MatchStatsBars } from "./MatchLive";
 
 export const dynamic = "force-dynamic";
 
@@ -129,7 +130,7 @@ export default async function MatchDetailPage({
           {detail.status === "LIVE" ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
               <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-              Live
+              {detail.elapsed != null ? `${detail.elapsed}'` : "Live"}
             </span>
           ) : detail.status === "FINAL" ? (
             <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
@@ -161,6 +162,9 @@ export default async function MatchDetailPage({
         <div className="h-px bg-line-soft" />
         <TeamRow side={detail.away} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
       </div>
+
+      <MatchTimeline items={detail.timeline} />
+      <MatchStatsBars bars={detail.stats} homeCode={detail.home.code} awayCode={detail.away.code} />
 
       {detail.scored && detail.pickSplit ? <PickSplitCard split={detail.pickSplit} /> : null}
 

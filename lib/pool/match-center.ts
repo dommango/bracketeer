@@ -24,6 +24,7 @@ export interface MatchInput {
   awayScore: number | null;
   winnerCode: string | null;
   resultStatus: MatchStatus | null;
+  elapsed?: number | null; // live match minute (from the API feed)
 }
 
 export interface MatchCenterSide {
@@ -43,6 +44,7 @@ export interface MatchCenterRow {
   roundCode: string;
   scheduledAt: string | null; // ISO
   status: MatchStatus;
+  elapsed: number | null; // live match minute when LIVE, else null
   home: MatchCenterSide;
   away: MatchCenterSide;
   winnerCode: string | null;
@@ -83,6 +85,8 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
     roundCode: m.roundCode,
     scheduledAt: m.scheduledAt ? m.scheduledAt.toISOString() : null,
     status,
+    // Match minute is only meaningful while LIVE.
+    elapsed: status === "LIVE" ? (m.elapsed ?? null) : null,
     home: { code: m.homeCode, name: teamName(m.homeCode), score: m.homeScore },
     away: { code: m.awayCode, name: teamName(m.awayCode), score: m.awayScore },
     winnerCode: m.winnerCode,

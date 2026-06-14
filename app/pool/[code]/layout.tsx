@@ -61,16 +61,21 @@ export default async function PoolLayout({
               backgroundPosition: "center",
             }}
           />
+          {/* Scrim stack: a flat tint floors contrast on any artwork, then a
+              top-anchored gradient darkens exactly where the (top-left) text
+              sits — the old gradient only darkened the bottom, where nothing is. */}
+          <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.34)" }} />
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)",
+              background:
+                "linear-gradient(155deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.22) 45%, rgba(0,0,0,0) 70%), linear-gradient(0deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 35%)",
             }}
           />
           <div className="relative">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
                   {pool.tournamentName}
                 </p>
                 <h1 className="mt-1 break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
@@ -89,7 +94,7 @@ export default async function PoolLayout({
               </span>
             </div>
 
-            <div className="mt-4 text-sm text-white/80">
+            <div className="mt-4 text-sm text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]">
               {sessionUser ? (
                 <div className="flex items-center gap-2">
                   <Link

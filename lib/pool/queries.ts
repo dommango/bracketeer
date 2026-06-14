@@ -17,6 +17,13 @@ import {
   type MatchCenterRow,
 } from "@/lib/pool/match-center";
 import { buildPickSplit, type PickSplit } from "@/lib/pool/pick-split";
+import {
+  buildTimeline,
+  buildStatBars,
+  type TimelineItem,
+  type StatBar,
+  type TeamStatValues,
+} from "@/lib/pool/match-live";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
@@ -78,6 +85,7 @@ interface ResolvableMatch {
     awayScore: number | null;
     winnerCode: string | null;
     status: string | null;
+    elapsed: number | null;
   } | null;
 }
 
@@ -105,6 +113,7 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
     awayScore: m.result?.awayScore ?? null,
     winnerCode: m.result?.winnerCode ?? r?.winner ?? null,
     resultStatus: (m.result?.status as MatchStatus | undefined) ?? null,
+    elapsed: m.result?.elapsed ?? null,
   };
 }
 
@@ -519,6 +528,7 @@ export async function getMatchCenter(
           awayScore: true,
           winnerCode: true,
           status: true,
+          elapsed: true,
         },
       },
     },
@@ -552,6 +562,7 @@ export async function getLastMatch(
       awayScore: true,
       winnerCode: true,
       status: true,
+      elapsed: true,
       match: {
         select: {
           matchNo: true,
@@ -581,6 +592,7 @@ export async function getLastMatch(
       awayScore: result.awayScore,
       winnerCode: result.winnerCode,
       status: result.status,
+      elapsed: result.elapsed,
     },
   };
 
@@ -618,6 +630,7 @@ export async function getLiveMatches(
           awayScore: true,
           winnerCode: true,
           status: true,
+          elapsed: true,
         },
       },
     },
@@ -697,6 +710,7 @@ export interface MatchDetail {
   roundLabel: string;
   scheduledAt: string | null;
   status: MatchStatus;
+  elapsed: number | null; // live match minute when LIVE, else null
   home: MatchDetailSide;
   away: MatchDetailSide;
   winnerCode: string | null;
@@ -704,6 +718,8 @@ export interface MatchDetail {
   scored: boolean; // a scored knockout match (what-if + pick-split apply)
   pickSplit: PickSplit | null;
   yourPick: { code: string; name: string; correct: boolean | null } | null;
+  timeline: TimelineItem[]; // goal/card events (empty when none fed)
+  stats: StatBar[]; // paired team stats (empty when none fed)
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split
@@ -723,6 +739,7 @@ export async function getMatchDetail(
   const match = await prisma.match.findUnique({
     where: { tournamentId_matchNo: { tournamentId: pool.tournamentId, matchNo } },
     select: {
+      id: true,
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
@@ -736,6 +753,7 @@ export async function getMatchDetail(
           awayScore: true,
           winnerCode: true,
           status: true,
+          elapsed: true,
         },
       },
     },
@@ -773,12 +791,29 @@ export async function getMatchDetail(
     }
   }
 
+  // Live/finished match enrichment: the goal/card timeline + team stats the
+  // poller already persists. Skip the queries entirely for not-yet-played matches.
+  let timeline: TimelineItem[] = [];
+  let stats: StatBar[] = [];
+  if (status !== "SCHEDULED") {
+    const [events, statsRow] = await Promise.all([
+      getMatchEvents(match.id),
+      getMatchStats(match.id),
+    ]);
+    timeline = buildTimeline(events, homeCode, awayCode);
+    stats = buildStatBars(
+      (statsRow?.home as unknown as TeamStatValues | undefined) ?? null,
+      (statsRow?.away as unknown as TeamStatValues | undefined) ?? null,
+    );
+  }
+
   return {
     matchNo,
     roundCode: match.roundCode,
     roundLabel: roundLabel(match.roundCode),
     scheduledAt: match.scheduledAt ? match.scheduledAt.toISOString() : null,
     status,
+    elapsed: status === "LIVE" ? (match.result?.elapsed ?? null) : null,
     home: { code: homeCode, name: teamName(homeCode), score: match.result?.homeScore ?? null },
     away: { code: awayCode, name: teamName(awayCode), score: match.result?.awayScore ?? null },
     winnerCode,
@@ -786,6 +821,8 @@ export async function getMatchDetail(
     scored,
     pickSplit,
     yourPick,
+    timeline,
+    stats,
   };
 }
 
@@ -896,6 +933,7 @@ export async function getGroupMatchCenter(
           awayScore: true,
           winnerCode: true,
           status: true,
+          elapsed: true,
         },
       },
     },

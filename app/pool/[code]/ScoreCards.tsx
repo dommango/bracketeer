@@ -31,11 +31,11 @@ const teamName = (code: string | null): string =>
 const CARD_CLASS =
   "block rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch";
 
-function LiveBadge() {
+function LiveBadge({ minute }: { minute?: number | null }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
       <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-      Live
+      {minute != null ? `${minute}'` : "Live"}
     </span>
   );
 }
@@ -78,7 +78,7 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
           {ROUND_LABEL[row.roundCode] ?? row.roundCode}
         </span>
         {row.status === "LIVE" ? (
-          <LiveBadge />
+          <LiveBadge minute={row.elapsed} />
         ) : (
           <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
             Final
