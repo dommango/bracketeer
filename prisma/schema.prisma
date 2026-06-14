@@ -210,7 +210,7 @@ model MatchOdds {
   awayWinProb Float
   raw         Json     // raw decimal prices, for audit / re-derivation
   source      String   // "the-odds-api"
-  fetchedAt   DateTime @updatedAt
+  fetchedAt   DateTime
 }
 
 // ---------------------------------------------------------------------------
