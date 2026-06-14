@@ -43,6 +43,13 @@ describe("buildBracketView", () => {
     expect(final.away).toBe("SF2");
   });
 
+  it("attaches venue + city to knockout matches", () => {
+    const view = buildBracketView(chalk());
+    const final = view.rounds[5].matches[0];
+    expect(final.venue).toBeTruthy();
+    expect(final.city).toBeTruthy();
+  });
+
   it("keeps R32 home/away aligned with the resolver", () => {
     const view = buildBracketView(chalk());
     // Group A runner-up is the home side of match 73 ({pos:2, group:A}).
