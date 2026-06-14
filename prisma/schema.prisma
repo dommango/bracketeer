@@ -31,6 +31,7 @@ model User {
   entries     Entry[]
   ownedPools  Pool[]        @relation("PoolOwner")
   messages    ChatMessage[]
+  reactions   MessageReaction[]
 }
 
 model Account {
@@ -323,15 +324,51 @@ model ScoreSnapshot {
   @@index([entryId, capturedAt])
 }
 
+enum ChatKind {
+  USER
+  SYSTEM // auto-posted match events (goals, cards, results); no author
+}
+
+enum AttachmentType {
+  GIF
+  IMAGE
+}
+
 model ChatMessage {
   id        String   @id @default(cuid())
   poolId    String
-  userId    String
+  userId    String? // null for SYSTEM messages
+  kind      ChatKind @default(USER)
   body      String
+  // Quoted-reply target; SetNull so deleting the parent leaves the reply intact.
+  replyToId String?
+  // GIF / image attachment (provider URL; no bytes stored here).
+  attachmentUrl  String?
+  attachmentType AttachmentType?
+  // SYSTEM-message context for rich rendering: { matchNo, event, ... }.
+  meta      Json?
   createdAt DateTime @default(now())
 
-  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pool      Pool              @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replyTo   ChatMessage?      @relation("ChatReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[]     @relation("ChatReply")
+  reactions MessageReaction[]
 
   @@index([poolId, createdAt])
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One row per (message, user, emoji): toggling is an upsert/delete.
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
 }

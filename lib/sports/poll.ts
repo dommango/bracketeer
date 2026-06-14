@@ -24,7 +24,35 @@ import {
 } from "@/lib/pool/results";
 import { resolveWinnerExternalId } from "./winner";
 import { buildGroupPairMatchNos } from "@/lib/scoring/data";
+import { postSystemMessage } from "@/lib/pool/chat";
+import { notifyPool } from "@/lib/realtime/notify";
+import {
+  formatGoalLine,
+  formatCardLine,
+  formatFinalLine,
+  type AnnouncedEvent,
+} from "@/lib/pool/chat-events";
 import type { EventType } from "@/generated/prisma/client";
+
+// Post one auto-event line to every pool of the tournament and ping their chat
+// streams. Best-effort decoration — callers wrap it so a failure never breaks
+// the poll. Exported nowhere; lives here beside its only caller.
+async function announceToAllPools(
+  tournamentId: string,
+  body: string,
+  meta: Record<string, unknown>,
+): Promise<void> {
+  const pools = await prisma.pool.findMany({ where: { tournamentId }, select: { id: true } });
+  for (const p of pools) {
+    // Isolate per-pool so one failing pool can't drop the announcement for the rest.
+    try {
+      await postSystemMessage(p.id, body, meta);
+      await notifyPool(p.id, "chat");
+    } catch (err) {
+      console.error(`announce failed for pool ${p.id}:`, err);
+    }
+  }
+}
 
 export interface PollSummary {
   skipped?: boolean;
@@ -95,12 +123,19 @@ function toEventType(type: string, detail: string): EventType | null {
   return null;
 }
 
-// Replaces all events for a match atomically (delete-then-insert).
+// Stable identity for an event within a match — used both to dedupe storage and
+// to diff this poll's feed against what we already stored (for chat announcements).
+function eventKey(r: { minute: number; extraMinute: number | null; type: EventType; teamCode: string }): string {
+  return `${r.minute}|${r.extraMinute ?? ""}|${r.type}|${r.teamCode}`;
+}
+
+// Replaces all events for a match atomically (delete-then-insert) and returns the
+// events that are new this poll (not previously stored) so the caller can announce them.
 async function persistEvents(
   matchId: string,
   rawEvents: RawMatchEvent[],
   teamCodeByExternalId: Record<string, string>,
-): Promise<number> {
+): Promise<{ written: number; added: AnnouncedEvent[] }> {
   const rows = rawEvents.flatMap((e) => {
     const type = toEventType(e.type, e.detail);
     if (!type) return [];
@@ -117,12 +152,27 @@ async function persistEvents(
     }];
   });
 
+  const existing = await prisma.matchEvent.findMany({
+    where: { matchId },
+    select: { minute: true, extraMinute: true, type: true, teamCode: true },
+  });
+  const seen = new Set(existing.map(eventKey));
+  const added: AnnouncedEvent[] = rows
+    .filter((r) => !seen.has(eventKey(r)))
+    .map((r) => ({
+      type: r.type,
+      teamCode: r.teamCode,
+      playerName: r.playerName,
+      minute: r.minute,
+      extraMinute: r.extraMinute,
+    }));
+
   await prisma.$transaction([
     prisma.matchEvent.deleteMany({ where: { matchId } }),
     ...(rows.length > 0 ? [prisma.matchEvent.createMany({ data: rows, skipDuplicates: true })] : []),
   ]);
 
-  return rows.length;
+  return { written: rows.length, added };
 }
 
 export async function pollScores(): Promise<PollSummary> {
@@ -162,8 +212,21 @@ export async function pollScores(): Promise<PollSummary> {
   const groupPairMatchNos = buildGroupPairMatchNos();
   const scheduledAtQueue: Array<{ matchNo: number; scheduledAt: Date }> = [];
   // Live group fixtures to enrich in Pass 3: matchId + provider team ids for
-  // correct home/away stat assignment (API response order is not guaranteed).
-  const liveFixtures: Array<{ fixtureId: number; matchId: string; homeTeamId: number; awayTeamId: number }> = [];
+  // correct home/away stat assignment (API response order is not guaranteed),
+  // plus the codes/score needed to format goal & card chat posts.
+  const liveFixtures: Array<{
+    fixtureId: number;
+    matchId: string;
+    matchNo: number;
+    homeTeamId: number;
+    awayTeamId: number;
+    homeCode: string;
+    awayCode: string;
+    homeScore: number | null;
+    awayScore: number | null;
+  }> = [];
+  // Group matches that flipped to FINAL this poll — for the one-time FT chat post.
+  const finals: Array<{ matchNo: number; homeCode: string; awayCode: string; homeScore: number; awayScore: number }> = [];
   let groupsApplied = 0;
 
   for (const f of fixtures) {
@@ -178,7 +241,7 @@ export async function pollScores(): Promise<PollSummary> {
     if (f.scheduledAt) scheduledAtQueue.push({ matchNo, scheduledAt: new Date(f.scheduledAt) });
 
     if (f.live || f.finished) {
-      const { applied: didApply, matchId } = await upsertGroupMatchResultFromApi(
+      const { applied: didApply, matchId, newlyFinal } = await upsertGroupMatchResultFromApi(
         tournamentId,
         matchNo,
         {
@@ -192,12 +255,20 @@ export async function pollScores(): Promise<PollSummary> {
         },
       );
       if (didApply) groupsApplied += 1;
+      if (newlyFinal) {
+        finals.push({ matchNo, homeCode, awayCode, homeScore: f.homeGoals ?? 0, awayScore: f.awayGoals ?? 0 });
+      }
       if (f.live && matchId) {
         liveFixtures.push({
           fixtureId: f.fixtureId,
           matchId,
+          matchNo,
           homeTeamId: Number(f.homeExternalId),
           awayTeamId: Number(f.awayExternalId),
+          homeCode,
+          awayCode,
+          homeScore: f.homeGoals,
+          awayScore: f.awayGoals,
         });
       }
     }
@@ -213,19 +284,47 @@ export async function pollScores(): Promise<PollSummary> {
   if (groupsApplied > 0) await promoteCompletedGroupsToOfficial(tournamentId);
   if (applied > 0 || groupsApplied > 0) await recomputeTournamentPools(tournamentId);
 
+  // Full-time chat posts for group matches that just settled (best-effort).
+  for (const fin of finals) {
+    try {
+      await announceToAllPools(
+        tournamentId,
+        formatFinalLine(fin.homeCode, fin.awayCode, fin.homeScore, fin.awayScore),
+        { matchNo: fin.matchNo, kind: "final" },
+      );
+    } catch (err) {
+      console.error("FT announce failed:", err);
+    }
+  }
+
   // --- Pass 3: events + stats for currently-live group fixtures ---
   let eventsWritten = 0;
   let statsWritten = 0;
 
   if (liveFixtures.length > 0) {
     const enrichResults = await Promise.allSettled(
-      liveFixtures.map(async ({ fixtureId, matchId, homeTeamId, awayTeamId }) => {
+      liveFixtures.map(async (lf) => {
+        const { fixtureId, matchId, homeTeamId, awayTeamId } = lf;
         const [rawEvents, rawStats] = await Promise.all([
           fetchMatchEvents(fixtureId),
           fetchMatchStats(fixtureId, homeTeamId, awayTeamId),
         ]);
 
-        const written = await persistEvents(matchId, rawEvents, EXTERNAL_TEAM_CODES);
+        const { written, added } = await persistEvents(matchId, rawEvents, EXTERNAL_TEAM_CODES);
+
+        // Goal & red-card chat posts for newly-seen events (best-effort).
+        for (const e of added) {
+          const line =
+            formatGoalLine(e, lf.homeCode, lf.awayCode, lf.homeScore ?? 0, lf.awayScore ?? 0) ??
+            formatCardLine(e);
+          if (!line) continue;
+          try {
+            await announceToAllPools(tournamentId, line, { matchNo: lf.matchNo, kind: "event" });
+          } catch (err) {
+            console.error("event announce failed:", err);
+          }
+        }
+
         let statsCount = 0;
         if (rawStats) {
           await prisma.matchStats.upsert({

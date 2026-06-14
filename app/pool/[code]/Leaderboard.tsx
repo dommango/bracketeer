@@ -71,7 +71,7 @@ export function Leaderboard({
           <span aria-hidden className="mt-px text-base leading-none">⚡</span>
           <p className="text-[13px] leading-snug text-ink-2">
             <span className="font-bold text-ink">Standings are provisional.</span> Live points
-            from in-progress matches and unsettled groups update as results come in, and aren't
+            from in-progress matches and unsettled groups update as results come in, and aren’t
             final until the group stage ends.
           </p>
         </div>

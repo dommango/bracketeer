@@ -108,7 +108,7 @@ export default async function MatchDetailPage({
 
   const [detail, initialMessages] = await Promise.all([
     getMatchDetail(pool.id, matchNo, sessionUser?.id ?? null),
-    listMessages(pool.id, 50),
+    listMessages(pool.id, 50, sessionUser?.id ?? null),
   ]);
 
   if (!detail) notFound();

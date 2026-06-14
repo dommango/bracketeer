@@ -11,7 +11,13 @@ import { apiOk, apiError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-const postSchema = z.object({ body: z.string().min(1, "Message is empty").max(2000) });
+// Attachments (GIF/image) are deliberately NOT accepted yet: rendering an
+// arbitrary attachmentUrl as <img src> is a tracking-pixel / SSRF surface. They
+// stay out of the schema until the sending UI ships with a host allowlist.
+const postSchema = z.object({
+  body: z.string().min(1, "Message is empty").max(2000),
+  replyToId: z.string().optional(),
+});
 
 // Per-sender cap so one member can't flood the pool chat.
 const CHAT_LIMIT = 20;
@@ -28,7 +34,7 @@ export async function GET(
   const raw = Number(req.nextUrl.searchParams.get("limit") || 50);
   // Clamp so a caller can't request an unbounded page.
   const limit = Number.isFinite(raw) ? Math.min(Math.max(Math.trunc(raw), 1), 100) : 50;
-  const messages = await listMessages(poolId, limit);
+  const messages = await listMessages(poolId, limit, access.user.id);
   return apiOk({ messages });
 }
 
@@ -45,15 +51,18 @@ export async function POST(
     return apiError("You're sending messages too fast — slow down a moment.", 429);
   }
 
-  let body: string;
+  let input: z.infer<typeof postSchema>;
   try {
-    body = postSchema.parse(await req.json()).body;
+    input = postSchema.parse(await req.json());
   } catch (err) {
     return apiError(`Invalid body: ${(err as Error).message}`, 400);
   }
 
   try {
-    const message = await postMessage(poolId, access.user.id, body);
+    const message = await postMessage(poolId, access.user.id, {
+      body: input.body,
+      replyToId: input.replyToId,
+    });
     await notifyPool(poolId, "chat");
     return apiOk(message, { status: 201 });
   } catch (err) {

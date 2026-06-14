@@ -163,15 +163,19 @@ export async function upsertGroupMatchResultFromApi(
     finished: boolean;
     elapsed?: number | null;
   },
-): Promise<{ applied: boolean; matchId: string | null }> {
-  if (!input.live && !input.finished) return { applied: false, matchId: null };
+): Promise<{ applied: boolean; matchId: string | null; newlyFinal: boolean }> {
+  if (!input.live && !input.finished) return { applied: false, matchId: null, newlyFinal: false };
 
   const match = await prisma.match.findUnique({
     where: { tournamentId_matchNo: { tournamentId, matchNo } },
-    select: { id: true, result: { select: { source: true } } },
+    select: { id: true, result: { select: { source: true, status: true } } },
   });
-  if (!match) return { applied: false, matchId: null };
-  if (match.result?.source === "MANUAL") return { applied: false, matchId: match.id };
+  if (!match) return { applied: false, matchId: null, newlyFinal: false };
+  if (match.result?.source === "MANUAL") return { applied: false, matchId: match.id, newlyFinal: false };
+
+  // True only on the poll that flips this match to FINAL — drives the one-time
+  // full-time chat post (a repeated FINAL on later polls must not re-announce).
+  const newlyFinal = input.finished && match.result?.status !== "FINAL";
 
   const status = input.finished ? ("FINAL" as const) : ("LIVE" as const);
   const winnerCode =
@@ -204,7 +208,7 @@ export async function upsertGroupMatchResultFromApi(
     data: { scored: input.finished },
   });
 
-  return { applied: true, matchId: match.id };
+  return { applied: true, matchId: match.id, newlyFinal };
 }
 
 // Backfill Match.scheduledAt for group-stage matches that have no scheduled time

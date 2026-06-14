@@ -18,7 +18,7 @@ export default async function ChatPage({
   const access = await getPoolAccess(pool.id);
   const sessionUser = access?.user ?? (await getSessionUser());
   const isMember = Boolean(access);
-  const messages = isMember ? await listMessages(pool.id, 50) : [];
+  const messages = isMember ? await listMessages(pool.id, 50, sessionUser?.id ?? null) : [];
 
   return (
     <section>
