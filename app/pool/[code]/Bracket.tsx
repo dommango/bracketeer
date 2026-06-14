@@ -1,6 +1,7 @@
 import type { BracketView, BracketMatch, BracketRound } from "@/lib/pool/bracket-view";
 import type { GroupTableRow } from "@/lib/pool/group-table";
 import { R16, QF, SF, FINAL } from "@/lib/scoring/data";
+import { formatMatchDate } from "@/lib/pool/format";
 import { Flag } from "./Flag";
 
 // Pre-order DFS from the Final (a-branch before b-branch) gives every knockout
@@ -238,7 +239,8 @@ export function GroupStandings({ view }: { view: BracketView }) {
           return (
             <div
               key={g.group}
-              className="relative overflow-hidden rounded-xl border border-line bg-surface p-3 text-sm"
+              className="relative overflow-hidden rounded-xl border border-line p-3 text-sm"
+              style={{ background: `color-mix(in srgb, var(--city-${city}) 7%, var(--surface))` }}
             >
               <span
                 className="pattern"
@@ -259,13 +261,12 @@ export function GroupStandings({ view }: { view: BracketView }) {
                   <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
                     Group {g.group}
                   </span>
+                  {!g.started && g.firstMatchAt ? (
+                    <span className="ml-auto font-mono text-[10px] font-medium text-ink-3">
+                      {formatMatchDate(g.firstMatchAt)}
+                    </span>
+                  ) : null}
                 </div>
-                {g.provisional ? (
-                  <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-live-tint px-1.5 py-0.5 font-mono text-[9px] font-bold text-live">
-                    <span className="h-[4px] w-[4px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-                    Live
-                  </span>
-                ) : null}
                 {g.table.length > 0 ? (
                   <table className="mt-2 w-full border-collapse text-[11px]">
                     <thead>
@@ -295,7 +296,7 @@ export function GroupStandings({ view }: { view: BracketView }) {
                             <td className="py-0.5 text-left font-mono">{r.rank}</td>
                             <td className="py-0.5 text-left">
                               {r.code}
-                              {r.tied ? <span className="ml-1 text-ink-4">=</span> : null}
+                              {r.tied && g.started ? <span className="ml-1 text-ink-4">=</span> : null}
                             </td>
                             <td className="py-0.5 text-right tabular-nums">{r.played}</td>
                             <td className="py-0.5 text-right tabular-nums">

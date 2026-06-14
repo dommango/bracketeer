@@ -65,6 +65,10 @@ describe("buildBracketView group tables", () => {
     expect(a.table).toHaveLength(4);
     expect(a.table.every((r) => r.played === 0)).toBe(true);
     expect(a.provisional).toBe(false);
+    // Not started, and the group's first kickoff is exposed for the pre-play view.
+    expect(a.started).toBe(false);
+    expect(a.firstMatchAt).toBeTruthy();
+    expect(Number.isNaN(new Date(a.firstMatchAt!).getTime())).toBe(false);
   });
 
   it("fills provisional 1st/2nd from the live table when the group is not official", () => {
@@ -79,6 +83,7 @@ describe("buildBracketView group tables", () => {
     expect(a.first).toBe("Mexico");
     expect(a.table.length).toBe(4);
     expect(a.table[0].code).toBe("MEX");
+    expect(a.started).toBe(true); // matches have been played
   });
 
   it("prefers the official result over the live table", () => {
