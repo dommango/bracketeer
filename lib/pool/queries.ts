@@ -81,6 +81,7 @@ interface ResolvableMatch {
   awaySlotRef: string | null;
   venue: string | null;
   city: string | null;
+  odds: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
   result: {
     homeTeamCode: string | null;
     awayTeamCode: string | null;
@@ -126,6 +127,7 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
     venue: m.venue ?? null,
     city: m.city ?? null,
     cityToken: venueFor(m.matchNo)?.cityToken ?? null,
+    odds: m.odds ?? null,
   };
 }
 
@@ -545,6 +547,7 @@ export async function getMatchCenter(
       city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -601,6 +604,7 @@ export async function getLastMatch(
           city: true,
           homeSlotRef: true,
           awaySlotRef: true,
+          odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
         },
       },
     },
@@ -618,6 +622,7 @@ export async function getLastMatch(
     city: result.match.city ?? null,
     homeSlotRef: result.match.homeSlotRef,
     awaySlotRef: result.match.awaySlotRef,
+    odds: result.match.odds ?? null,
     result: {
       homeTeamCode: result.homeTeamCode,
       awayTeamCode: result.awayTeamCode,
@@ -659,6 +664,7 @@ export async function getLiveMatches(
       city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -764,6 +770,7 @@ export interface MatchDetail {
   yourPick: { code: string; name: string; correct: boolean | null } | null;
   timeline: TimelineItem[]; // goal/card events (empty when none fed)
   stats: StatBar[]; // paired team stats (empty when none fed)
+  odds: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split
@@ -791,6 +798,7 @@ export async function getMatchDetail(
       city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -876,6 +884,7 @@ export async function getMatchDetail(
     yourPick,
     timeline,
     stats,
+    odds: match.odds ?? null,
   };
 }
 
@@ -980,6 +989,7 @@ export async function getGroupMatchCenter(
       city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,

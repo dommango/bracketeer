@@ -38,6 +38,7 @@ export interface MatchInput {
   venue?: string | null;
   city?: string | null;
   cityToken?: string | null;
+  odds?: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
 }
 
 export interface MatchCenterSide {
@@ -67,6 +68,7 @@ export interface MatchCenterRow {
   venue: string | null;
   city: string | null;
   cityToken: string | null;
+  odds: { homeWinProb: number; drawProb: number; awayWinProb: number } | null;
 }
 
 export interface MatchCenterSection {
@@ -114,6 +116,7 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
     venue: m.venue ?? null,
     city: m.city ?? null,
     cityToken: m.cityToken ?? null,
+    odds: m.odds ?? null,
   };
 }
 

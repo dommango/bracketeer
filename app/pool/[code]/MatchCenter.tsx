@@ -3,6 +3,8 @@ import type { MatchCenterSection, MatchCenterRow, MatchCenterSide } from "@/lib/
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
 import { VenueLine } from "./VenueLine";
+import { WinProbBar } from "./WinProbBar";
+import { liveUpset } from "@/lib/odds/map";
 
 // Same chromatic round sweep as the bracket (group green → gold final).
 const ROUND_ACCENT: Record<string, string> = {
@@ -32,6 +34,23 @@ function StatusBadge({ status }: { status: MatchCenterRow["status"] }) {
     );
   }
   return null;
+}
+
+function UpsetBadge({ row }: { row: MatchCenterRow }) {
+  if (!row.odds || row.status !== "LIVE") return null;
+  const upset = liveUpset(
+    { status: row.status, homeScore: row.home.score, awayScore: row.away.score },
+    row.odds,
+  );
+  if (!upset) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white"
+      style={{ background: "var(--gold-dark)" }}
+    >
+      ⚡ Upset
+    </span>
+  );
 }
 
 function Side({ side, isWinner, decided }: { side: MatchCenterSide; isWinner: boolean; decided: boolean }) {
@@ -80,6 +99,7 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
       style={{ borderLeft: `4px solid ${accent}` }}
     >
       <div className="mb-1 flex items-center justify-end gap-2">
+        <UpsetBadge row={row} />
         <StatusBadge status={row.status} />
         {row.status === "SCHEDULED" && row.scheduledAt ? (
           <span className="font-mono text-[10px] text-ink-3">{formatKickoff(row.scheduledAt)}</span>
@@ -96,6 +116,7 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
       <div className="mt-1.5">
         <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
       </div>
+      <WinProbBar odds={row.odds} />
     </Link>
   );
 }
