@@ -51,10 +51,16 @@ export interface GroupStanding {
   firstMatchAt: string | null; // ISO kickoff of the group's earliest match
 }
 
+export interface ThirdPlaceRow extends GroupTableRow {
+  group: string;
+  advancing: boolean;
+}
+
 export interface BracketView {
   rounds: BracketRound[];
   groups: GroupStanding[];
   thirds: string[];
+  thirdsTable: ThirdPlaceRow[];
   awards: Results["awards"];
 }
 
@@ -126,5 +132,14 @@ export function buildBracketView(
 
   const thirds = (results.thirdAdvance ?? []).map((c) => teamName(c));
 
-  return { rounds, groups, thirds, awards: results.awards };
+  const thirdAdvanceSet = new Set(provisional.thirdAdvance);
+  const thirdsTable: ThirdPlaceRow[] = Object.entries(tables)
+    .flatMap(([g, table]) =>
+      table
+        .filter((r) => r.rank === 3)
+        .map((r) => ({ ...r, group: g, advancing: thirdAdvanceSet.has(r.code) })),
+    )
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.group.localeCompare(b.group));
+
+  return { rounds, groups, thirds, thirdsTable, awards: results.awards };
 }

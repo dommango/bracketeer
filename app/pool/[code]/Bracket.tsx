@@ -225,6 +225,67 @@ export function Bracket({ view }: { view: BracketView }) {
   );
 }
 
+// The group letter rendered as a concentric "logo" motif: the same glyph echoed
+// behind itself at growing scale in progressively lighter shades of the group's
+// city color, with a solid white glyph on top.
+function GroupLetterMark({ letter, city }: { letter: string; city: string }) {
+  const echoes = [
+    { scale: 2.3, opacity: 0.14 },
+    { scale: 1.85, opacity: 0.24 },
+    { scale: 1.45, opacity: 0.42 },
+    { scale: 1.15, opacity: 0.66 },
+  ];
+  return (
+    <span
+      className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md"
+      style={{ background: `var(--city-${city})` }}
+    >
+      {echoes.map((e, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="absolute font-display leading-none text-white"
+          style={{ transform: `scale(${e.scale})`, opacity: e.opacity, fontSize: "15px" }}
+        >
+          {letter}
+        </span>
+      ))}
+      <span
+        className="relative font-display leading-none text-white"
+        style={{ fontSize: "15px", textShadow: "0 1px 2px rgba(0,0,0,0.35)" }}
+      >
+        {letter}
+      </span>
+    </span>
+  );
+}
+
+// Up to three W/D/L result chips derived from the win/draw/loss counts (the table
+// row carries aggregate counts, not per-match order), padded with empty cells.
+function FormChips({ w, d, l }: { w: number; d: number; l: number }) {
+  const seq = [
+    ...Array(w).fill("W"),
+    ...Array(d).fill("D"),
+    ...Array(l).fill("L"),
+  ].slice(0, 3);
+  while (seq.length < 3) seq.push("");
+  const color = (r: string) =>
+    r === "W" ? "#22c55e" : r === "D" ? "#9ca3af" : r === "L" ? "#ef4444" : "transparent";
+  return (
+    <span className="inline-flex gap-0.5">
+      {seq.map((r, i) => (
+        <span
+          key={i}
+          className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-[3px] text-[8px] font-bold text-white"
+          style={{ background: color(r), border: r ? "none" : "1px solid var(--line)" }}
+        >
+          {r}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function GroupStandings({ view }: { view: BracketView }) {
   // Tables are always populated (all 4 teams, 0–0 before play), so every group
   // renders the same full-size table; the empty state only shows pre-seed.
@@ -238,104 +299,120 @@ export function GroupStandings({ view }: { view: BracketView }) {
   }
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {view.groups.map((g) => {
           const city = GROUP_CITY[g.group] ?? "mexico-city";
           return (
             <div
               key={g.group}
-              className="relative overflow-hidden rounded-xl border border-line p-3 text-sm"
-              style={{ background: `color-mix(in srgb, var(--city-${city}) 7%, var(--surface))` }}
+              className="relative overflow-hidden rounded-xl border border-line bg-surface p-3 text-sm"
             >
-              <span
-                className="pattern"
-                data-pattern={city}
-                style={{ color: `var(--city-${city})` }}
-              />
-              <div className="relative">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm font-display text-[13px] text-white"
-                    style={{
-                      background: `var(--city-${city})`,
-                      textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                    }}
-                  >
-                    {g.group}
+              <div className="flex items-center gap-2">
+                <GroupLetterMark letter={g.group} city={city} />
+                <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+                  Group {g.group}
+                </span>
+                {!g.started && g.firstMatchAt ? (
+                  <span className="ml-auto font-mono text-[10px] font-medium text-ink-3">
+                    {formatMatchDate(g.firstMatchAt)}
                   </span>
-                  <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
-                    Group {g.group}
-                  </span>
-                  {!g.started && g.firstMatchAt ? (
-                    <span className="ml-auto font-mono text-[10px] font-medium text-ink-3">
-                      {formatMatchDate(g.firstMatchAt)}
-                    </span>
-                  ) : null}
-                </div>
-                {g.table.length > 0 ? (
-                  <table className="mt-2 w-full border-collapse text-[11px]">
-                    <thead>
-                      <tr className="text-ink-4">
-                        <th className="text-left font-medium">#</th>
-                        <th className="text-left font-medium">Team</th>
-                        <th className="text-right font-medium">P</th>
-                        <th className="text-right font-medium">GD</th>
-                        <th className="text-right font-medium">Pts</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {g.table.map((r: GroupTableRow) => {
-                        const advancing = r.rank <= 2;
-                        const isThird = r.rank === 3;
-                        return (
-                          <tr
-                            key={r.code}
-                            className={
-                              advancing
-                                ? "font-bold text-ink"
-                                : isThird
-                                  ? "text-ink-2"
-                                  : "text-ink-4"
-                            }
-                          >
-                            <td className="py-0.5 text-left font-mono">{r.rank}</td>
-                            <td className="py-0.5 text-left">
-                              {r.code}
-                              {r.tied && g.started ? <span className="ml-1 text-ink-4">=</span> : null}
-                            </td>
-                            <td className="py-0.5 text-right tabular-nums">{r.played}</td>
-                            <td className="py-0.5 text-right tabular-nums">
-                              {r.gd > 0 ? `+${r.gd}` : r.gd}
-                            </td>
-                            <td className="py-0.5 text-right font-mono tabular-nums">{r.pts}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <>
-                    <p className="mt-2">
-                      <span className="font-mono text-ink-4">1.</span>{" "}
-                      <span className="font-medium text-ink">{g.first ?? "—"}</span>
-                    </p>
-                    <p>
-                      <span className="font-mono text-ink-4">2.</span>{" "}
-                      <span className="font-medium text-ink">{g.second ?? "—"}</span>
-                    </p>
-                  </>
-                )}
+                ) : null}
               </div>
+              {g.table.length > 0 ? (
+                <table className="mt-2 w-full border-collapse text-[11px]">
+                  <thead>
+                    <tr className="text-ink-4">
+                      <th className="text-left font-medium">#</th>
+                      <th className="text-left font-medium">Team</th>
+                      <th className="text-right font-medium">P</th>
+                      <th className="text-left font-medium">Form</th>
+                      <th className="text-right font-medium">GF</th>
+                      <th className="text-right font-medium">GA</th>
+                      <th className="text-right font-medium">GD</th>
+                      <th className="text-right font-medium">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.table.map((r: GroupTableRow) => {
+                      const advancing = r.rank <= 2;
+                      const isThird = r.rank === 3;
+                      return (
+                        <tr
+                          key={r.code}
+                          className={
+                            advancing
+                              ? "font-bold text-ink"
+                              : isThird
+                                ? "text-ink-2"
+                                : "text-ink-4"
+                          }
+                        >
+                          <td className="py-0.5 text-left font-mono">{r.rank}</td>
+                          <td className="py-0.5 text-left">
+                            {r.code}
+                            {r.tied && g.started ? <span className="ml-1 text-ink-4">=</span> : null}
+                          </td>
+                          <td className="py-0.5 text-right tabular-nums">{r.played}</td>
+                          <td className="py-0.5 text-left">
+                            <FormChips w={r.w} d={r.d} l={r.l} />
+                          </td>
+                          <td className="py-0.5 text-right tabular-nums">{r.gf}</td>
+                          <td className="py-0.5 text-right tabular-nums">{r.ga}</td>
+                          <td className="py-0.5 text-right tabular-nums">
+                            {r.gd > 0 ? `+${r.gd}` : r.gd}
+                          </td>
+                          <td className="py-0.5 text-right font-mono tabular-nums">{r.pts}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <>
+                  <p className="mt-2">
+                    <span className="font-mono text-ink-4">1.</span>{" "}
+                    <span className="font-medium text-ink">{g.first ?? "—"}</span>
+                  </p>
+                  <p>
+                    <span className="font-mono text-ink-4">2.</span>{" "}
+                    <span className="font-medium text-ink">{g.second ?? "—"}</span>
+                  </p>
+                </>
+              )}
             </div>
           );
         })}
       </div>
-      {view.thirds.length > 0 ? (
+      {view.thirdsTable.length > 0 ? (
         <div className="rounded-xl border border-line bg-surface p-3 text-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
-            Third-place advancers
+            Third-place standings
           </p>
-          <p className="mt-1.5 font-medium text-ink">{view.thirds.join(" · ")}</p>
+          <table className="mt-2 w-full border-collapse text-[11px]">
+            <thead>
+              <tr className="text-ink-4">
+                <th className="text-left font-medium">#</th>
+                <th className="text-left font-medium">Grp</th>
+                <th className="text-left font-medium">Team</th>
+                <th className="text-right font-medium">P</th>
+                <th className="text-right font-medium">GD</th>
+                <th className="text-right font-medium">Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {view.thirdsTable.map((r, i) => (
+                <tr key={r.code} className={r.advancing ? "font-bold text-ink" : "text-ink-4"}>
+                  <td className="py-0.5 text-left font-mono">{i + 1}</td>
+                  <td className="py-0.5 text-left">{r.group}</td>
+                  <td className="py-0.5 text-left">{r.code}</td>
+                  <td className="py-0.5 text-right tabular-nums">{r.played}</td>
+                  <td className="py-0.5 text-right tabular-nums">{r.gd > 0 ? `+${r.gd}` : r.gd}</td>
+                  <td className="py-0.5 text-right font-mono tabular-nums">{r.pts}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-[10px] text-ink-4">Top 8 advance to the Round of 32.</p>
         </div>
       ) : null}
     </div>
