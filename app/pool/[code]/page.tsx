@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPoolByCode, getHomeView, getPoolView, getPoolBracket } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
+import { listMessages } from "@/lib/pool/chat";
 import { Home } from "./Home";
 
 // Personal dashboard: live scores, your standing(s), stats, the next match, and a
@@ -21,10 +22,12 @@ export default async function PoolHomePage({
   const access = await getPoolAccess(pool.id);
   const sessionUser = access?.user ?? (await getSessionUser());
 
-  const [view, poolView, bracket] = await Promise.all([
+  const [view, poolView, bracket, recentChat] = await Promise.all([
     getHomeView(pool.id, sessionUser?.id ?? null),
     getPoolView(code),
     getPoolBracket(pool.id),
+    // Chat is members-only — fetch the latest few only for users with access.
+    access ? listMessages(pool.id, 3, sessionUser?.id ?? null) : Promise.resolve([]),
   ]);
   const fullBoard = poolView?.leaderboard ?? [];
 
@@ -50,6 +53,7 @@ export default async function PoolHomePage({
       hasMore={hasMore}
       bracket={bracket}
       showMedals={poolView?.groupStageComplete ?? false}
+      recentChat={recentChat}
     />
   );
 }

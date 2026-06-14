@@ -7,8 +7,20 @@ import { GroupStandings } from "./Bracket";
 import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 import type { BracketView } from "@/lib/pool/bracket-view";
+import type { ChatView } from "@/lib/pool/chat";
+import { DISPLAY_TZ } from "@/lib/tz";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+
+// Short time-of-day in the pool's display zone (Eastern), matching Chat.tsx's
+// timeLabel so timestamps read identically across the app — not the viewer's zone.
+function chatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: DISPLAY_TZ,
+  });
+}
 
 // A minor inline link to the pick editor, folded into the standing card so the
 // bracket no longer needs its own card. Shows the lock countdown pre-tournament.
@@ -28,7 +40,7 @@ function PicksLink({
       href={`/pool/${code}/picks`}
       className="group inline-flex items-center gap-1.5 text-sm font-semibold text-pitch hover:underline"
     >
-      {hasEntry ? "Review or edit your picks" : "Make your picks"}
+      {hasEntry ? (upcoming ? "Review or edit your picks" : "Review your picks") : "Make your picks"}
       <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
         →
       </span>
@@ -84,22 +96,22 @@ function StandingCard({
   const isLeader = you.rank === 1;
   return (
     <div
-      className={`rounded-2xl border bg-surface p-5 ${
+      className={`rounded-2xl border bg-surface p-4 ${
         isLeader ? "border-gold shadow-[var(--shadow-ring-gold)]" : "border-line shadow-[var(--shadow-xs)]"
       }`}
     >
       <p className={LABEL}>Your standing</p>
-      <div className="mt-2 flex items-end gap-4">
+      <div className="mt-1.5 flex items-end gap-4">
         <div className="leading-none">
-          <span className="font-display text-[40px] text-ink">#{you.rank}</span>
+          <span className="font-display text-[28px] text-ink">#{you.rank}</span>
           <span className="ml-1.5 text-sm text-ink-3">of {you.entryCount}</span>
         </div>
         <div className="ml-auto text-right leading-none">
-          <CountUp value={you.total} className="font-display text-[40px] tabular-nums text-ink" />
+          <CountUp value={you.total} className="font-display text-[28px] tabular-nums text-ink" />
           <span className="ml-1.5 text-sm text-ink-3">pts</span>
         </div>
       </div>
-      <p className="mt-3 text-sm text-ink-2">
+      <p className="mt-2 text-sm text-ink-2">
         {isLeader ? (
           "You’re leading the pool 🏆"
         ) : (
@@ -116,7 +128,7 @@ function StandingCard({
           </>
         )}
       </p>
-      <div className="mt-4 border-t border-line-soft pt-3">
+      <div className="mt-3 border-t border-line-soft pt-2.5">
         <PicksLink code={code} hasEntry upcoming={upcoming} startsAt={startsAt} />
       </div>
     </div>
@@ -146,6 +158,44 @@ function OtherEntries({ entries, code }: { entries: Standing[]; code: string }) 
                 <span className="text-xs text-ink-3"> pts</span>
               </span>
             </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// The latest few chat messages, as a compact card linking to the full chat.
+// Members-only; the page passes an empty list to non-members (renders nothing).
+function HomeChat({ code, messages }: { code: string; messages: ChatView[] }) {
+  if (messages.length === 0) return null;
+  return (
+    <section>
+      <div className="flex items-center justify-between px-1">
+        <h2 className={LABEL}>Latest from chat</h2>
+        <Link
+          href={`/pool/${code}/chat`}
+          className="text-xs font-semibold text-pitch hover:underline"
+        >
+          Open chat →
+        </Link>
+      </div>
+      <ul className="mt-2.5 divide-y divide-line rounded-2xl border border-line bg-surface">
+        {messages.map((m) => (
+          <li key={m.id} className="flex items-baseline gap-2 px-4 py-2.5 text-sm">
+            <span className="shrink-0 font-semibold text-ink">
+              {m.kind === "SYSTEM" ? "Match update" : (m.authorName ?? "Player")}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-ink-2">
+              {m.body?.trim()
+                ? m.body
+                : m.attachmentType === "GIF"
+                  ? "Sent a GIF"
+                  : m.attachmentType === "IMAGE"
+                    ? "Sent a photo"
+                    : ""}
+            </span>
+            <span className="shrink-0 font-mono text-[10px] text-ink-4">{chatTime(m.createdAt)}</span>
           </li>
         ))}
       </ul>
@@ -224,6 +274,7 @@ export function Home({
   hasMore,
   bracket,
   showMedals,
+  recentChat,
 }: {
   view: HomeView;
   // Already truncated to the top rows (+ your row when you're below it).
@@ -240,6 +291,8 @@ export function Home({
   bracket: BracketView | null;
   // Show leaderboard medals (only after the group stage completes).
   showMedals: boolean;
+  // The most recent chat messages (empty for non-members).
+  recentChat: ChatView[];
 }) {
   return (
     <div className="space-y-4">
@@ -255,6 +308,8 @@ export function Home({
       />
 
       <OtherEntries entries={view.otherEntries} code={code} />
+
+      <HomeChat code={code} messages={recentChat} />
 
       {view.stats ? <StatsStrip stats={view.stats} /> : null}
 

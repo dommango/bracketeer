@@ -75,7 +75,7 @@ export default async function PicksPage({
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-          {entry ? "Edit your picks" : "Make your picks"}
+          {entry ? (locked ? "Your picks" : "Edit your picks") : "Make your picks"}
         </h2>
         <Link
           href={entries.length > 1 ? `/pool/${code}/picks` : `/pool/${code}`}
