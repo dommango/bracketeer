@@ -16,3 +16,15 @@ export function formatKickoff(iso: string): string {
     timeZoneName: "short",
   });
 }
+
+// A kickoff timestamp (ISO string) → short weekday/date only in the display
+// timezone, e.g. "Sat, Jun 27" — for stage/group summaries where the time isn't
+// relevant. Pinned to DISPLAY_TZ like formatKickoff.
+export function formatMatchDate(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: DISPLAY_TZ,
+  });
+}

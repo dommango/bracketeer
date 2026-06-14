@@ -17,13 +17,16 @@ function matchRoundLabel(no: number): string | null {
 }
 
 // Turn a stored slot ref into a short label:
-//   "1A" / "2B"      → "1A" / "2B"   (group winner / runner-up)
-//   "3rd:ABCDF"      → "3rd"         (one of several third-placed teams)
-//   "W101" / "L101"  → "SF1" / "SF1 L" (winner / loser of that match)
+//   "1A" / "2B"      → "1A" / "2B"        (group winner / runner-up)
+//   "3rd:ABCDF"      → "3rd A/B/C/D/F"    (advancing 3rd-place team from one of these groups)
+//   "W101" / "L101"  → "SF1" / "SF1 L"    (winner / loser of that match)
 export function slotLabel(ref: string | null | undefined): string {
   if (!ref) return "TBD";
   if (/^[12][A-L]$/.test(ref)) return ref;
-  if (ref.startsWith("3rd")) return "3rd";
+  if (ref.startsWith("3rd")) {
+    const groups = ref.slice(4); // letters after "3rd:"
+    return groups ? `3rd ${groups.split("").join("/")}` : "3rd";
+  }
   const wl = ref.match(/^([WL])(\d+)$/);
   if (wl) {
     const base = matchRoundLabel(Number(wl[2]));

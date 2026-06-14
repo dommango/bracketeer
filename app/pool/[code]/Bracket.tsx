@@ -1,6 +1,7 @@
 import type { BracketView, BracketMatch, BracketRound } from "@/lib/pool/bracket-view";
 import type { GroupTableRow } from "@/lib/pool/group-table";
 import { R16, QF, SF, FINAL } from "@/lib/scoring/data";
+import { formatMatchDate, formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
 
 // Pre-order DFS from the Final (a-branch before b-branch) gives every knockout
@@ -92,20 +93,25 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
       className="rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm"
       style={{ borderLeft: `4px solid ${accent}` }}
     >
-      {m.live || decided ? (
-        <div className="mb-1 flex items-center justify-end">
-          {m.live ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
-              <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-              Live
-            </span>
-          ) : (
-            <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
-              Final
-            </span>
-          )}
-        </div>
-      ) : null}
+      <div className="mb-1 flex items-center justify-between gap-2">
+        {m.tag ? (
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-ink-4">
+            {m.tag}
+          </span>
+        ) : <span />}
+        {m.live ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
+            <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
+            Live
+          </span>
+        ) : decided ? (
+          <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
+            Final
+          </span>
+        ) : m.scheduledAt ? (
+          <span className="font-mono text-[10px] text-ink-3">{formatKickoff(m.scheduledAt)}</span>
+        ) : null}
+      </div>
       <Side
         name={m.home}
         code={m.homeCode}
@@ -238,7 +244,8 @@ export function GroupStandings({ view }: { view: BracketView }) {
           return (
             <div
               key={g.group}
-              className="relative overflow-hidden rounded-xl border border-line bg-surface p-3 text-sm"
+              className="relative overflow-hidden rounded-xl border border-line p-3 text-sm"
+              style={{ background: `color-mix(in srgb, var(--city-${city}) 7%, var(--surface))` }}
             >
               <span
                 className="pattern"
@@ -259,13 +266,12 @@ export function GroupStandings({ view }: { view: BracketView }) {
                   <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
                     Group {g.group}
                   </span>
+                  {!g.started && g.firstMatchAt ? (
+                    <span className="ml-auto font-mono text-[10px] font-medium text-ink-3">
+                      {formatMatchDate(g.firstMatchAt)}
+                    </span>
+                  ) : null}
                 </div>
-                {g.provisional ? (
-                  <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-live-tint px-1.5 py-0.5 font-mono text-[9px] font-bold text-live">
-                    <span className="h-[4px] w-[4px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-                    Live
-                  </span>
-                ) : null}
                 {g.table.length > 0 ? (
                   <table className="mt-2 w-full border-collapse text-[11px]">
                     <thead>
@@ -295,7 +301,7 @@ export function GroupStandings({ view }: { view: BracketView }) {
                             <td className="py-0.5 text-left font-mono">{r.rank}</td>
                             <td className="py-0.5 text-left">
                               {r.code}
-                              {r.tied ? <span className="ml-1 text-ink-4">=</span> : null}
+                              {r.tied && g.started ? <span className="ml-1 text-ink-4">=</span> : null}
                             </td>
                             <td className="py-0.5 text-right tabular-nums">{r.played}</td>
                             <td className="py-0.5 text-right tabular-nums">

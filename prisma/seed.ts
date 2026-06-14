@@ -17,22 +17,12 @@ import {
   groupMatchups,
 } from "../lib/scoring/data";
 import { DEFAULT_SCORING } from "../lib/scoring/score";
-import { venueFor } from "../lib/scoring/schedule";
+import { venueFor, kickoffFor } from "../lib/scoring/schedule";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 const SLUG = "wc2026";
-
-// Parse a label like "Sat Jun 27" / "Wed Jul 1" into a 2026 UTC date.
-const MONTHS: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-function parseLabelDate(label: string): Date | null {
-  const m = label.match(/([A-Z][a-z]{2})\s+(\d{1,2})$/);
-  if (!m) return null;
-  const month = MONTHS[m[1]];
-  if (month == null) return null;
-  return new Date(Date.UTC(2026, month, Number(m[2]), 19, 0, 0));
-}
 
 function r32SlotRef(slot: (typeof R32)[number]["a"]): string {
   if ("third" in slot) return `3rd:${slot.third.join("")}`;
@@ -44,7 +34,6 @@ interface SeedMatch {
   roundCode: string;
   homeSlotRef: string;
   awaySlotRef: string;
-  date: string | null;
 }
 
 function buildMatches(): SeedMatch[] {
@@ -59,7 +48,6 @@ function buildMatches(): SeedMatch[] {
         roundCode: "GROUP",
         homeSlotRef: home,
         awaySlotRef: away,
-        date: null,
       });
     }
   }
@@ -71,7 +59,6 @@ function buildMatches(): SeedMatch[] {
       roundCode: "R32",
       homeSlotRef: r32SlotRef(m.a),
       awaySlotRef: r32SlotRef(m.b),
-      date: m.date,
     });
   }
   // R16 / QF / SF — feeders are "W<id>".
@@ -82,7 +69,6 @@ function buildMatches(): SeedMatch[] {
         roundCode: round,
         homeSlotRef: `W${m.a}`,
         awaySlotRef: `W${m.b}`,
-        date: m.date,
       });
     }
   }
@@ -92,7 +78,6 @@ function buildMatches(): SeedMatch[] {
     roundCode: "BRONZE",
     homeSlotRef: `L${BRONZE.aLoser}`,
     awaySlotRef: `L${BRONZE.bLoser}`,
-    date: BRONZE.date,
   });
   // Final 104.
   out.push({
@@ -100,7 +85,6 @@ function buildMatches(): SeedMatch[] {
     roundCode: "FINAL",
     homeSlotRef: `W${FINAL.a}`,
     awaySlotRef: `W${FINAL.b}`,
-    date: FINAL.date,
   });
 
   return out;
@@ -139,13 +123,14 @@ async function main() {
   const matches = buildMatches();
   for (const sm of matches) {
     const v = venueFor(sm.matchNo);
+    const scheduledAt = kickoffFor(sm.matchNo);
     await prisma.match.upsert({
       where: { tournamentId_matchNo: { tournamentId: tournament.id, matchNo: sm.matchNo } },
       update: {
         roundCode: sm.roundCode,
         homeSlotRef: sm.homeSlotRef,
         awaySlotRef: sm.awaySlotRef,
-        scheduledAt: sm.date ? parseLabelDate(sm.date) : null,
+        scheduledAt,
         venue: v?.venue ?? null,
         city: v?.city ?? null,
       },
@@ -155,7 +140,7 @@ async function main() {
         roundCode: sm.roundCode,
         homeSlotRef: sm.homeSlotRef,
         awaySlotRef: sm.awaySlotRef,
-        scheduledAt: sm.date ? parseLabelDate(sm.date) : null,
+        scheduledAt,
         venue: v?.venue ?? null,
         city: v?.city ?? null,
       },

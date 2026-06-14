@@ -7,6 +7,8 @@ import {
   isGroupStageComplete,
 } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
+import { kickoffFor } from "@/lib/scoring/schedule";
+import { formatMatchDate } from "@/lib/pool/format";
 import { MatchCenter } from "../MatchCenter";
 import { GroupStandings, Bracket } from "../Bracket";
 
@@ -14,6 +16,27 @@ import { GroupStandings, Bracket } from "../Bracket";
 export const dynamic = "force-dynamic";
 
 type FixturesView = "groups" | "knockouts";
+
+// Date span of a contiguous matchNo range (e.g. "Thu, Jun 11 – Sat, Jun 27"),
+// from the static schedule. Null when none of the matches are scheduled.
+function stageDateRange(from: number, to: number): string | null {
+  let min: number | null = null;
+  let max: number | null = null;
+  for (let n = from; n <= to; n++) {
+    const d = kickoffFor(n);
+    if (!d) continue;
+    const t = d.getTime();
+    if (min === null || t < min) min = t;
+    if (max === null || t > max) max = t;
+  }
+  if (min === null || max === null) return null;
+  const a = formatMatchDate(new Date(min).toISOString());
+  const b = formatMatchDate(new Date(max).toISOString());
+  return a === b ? a : `${a} – ${b}`;
+}
+
+const GROUP_RANGE = stageDateRange(1, 72);
+const KNOCKOUT_RANGE = stageDateRange(73, 104);
 
 function Toggle({ code, active }: { code: string; active: FixturesView }) {
   const tab = (view: FixturesView, label: string) => {
@@ -31,9 +54,16 @@ function Toggle({ code, active }: { code: string; active: FixturesView }) {
     );
   };
   return (
-    <div className="flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
-      {tab("groups", "Group Stage")}
-      {tab("knockouts", "Knockouts")}
+    <div>
+      <div className="flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
+        {tab("groups", "Group Stage")}
+        {tab("knockouts", "Knockout Stage")}
+      </div>
+      {(active === "groups" ? GROUP_RANGE : KNOCKOUT_RANGE) ? (
+        <p className="mt-1.5 text-center font-mono text-[11px] text-ink-3">
+          {active === "groups" ? GROUP_RANGE : KNOCKOUT_RANGE}
+        </p>
+      ) : null}
     </div>
   );
 }
