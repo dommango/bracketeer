@@ -4,6 +4,7 @@ import type { HomeNextMatch } from "@/lib/pool/home";
 import { Flag } from "./Flag";
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { formatKickoff } from "@/lib/pool/format";
+import { VenueLine } from "./VenueLine";
 
 // code → group letter, for labelling a group match by its actual group (A–L).
 const TEAM_GROUP: Record<string, string> = Object.fromEntries(
@@ -114,6 +115,9 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
           </span>
         </div>
       ) : null}
+      <div className="mt-2">
+        <VenueLine venue={row.venue} city={row.city} />
+      </div>
     </Link>
   );
 }

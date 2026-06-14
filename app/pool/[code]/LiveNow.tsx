@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { MatchCenterRow, MatchCenterSide } from "@/lib/pool/match-center";
 import { Flag } from "./Flag";
+import { VenueLine } from "./VenueLine";
 
 // Same chromatic round sweep as the bracket / match center (group green → gold final).
 const ROUND_ACCENT: Record<string, string> = {
@@ -72,6 +73,9 @@ function LiveCard({ row, code }: { row: MatchCenterRow; code: string }) {
           </span>
         </div>
       ) : null}
+      <div className="mt-2">
+        <VenueLine venue={row.venue} city={row.city} />
+      </div>
     </Link>
   );
 }

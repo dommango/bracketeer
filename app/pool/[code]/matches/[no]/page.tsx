@@ -9,6 +9,7 @@ import { Flag } from "../../Flag";
 import { WhatIf } from "../../WhatIf";
 import { Chat } from "../../Chat";
 import { MatchTimeline, MatchStatsBars } from "./MatchLive";
+import { VenueLine } from "../../VenueLine";
 
 export const dynamic = "force-dynamic";
 
@@ -166,6 +167,9 @@ export default async function MatchDetailPage({
         <TeamRow side={detail.home} pens={detail.homePens} isWinner={decided && detail.winnerCode === detail.home.code} decided={decided} />
         <div className="h-px bg-line-soft" />
         <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
+        <div className="mt-3">
+          <VenueLine venue={detail.venue} city={detail.city} />
+        </div>
       </div>
 
       <MatchTimeline items={detail.timeline} />

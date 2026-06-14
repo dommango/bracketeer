@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { MatchCenterSection, MatchCenterRow, MatchCenterSide } from "@/lib/pool/match-center";
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
+import { VenueLine } from "./VenueLine";
 
 // Same chromatic round sweep as the bracket (group green → gold final).
 const ROUND_ACCENT: Record<string, string> = {
@@ -92,6 +93,9 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
           <PickChip pick={row.yourPick} />
         </div>
       ) : null}
+      <div className="mt-1.5">
+        <VenueLine venue={row.venue} city={row.city} />
+      </div>
     </Link>
   );
 }
