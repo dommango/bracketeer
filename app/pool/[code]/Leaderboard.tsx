@@ -62,8 +62,11 @@ export function Leaderboard({
     );
   }
 
+  const hasLive = rows.some((r) => r.projected);
+
   return (
-    <ol className="space-y-2">
+    <>
+      <ol className="space-y-2">
       {rows.map((row) => {
         const b = (row.breakdown ?? {}) as Record<string, number>;
         const isLeader = row.rank === 1;
@@ -98,7 +101,12 @@ export function Leaderboard({
                 ) : null}
               </span>
               <span className="shrink-0 text-right">
-                <span className="font-display text-[22px] tabular-nums text-ink">{row.total}</span>
+                {/* Show the live total (official + provisional) so the number matches
+                    both the live ranking and the Home standing card; the badge breaks
+                    out how much of it is still provisional. */}
+                <span className="font-display text-[22px] tabular-nums text-ink">
+                  {row.total + (row.projected ?? 0)}
+                </span>
                 <span className="text-xs text-ink-3"> pts</span>
                 {row.projected ? (
                   <span className="block font-mono text-[11px] tabular-nums text-positive">
@@ -141,6 +149,14 @@ export function Leaderboard({
           </li>
         );
       })}
-    </ol>
+      </ol>
+      {hasLive ? (
+        <p className="mt-3 px-1 text-[11px] leading-relaxed text-ink-3">
+          <span className="font-mono text-positive">▲ live</span> points are provisional —
+          they reflect in-progress matches and not-yet-final group standings, and update as
+          results come in. Only finalized results count toward official scoring.
+        </p>
+      ) : null}
+    </>
   );
 }

@@ -42,7 +42,7 @@ export interface PollSummary {
 // 30 min extra time + ~35 min shootout / breaks / stoppage buffer.
 async function shouldPollNow(tournamentId: string): Promise<boolean> {
   const now = Date.now();
-  const match = await prisma.match.findFirst({
+  const inWindow = await prisma.match.findFirst({
     where: {
       tournamentId,
       scheduledAt: {
@@ -52,7 +52,19 @@ async function shouldPollNow(tournamentId: string): Promise<boolean> {
     },
     select: { id: true },
   });
-  return match != null;
+  if (inWindow) return true;
+
+  // Bootstrap: group matches are seeded with no kickoff time (scheduledAt null),
+  // and the only thing that backfills them is a poll run — a deadlock that would
+  // keep the live window permanently closed through the whole group stage. So
+  // while any unscored match still has an unknown kickoff, poll regardless: the
+  // fetched fixtures backfill scheduledAt (backfillGroupMatchScheduledAt below),
+  // after which this falls back to the precise window check above.
+  const unscheduled = await prisma.match.findFirst({
+    where: { tournamentId, scheduledAt: null, scored: false },
+    select: { id: true },
+  });
+  return unscheduled != null;
 }
 
 function resolveWinnerCode(f: FinishedFixture): string | null {
