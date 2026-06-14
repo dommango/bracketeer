@@ -140,7 +140,7 @@ function Footer() {
     <div className="mt-7 flex justify-center gap-2 text-[11px] text-ink-3">
       <span>FIFA World Cup 26™</span>
       <span>·</span>
-      <span>Pool MVP · Kickoff Jun 11, 2026</span>
+      <span>June 11 – July 19, 2026</span>
     </div>
   );
 }
