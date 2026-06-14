@@ -1,0 +1,65 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-14-venues-and-odds.md",
+  "tasks": [
+    {
+      "id": 1,
+      "subject": "Task 1: Schema — Match.venue/city + MatchOdds model",
+      "status": "completed",
+      "description": "**Goal:** Add venue/city columns to Match and a separate 1:1 MatchOdds model, migrate, regenerate client.\n\n**Files:** prisma/schema.prisma\n\n**Verify:** env $ENV npm run db:migrate -- --name venues_and_odds && env $ENV npx prisma generate && npm run typecheck\n\n```json:metadata\n{\"files\": [\"prisma/schema.prisma\"], \"verifyCommand\": \"env $ENV npm run db:migrate -- --name venues_and_odds && env $ENV npx prisma generate && npm run typecheck\", \"acceptanceCriteria\": [\"Match has venue/city nullable\", \"Match has odds MatchOdds? relation\", \"MatchOdds model with matchId @unique + 3 Float probs + raw Json + source + fetchedAt\", \"migration applied + client regenerated + typecheck clean\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: MATCH_SCHEDULE static venue data (TDD)",
+      "status": "completed",
+      "description": "**Goal:** Pure module mapping matchNo to host city, venue/city/accent derived from a stable 16-stadium table.\n\n**Files:** lib/scoring/schedule.ts, lib/scoring/schedule.test.ts\n\n**Verify:** npx vitest run lib/scoring/schedule.test.ts\n\n```json:metadata\n{\"files\": [\"lib/scoring/schedule.ts\", \"lib/scoring/schedule.test.ts\"], \"verifyCommand\": \"npx vitest run lib/scoring/schedule.test.ts\", \"acceptanceCriteria\": [\"HOST_CITIES has all 16 host cities keyed by palette tokens\", \"MATCH_CITY maps every matchNo 1-104 to a valid token\", \"venueFor returns {venue,city,cityToken} or null\", \"test enforces 16 tokens + 104 coverage + token validity\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Seed venue/city + verify-venues script",
+      "status": "completed",
+      "blockedBy": [1, 2],
+      "description": "**Goal:** Write venue/city into Match rows on seed; add a verification script.\n\n**Files:** prisma/seed.ts, scripts/verify-venues.ts\n\n**Verify:** env $ENV npx tsx prisma/seed.ts && env $ENV npx tsx scripts/verify-venues.ts\n\n```json:metadata\n{\"files\": [\"prisma/seed.ts\", \"scripts/verify-venues.ts\"], \"verifyCommand\": \"env $ENV npx tsx prisma/seed.ts && env $ENV npx tsx scripts/verify-venues.ts\", \"acceptanceCriteria\": [\"seed writes venue/city via venueFor in create+update\", \"verify-venues prints per-match venue/city and counts missing\", \"re-seed idempotent; all 104 have venue/city\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Thread venue/city through match model + selectors (TDD)",
+      "status": "completed",
+      "blockedBy": [1],
+      "description": "**Goal:** Carry venue/city through MatchInput/MatchCenterRow and MatchDetail.\n\n**Files:** lib/pool/match-center.ts, lib/pool/match-center.test.ts, lib/pool/queries.ts\n\n**Verify:** npx vitest run lib/pool/match-center.test.ts && npm run typecheck\n\n```json:metadata\n{\"files\": [\"lib/pool/match-center.ts\", \"lib/pool/match-center.test.ts\", \"lib/pool/queries.ts\"], \"verifyCommand\": \"npx vitest run lib/pool/match-center.test.ts && npm run typecheck\", \"acceptanceCriteria\": [\"MatchInput + MatchCenterRow carry venue/city\", \"buildRow passes them through\", \"MatchDetail carries venue/city\", \"all selectors select+populate venue/city\", \"match-center test passes + typecheck clean\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Venue/city UI on fixture cards + match detail",
+      "status": "completed",
+      "blockedBy": [4],
+      "description": "**Goal:** Render 'Venue · City' with host-city accent on fixture cards + match-detail header.\n\n**Files:** app/pool/[code]/VenueLine.tsx, MatchCenter.tsx, ScoreCards.tsx, LiveNow.tsx, matches/[no]/page.tsx\n\n**Verify:** env $ENV npm run build\n\n```json:metadata\n{\"files\": [\"app/pool/[code]/VenueLine.tsx\", \"app/pool/[code]/MatchCenter.tsx\", \"app/pool/[code]/ScoreCards.tsx\", \"app/pool/[code]/LiveNow.tsx\", \"app/pool/[code]/matches/[no]/page.tsx\"], \"verifyCommand\": \"env $ENV npm run build\", \"acceptanceCriteria\": [\"VenueLine accents by city token, null-safe\", \"MatchCenter rows show venue line\", \"ScoreCards + LiveNow show venue line\", \"match detail header shows venue/city\", \"build succeeds\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: Odds env config + The Odds API client",
+      "status": "completed",
+      "description": "**Goal:** Graceful-degrading ODDS_API_KEY config + thin Odds API client.\n\n**Files:** lib/env.ts, lib/odds/client.ts\n\n**Verify:** npm run typecheck\n\n```json:metadata\n{\"files\": [\"lib/env.ts\", \"lib/odds/client.ts\"], \"verifyCommand\": \"npm run typecheck\", \"acceptanceCriteria\": [\"env has ODDS_API_KEY/BASE/REGION with defaults\", \"oddsApiEnabled exported\", \"parseOddsEvents+fetchOddsEvents return typed h2h events\", \"typecheck clean\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Odds mapping helpers (pure, TDD)",
+      "status": "completed",
+      "description": "**Goal:** Pure tested helpers: team normalize, matchNo resolve, implied probs, live upset.\n\n**Files:** lib/odds/map.ts, lib/odds/map.test.ts\n\n**Verify:** npx vitest run lib/odds/map.test.ts\n\n```json:metadata\n{\"files\": [\"lib/odds/map.ts\", \"lib/odds/map.test.ts\"], \"verifyCommand\": \"npx vitest run lib/odds/map.test.ts\", \"acceptanceCriteria\": [\"toImpliedProbs normalizes to sum 1\", \"normalizeTeam resolves names+aliases, null on unknown\", \"resolveMatchNo matches unordered pair, null otherwise\", \"liveUpset LIVE-only underdog-ahead logic\", \"tests pass\"]}\n```"
+    },
+    {
+      "id": 8,
+      "subject": "Task 8: Odds poller + cron route + verify-odds",
+      "status": "completed",
+      "blockedBy": [1, 6, 7],
+      "description": "**Goal:** Fetch odds, map to matchNos, upsert MatchOdds; CRON_SECRET route; cron ping; verify script.\n\n**Files:** lib/odds/poll.ts, app/api/cron/poll-odds/route.ts, scripts/verify-odds.ts, scripts/cron.mjs\n\n**Verify:** npm run typecheck && env $ENV npm run build && env $ENV npx tsx scripts/verify-odds.ts\n\n```json:metadata\n{\"files\": [\"lib/odds/poll.ts\", \"app/api/cron/poll-odds/route.ts\", \"scripts/verify-odds.ts\", \"scripts/cron.mjs\"], \"verifyCommand\": \"npm run typecheck && env $ENV npm run build && env $ENV npx tsx scripts/verify-odds.ts\", \"acceptanceCriteria\": [\"pollOdds no-ops when odds disabled\", \"enabled path fetch->normalize->resolve->upsert MatchOdds with summary\", \"cron route constant-time secret\", \"cron.mjs pings poll-odds\", \"verify-odds prints summary+unmatched\", \"typecheck+build pass\"]}\n```"
+    },
+    {
+      "id": 9,
+      "subject": "Task 9: Win-prob bar + live upset + pick-difficulty UI",
+      "status": "completed",
+      "blockedBy": [4, 7, 8],
+      "description": "**Goal:** Surface odds in selectors; win-prob bar (cards+detail), LIVE-only upset badge, pick-difficulty (detail only).\n\n**Files:** lib/pool/match-center.ts, lib/pool/queries.ts, app/pool/[code]/WinProbBar.tsx, MatchCenter.tsx, matches/[no]/page.tsx\n\n**Verify:** npm run typecheck && env $ENV npm run build\n\n```json:metadata\n{\"files\": [\"lib/pool/match-center.ts\", \"lib/pool/queries.ts\", \"app/pool/[code]/WinProbBar.tsx\", \"app/pool/[code]/MatchCenter.tsx\", \"app/pool/[code]/matches/[no]/page.tsx\"], \"verifyCommand\": \"npm run typecheck && env $ENV npm run build\", \"acceptanceCriteria\": [\"row+detail carry odds triple\", \"selectors populate odds\", \"WinProbBar null-safe H/D/A split\", \"LIVE-only upset badge\", \"match detail pick-difficulty label\", \"typecheck+build pass\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-06-14T15:30:00Z"
+}
