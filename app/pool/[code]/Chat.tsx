@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { usePoolStream } from "./usePoolStream";
+import { DISPLAY_TZ } from "@/lib/tz";
 
 export interface ChatMessage {
   id: string;
@@ -12,8 +13,13 @@ export interface ChatMessage {
 }
 
 function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // Pinned to the pool's display zone (Eastern) so timestamps read the same for
+  // everyone, matching kickoff times — not each viewer's browser zone.
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: DISPLAY_TZ,
+  });
 }
 
 export function Chat({
