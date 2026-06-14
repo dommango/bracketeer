@@ -37,6 +37,7 @@ export interface MatchInput {
   awayRef?: string | null;
   venue?: string | null;
   city?: string | null;
+  cityToken?: string | null;
 }
 
 export interface MatchCenterSide {
