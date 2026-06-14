@@ -47,8 +47,8 @@ export const MATCH_CITY: Record<number, CityToken> = {
   25: "houston", 26: "toronto", 27: "new-york-nj", 28: "philadelphia", 29: "kansas-city", 30: "philadelphia",
   // Group F
   31: "dallas", 32: "houston", 33: "kansas-city", 34: "dallas", 35: "monterrey", 36: "monterrey",
-  // Group G
-  37: "vancouver", 38: "los-angeles", 39: "vancouver", 40: "seattle", 41: "vancouver", 42: "los-angeles",
+  // Group G (37 BEL–EGY is at Lumen Field, Seattle — verified vs the official schedule)
+  37: "seattle", 38: "los-angeles", 39: "vancouver", 40: "seattle", 41: "vancouver", 42: "los-angeles",
   // Group H
   43: "atlanta", 44: "atlanta", 45: "guadalajara", 46: "houston", 47: "miami", 48: "miami",
   // Group I
