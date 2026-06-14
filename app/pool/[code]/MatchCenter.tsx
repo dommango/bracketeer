@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { MatchCenterSection, MatchCenterRow, MatchCenterSide } from "@/lib/pool/match-center";
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
+import { VenueLine } from "./VenueLine";
+import { WinProbBar } from "./WinProbBar";
+import { UpsetBadge } from "./UpsetBadge";
 
 // Same chromatic round sweep as the bracket (group green → gold final).
 const ROUND_ACCENT: Record<string, string> = {
@@ -79,6 +82,7 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
       style={{ borderLeft: `4px solid ${accent}` }}
     >
       <div className="mb-1 flex items-center justify-end gap-2">
+        <UpsetBadge status={row.status} homeScore={row.home.score} awayScore={row.away.score} odds={row.odds} />
         <StatusBadge status={row.status} />
         {row.status === "SCHEDULED" && row.scheduledAt ? (
           <span className="font-mono text-[10px] text-ink-3">{formatKickoff(row.scheduledAt)}</span>
@@ -92,6 +96,10 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
           <PickChip pick={row.yourPick} />
         </div>
       ) : null}
+      <div className="mt-1.5">
+        <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
+      </div>
+      <WinProbBar odds={row.odds} />
     </Link>
   );
 }

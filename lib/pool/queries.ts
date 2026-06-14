@@ -30,6 +30,8 @@ import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { TEAMS } from "@/lib/scoring/data";
+import type { ImpliedProbs } from "@/lib/odds/map";
+import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone } from "@/lib/tz";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
@@ -78,6 +80,9 @@ interface ResolvableMatch {
   scheduledAt: Date | null;
   homeSlotRef: string | null;
   awaySlotRef: string | null;
+  venue: string | null;
+  city: string | null;
+  odds: ImpliedProbs | null;
   result: {
     homeTeamCode: string | null;
     awayTeamCode: string | null;
@@ -120,6 +125,10 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
     awayPens: m.result?.awayPens ?? null,
     homeRef: m.homeSlotRef,
     awayRef: m.awaySlotRef,
+    venue: m.venue ?? null,
+    city: m.city ?? null,
+    cityToken: venueFor(m.matchNo)?.cityToken ?? null,
+    odds: m.odds ?? null,
   };
 }
 
@@ -535,8 +544,11 @@ export async function getMatchCenter(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -589,8 +601,11 @@ export async function getLastMatch(
           matchNo: true,
           roundCode: true,
           scheduledAt: true,
+          venue: true,
+          city: true,
           homeSlotRef: true,
           awaySlotRef: true,
+          odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
         },
       },
     },
@@ -604,8 +619,11 @@ export async function getLastMatch(
     matchNo: result.match.matchNo,
     roundCode: result.match.roundCode,
     scheduledAt: result.match.scheduledAt,
+    venue: result.match.venue ?? null,
+    city: result.match.city ?? null,
     homeSlotRef: result.match.homeSlotRef,
     awaySlotRef: result.match.awaySlotRef,
+    odds: result.match.odds ?? null,
     result: {
       homeTeamCode: result.homeTeamCode,
       awayTeamCode: result.awayTeamCode,
@@ -643,8 +661,11 @@ export async function getLiveMatches(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -733,6 +754,9 @@ export interface MatchDetail {
   matchNo: number;
   roundCode: string;
   roundLabel: string;
+  venue: string | null;
+  city: string | null;
+  cityToken: string | null;
   scheduledAt: string | null;
   status: MatchStatus;
   elapsed: number | null; // live match minute when LIVE, else null
@@ -747,6 +771,7 @@ export interface MatchDetail {
   yourPick: { code: string; name: string; correct: boolean | null } | null;
   timeline: TimelineItem[]; // goal/card events (empty when none fed)
   stats: StatBar[]; // paired team stats (empty when none fed)
+  odds: ImpliedProbs | null;
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split
@@ -770,8 +795,11 @@ export async function getMatchDetail(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -840,6 +868,9 @@ export async function getMatchDetail(
     matchNo,
     roundCode: match.roundCode,
     roundLabel: roundLabel(match.roundCode),
+    venue: match.venue ?? null,
+    city: match.city ?? null,
+    cityToken: venueFor(matchNo)?.cityToken ?? null,
     scheduledAt: match.scheduledAt ? match.scheduledAt.toISOString() : null,
     status,
     elapsed: status === "LIVE" ? (match.result?.elapsed ?? null) : null,
@@ -854,6 +885,7 @@ export async function getMatchDetail(
     yourPick,
     timeline,
     stats,
+    odds: match.odds ?? null,
   };
 }
 
@@ -954,8 +986,11 @@ export async function getGroupMatchCenter(
       matchNo: true,
       roundCode: true,
       scheduledAt: true,
+      venue: true,
+      city: true,
       homeSlotRef: true,
       awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
       result: {
         select: {
           homeTeamCode: true,

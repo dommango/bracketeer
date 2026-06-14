@@ -7,6 +7,7 @@
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { ROUND_ORDER, roundLabel, isScoredKnockout, type RoundCode } from "@/lib/pool/rounds";
 import { slotLabel } from "@/lib/pool/slot-label";
+import type { ImpliedProbs } from "@/lib/odds/map";
 
 export type MatchStatus = "SCHEDULED" | "LIVE" | "FINAL";
 
@@ -35,6 +36,10 @@ export interface MatchInput {
   awayPens?: number | null;
   homeRef?: string | null; // feeder slot ref, for the placeholder name when unresolved
   awayRef?: string | null;
+  venue?: string | null;
+  city?: string | null;
+  cityToken?: string | null;
+  odds?: ImpliedProbs | null;
 }
 
 export interface MatchCenterSide {
@@ -61,6 +66,10 @@ export interface MatchCenterRow {
   away: MatchCenterSide;
   winnerCode: string | null;
   yourPick: YourPick | null;
+  venue: string | null;
+  city: string | null;
+  cityToken: string | null;
+  odds: ImpliedProbs | null;
 }
 
 export interface MatchCenterSection {
@@ -105,6 +114,10 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
     away: { code: m.awayCode, name: sideName(m.awayCode, m.awayRef), score: m.awayScore },
     winnerCode: m.winnerCode,
     yourPick,
+    venue: m.venue ?? null,
+    city: m.city ?? null,
+    cityToken: m.cityToken ?? null,
+    odds: m.odds ?? null,
   };
 }
 

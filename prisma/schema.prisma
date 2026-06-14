@@ -134,11 +134,14 @@ model Match {
   homeSlotRef  String?
   awaySlotRef  String?
   scored       Boolean  @default(false)
+  venue        String?
+  city         String?
 
   tournament Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   result     Result?
   events     MatchEvent[]
   stats      MatchStats?
+  odds       MatchOdds?
 
   @@unique([tournamentId, matchNo])
   @@index([tournamentId])
@@ -196,6 +199,18 @@ model MatchStats {
   home      Json
   away      Json
   updatedAt DateTime @updatedAt
+}
+
+model MatchOdds {
+  id          String   @id @default(cuid())
+  matchId     String   @unique
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  homeWinProb Float
+  drawProb    Float
+  awayWinProb Float
+  raw         Json     // raw decimal prices, for audit / re-derivation
+  source      String   // "the-odds-api"
+  fetchedAt   DateTime
 }
 
 // ---------------------------------------------------------------------------

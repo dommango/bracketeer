@@ -17,6 +17,7 @@ import {
   groupMatchups,
 } from "../lib/scoring/data";
 import { DEFAULT_SCORING } from "../lib/scoring/score";
+import { venueFor } from "../lib/scoring/schedule";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -137,6 +138,7 @@ async function main() {
   // Matches.
   const matches = buildMatches();
   for (const sm of matches) {
+    const v = venueFor(sm.matchNo);
     await prisma.match.upsert({
       where: { tournamentId_matchNo: { tournamentId: tournament.id, matchNo: sm.matchNo } },
       update: {
@@ -144,6 +146,8 @@ async function main() {
         homeSlotRef: sm.homeSlotRef,
         awaySlotRef: sm.awaySlotRef,
         scheduledAt: sm.date ? parseLabelDate(sm.date) : null,
+        venue: v?.venue ?? null,
+        city: v?.city ?? null,
       },
       create: {
         tournamentId: tournament.id,
@@ -152,6 +156,8 @@ async function main() {
         homeSlotRef: sm.homeSlotRef,
         awaySlotRef: sm.awaySlotRef,
         scheduledAt: sm.date ? parseLabelDate(sm.date) : null,
+        venue: v?.venue ?? null,
+        city: v?.city ?? null,
       },
     });
   }

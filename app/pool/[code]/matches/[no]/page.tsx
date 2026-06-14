@@ -9,6 +9,9 @@ import { Flag } from "../../Flag";
 import { WhatIf } from "../../WhatIf";
 import { Chat } from "../../Chat";
 import { MatchTimeline, MatchStatsBars } from "./MatchLive";
+import { VenueLine } from "../../VenueLine";
+import { WinProbBar } from "../../WinProbBar";
+import { UpsetBadge } from "../../UpsetBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -132,20 +135,23 @@ export default async function MatchDetailPage({
 
       <div className="rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-xs)]">
         <div className="mb-1 flex items-center justify-between">
-          {detail.status === "LIVE" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-              {detail.elapsed != null ? `${detail.elapsed}'` : "Live"}
-            </span>
-          ) : detail.status === "FINAL" ? (
-            <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
-              Final
-            </span>
-          ) : (
-            <span className="font-mono text-xs text-ink-3">
-              {detail.scheduledAt ? formatKickoff(detail.scheduledAt) : "Kickoff time TBD"}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {detail.status === "LIVE" ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
+                <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
+                {detail.elapsed != null ? `${detail.elapsed}'` : "Live"}
+              </span>
+            ) : detail.status === "FINAL" ? (
+              <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
+                Final
+              </span>
+            ) : (
+              <span className="font-mono text-xs text-ink-3">
+                {detail.scheduledAt ? formatKickoff(detail.scheduledAt) : "Kickoff time TBD"}
+              </span>
+            )}
+            <UpsetBadge status={detail.status} homeScore={detail.home.score} awayScore={detail.away.score} odds={detail.odds} />
+          </div>
           {detail.yourPick ? (
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-white"
@@ -166,6 +172,18 @@ export default async function MatchDetailPage({
         <TeamRow side={detail.home} pens={detail.homePens} isWinner={decided && detail.winnerCode === detail.home.code} decided={decided} />
         <div className="h-px bg-line-soft" />
         <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
+        <div className="mt-3">
+          <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} />
+        </div>
+        <WinProbBar odds={detail.odds} />
+        {detail.scored && detail.yourPick && detail.odds ? (() => {
+          const code = detail.yourPick.code;
+          const p = code === detail.home.code ? detail.odds.homeWinProb
+                  : code === detail.away.code ? detail.odds.awayWinProb : null;
+          return p != null ? (
+            <p className="mt-1 text-xs text-ink-3">You backed a {Math.round(p * 100)}% pick</p>
+          ) : null;
+        })() : null}
       </div>
 
       <MatchTimeline items={detail.timeline} />
