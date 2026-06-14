@@ -11,7 +11,7 @@ import { Chat } from "../../Chat";
 import { MatchTimeline, MatchStatsBars } from "./MatchLive";
 import { VenueLine } from "../../VenueLine";
 import { WinProbBar } from "../../WinProbBar";
-import { liveUpset } from "@/lib/odds/map";
+import { UpsetBadge } from "../../UpsetBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -150,17 +150,7 @@ export default async function MatchDetailPage({
                 {detail.scheduledAt ? formatKickoff(detail.scheduledAt) : "Kickoff time TBD"}
               </span>
             )}
-            {detail.odds && detail.status === "LIVE" && liveUpset(
-              { status: detail.status, homeScore: detail.home.score, awayScore: detail.away.score },
-              detail.odds,
-            ) ? (
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white"
-                style={{ background: "var(--gold-dark)" }}
-              >
-                ⚡ Upset
-              </span>
-            ) : null}
+            <UpsetBadge status={detail.status} homeScore={detail.home.score} awayScore={detail.away.score} odds={detail.odds} />
           </div>
           {detail.yourPick ? (
             <span
