@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode } from "@/lib/pool/queries";
+import { getPoolByCode, getKnockoutState } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { getUserEntry, getUserEntries } from "@/lib/pool/submit-picks";
 import { arePicksLocked } from "@/lib/pool/lock";
+import { isKnockoutLocked } from "@/lib/pool/knockout";
 import { emptyPicks } from "@/lib/scoring/types";
 import { PickForm } from "../PickForm";
+import { KnockoutPickForm } from "../KnockoutPickForm";
 import { Countdown } from "../Countdown";
 
 export const dynamic = "force-dynamic";
@@ -69,34 +71,80 @@ export default async function PicksPage({
   const entry = selected ? await getUserEntry(pool.id, sessionUser.id, selected.entryId) : null;
   const label = entry?.label ?? sessionUser.name ?? "Player";
   const entryLocked = entry?.locked ?? false;
-  const locked = arePicksLocked(pool.tournament.startsAt, entryLocked);
 
+  const header = (
+    <div className="flex items-center justify-between">
+      <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+        {entry ? "Edit your picks" : "Make your picks"}
+      </h2>
+      <Link
+        href={entries.length > 1 ? `/pool/${code}/picks` : `/pool/${code}`}
+        className="rounded-full px-2 py-1 text-xs font-semibold text-pitch underline-offset-2 hover:underline"
+      >
+        {entries.length > 1 ? "← Your brackets" : "← Pool home"}
+      </Link>
+    </div>
+  );
+
+  const editing =
+    entries.length > 1 && entry ? (
+      <p className="px-1 text-sm text-ink-2">
+        Editing <span className="font-semibold text-ink">{entry.label}</span>
+      </p>
+    ) : null;
+
+  // Knockout Challenge: picks open once the 32 qualifiers are set and lock at the
+  // Round-of-32 kickoff (not the long-past tournament start). Until the field is
+  // set there's nothing to pick, so show a clear "opens at the draw" gate.
+  if (pool.format === "KNOCKOUT") {
+    const { open, locksAt, seed } = await getKnockoutState(pool.tournament.id);
+    if (!open) {
+      return (
+        <section className="space-y-4">
+          {header}
+          <Gate>
+            <p className="text-sm font-semibold text-ink-2">Knockout picks open at the draw</p>
+            <p className="mt-1.5 text-sm text-ink-3">
+              Once the group stage wraps and the last 32 are set, fill out your bracket here. We’ll
+              notify the pool when it unlocks.
+            </p>
+          </Gate>
+        </section>
+      );
+    }
+    const locked = isKnockoutLocked(locksAt, entryLocked);
+    return (
+      <section className="space-y-4">
+        {header}
+        {editing}
+        <KnockoutDeadlineBanner
+          locksAt={locksAt ? locksAt.toISOString() : null}
+          locked={locked}
+          entryLocked={entryLocked}
+        />
+        <KnockoutPickForm
+          code={code}
+          entryId={entry?.entryId}
+          initialPicks={entry?.picks ?? emptyPicks()}
+          initialTiebreak={entry?.tiebreak ?? ""}
+          label={label}
+          locked={locked}
+          seed={seed}
+        />
+      </section>
+    );
+  }
+
+  const locked = arePicksLocked(pool.tournament.startsAt, entryLocked);
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-          {entry ? (locked ? "Your picks" : "Edit your picks") : "Make your picks"}
-        </h2>
-        <Link
-          href={entries.length > 1 ? `/pool/${code}/picks` : `/pool/${code}`}
-          className="rounded-full px-2 py-1 text-xs font-semibold text-pitch underline-offset-2 hover:underline"
-        >
-          {entries.length > 1 ? "← Your brackets" : "← Pool home"}
-        </Link>
-      </div>
-
-      {entries.length > 1 && entry ? (
-        <p className="px-1 text-sm text-ink-2">
-          Editing <span className="font-semibold text-ink">{entry.label}</span>
-        </p>
-      ) : null}
-
+      {header}
+      {editing}
       <DeadlineBanner
         startsAt={pool.tournament.startsAt.toISOString()}
         locked={locked}
         entryLocked={entryLocked}
       />
-
       <PickForm
         code={code}
         entryId={entry?.entryId}
@@ -106,6 +154,31 @@ export default async function PicksPage({
         locked={locked}
       />
     </section>
+  );
+}
+
+function KnockoutDeadlineBanner({
+  locksAt,
+  locked,
+  entryLocked,
+}: {
+  locksAt: string | null;
+  locked: boolean;
+  entryLocked: boolean;
+}) {
+  if (locked) {
+    return (
+      <div className="flex items-center gap-2 rounded-2xl bg-surface-sunk px-4 py-3 text-sm text-ink-2">
+        <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-ink-4" />
+        Picks are locked — {entryLocked ? "set by your pool admin." : "the Round of 32 has kicked off."}
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-pitch-tint px-4 py-3">
+      <span className="text-sm font-semibold text-pitch-dark">Picks lock at the Round-of-32 kickoff</span>
+      {locksAt ? <Countdown target={locksAt} className="text-sm text-pitch-dark" /> : null}
+    </div>
   );
 }
 

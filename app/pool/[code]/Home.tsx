@@ -267,17 +267,31 @@ function ContextStrip({ mover }: { mover: HomeView["topMover"] }) {
 // are known and lock at the Round-of-32 kickoff. Until the group stage resolves
 // there's nothing to pick yet, so we surface a clear "picks open at the draw"
 // state instead of the full-bracket flow. (The knockout pick editor lands next.)
-function KnockoutNotice({ groupStageComplete }: { groupStageComplete: boolean }) {
+function KnockoutNotice({
+  groupStageComplete,
+  code,
+}: {
+  groupStageComplete: boolean;
+  code: string;
+}) {
   return (
     <div className="rounded-2xl border border-pitch/30 bg-pitch/5 p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-pitch-dark">
         Knockout Challenge
       </p>
       {groupStageComplete ? (
-        <p className="mt-1.5 text-sm text-ink-2">
-          The last 32 are set — knockout picks are open. Fill out your bracket before the
-          Round-of-32 kickoff.
-        </p>
+        <>
+          <p className="mt-1.5 text-sm text-ink-2">
+            The last 32 are set — knockout picks are open. Fill out your bracket before the
+            Round-of-32 kickoff.
+          </p>
+          <Link
+            href={`/pool/${code}/picks`}
+            className="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-pitch px-4 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.98]"
+          >
+            Fill out your bracket →
+          </Link>
+        </>
       ) : (
         <p className="mt-1.5 text-sm text-ink-2">
           Picks open at the Round-of-32 draw, once the group stage wraps up (~June 28). Invite
@@ -325,7 +339,9 @@ export function Home({
 }) {
   return (
     <div className="space-y-4">
-      {format === "KNOCKOUT" ? <KnockoutNotice groupStageComplete={showMedals} /> : null}
+      {format === "KNOCKOUT" ? (
+        <KnockoutNotice groupStageComplete={showMedals} code={code} />
+      ) : null}
 
       <ScoreCards live={view.liveMatches} last={view.lastMatch} next={view.nextMatch} code={code} />
 

@@ -1,35 +1,30 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { GROUPS, TEAMS } from "@/lib/scoring/data";
 import {
   resolveKnockout,
   reconcileKnockoutPicks,
-  pickFormProgress,
-  validatePicks,
-  TARGET_THIRDS,
+  knockoutOnlyProgress,
   type KnockoutSlot,
 } from "@/lib/pool/pick-form";
+import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import { emptyPicks, type Picks } from "@/lib/scoring/types";
 import { submitPicksAction } from "./picks/actions";
-import { Flag } from "./Flag";
 import { AWARDS, Bar, KO_STAGES, KnockoutMatch, LABEL } from "./pick-ui";
 
-function TeamOption({ code }: { code: string }) {
-  return (
-    <option value={code}>
-      {TEAMS[code] ?? code}
-    </option>
-  );
-}
-
-export function PickForm({
+// Knockout-only bracket builder: the 32 qualifiers are fixed by the official R32
+// seed, so the picker only chooses a winner for each match (R32 → Final), plus
+// awards + tiebreak. No group / third-place sections (that's the full-bracket
+// PickForm). Saves through the same submitPicksAction; the group halves of the
+// payload stay empty and score zero.
+export function KnockoutPickForm({
   code,
   entryId,
   initialPicks,
   initialTiebreak,
   label,
   locked,
+  seed,
 }: {
   code: string;
   entryId?: string;
@@ -37,41 +32,23 @@ export function PickForm({
   initialTiebreak: string;
   label: string;
   locked: boolean;
+  seed: ResolvedR32;
 }) {
   const [picks, setPicks] = useState<Picks>(() =>
-    reconcileKnockoutPicks(initialPicks ?? emptyPicks()),
+    reconcileKnockoutPicks(initialPicks ?? emptyPicks(), seed),
   );
   const [tiebreak, setTiebreak] = useState(initialTiebreak);
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const ko = useMemo(() => resolveKnockout(picks), [picks]);
-  const progress = useMemo(() => pickFormProgress(picks), [picks]);
-  const issues = useMemo(() => validatePicks(picks), [picks]);
-
-  const letters = Object.keys(GROUPS);
-  const thirdsCount = picks.thirdAdvance.length;
+  const ko = useMemo(() => resolveKnockout(picks, seed), [picks, seed]);
+  const progress = useMemo(() => knockoutOnlyProgress(picks), [picks]);
 
   const update = (mut: (p: Picks) => Picks) => {
     setSaved(null);
-    setPicks((p) => reconcileKnockoutPicks(mut(p)));
+    setPicks((p) => reconcileKnockoutPicks(mut(p), seed));
   };
-
-  const setGroupPlace = (g: string, place: "groupFirst" | "groupSecond", code: string) =>
-    update((p) => ({ ...p, [place]: { ...p[place], [g]: code } }));
-
-  const toggleThird = (teamCode: string) =>
-    update((p) => {
-      const has = p.thirdAdvance.includes(teamCode);
-      if (!has && p.thirdAdvance.length >= TARGET_THIRDS) return p;
-      return {
-        ...p,
-        thirdAdvance: has
-          ? p.thirdAdvance.filter((c) => c !== teamCode)
-          : [...p.thirdAdvance, teamCode],
-      };
-    });
 
   const pickWinner = (matchNo: number, teamCode: string) =>
     update((p) => ({ ...p, knockout: { ...p.knockout, [matchNo]: teamCode } }));
@@ -97,7 +74,11 @@ export function PickForm({
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between">
               <span className={LABEL}>
-                {locked ? "Your bracket — locked" : progress.complete ? "Bracket complete" : "Your bracket"}
+                {locked
+                  ? "Your bracket — locked"
+                  : progress.complete
+                    ? "Bracket complete"
+                    : "Your bracket"}
               </span>
               <span className="font-mono text-xs tabular-nums text-ink-3">
                 {progress.overall.done}/{progress.overall.total}
@@ -111,7 +92,7 @@ export function PickForm({
             <button
               type="button"
               onClick={submit}
-              disabled={pending || issues.length > 0}
+              disabled={pending}
               className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-pitch px-4 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.98] disabled:opacity-60"
             >
               {pending ? "Saving…" : "Save picks"}
@@ -122,105 +103,12 @@ export function PickForm({
           <p className="mt-2 text-xs font-semibold text-positive">✓ {saved}</p>
         ) : null}
         {!locked && error ? <p className="mt-2 text-xs font-semibold text-negative">{error}</p> : null}
-        {!locked && issues.length > 0 ? (
-          <p className="mt-2 text-xs text-negative">{issues[0]}</p>
-        ) : null}
       </div>
-
-      {/* Groups */}
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className={LABEL}>Group stage · 1st &amp; 2nd</h3>
-          <span className="font-mono text-xs tabular-nums text-ink-3">
-            {progress.groups.done}/{progress.groups.total}
-          </span>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {letters.map((g) => {
-            const teams = GROUPS[g];
-            const first = picks.groupFirst[g] ?? "";
-            const second = picks.groupSecond[g] ?? "";
-            const thirdCandidates = teams.filter((t) => t !== first && t !== second);
-            return (
-              <div key={g} className="rounded-md border border-line bg-surface p-3">
-                <p className="mb-2 font-display text-sm text-ink">Group {g}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
-                      1st
-                    </span>
-                    <select
-                      value={first}
-                      onChange={(e) => setGroupPlace(g, "groupFirst", e.target.value)}
-                      disabled={locked}
-                      className="h-10 w-full rounded border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-pitch disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <option value="">—</option>
-                      {teams.map((t) => (
-                        <TeamOption key={t} code={t} />
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
-                      2nd
-                    </span>
-                    <select
-                      value={second}
-                      onChange={(e) => setGroupPlace(g, "groupSecond", e.target.value)}
-                      disabled={locked}
-                      className="h-10 w-full rounded border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-pitch disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <option value="">—</option>
-                      {teams.map((t) => (
-                        <TeamOption key={t} code={t} />
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                {first && second ? (
-                  <div className="mt-2">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
-                      3rd place advances?
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {thirdCandidates.map((t) => {
-                        const on = picks.thirdAdvance.includes(t);
-                        const blocked = !on && thirdsCount >= TARGET_THIRDS;
-                        return (
-                          <button
-                            key={t}
-                            type="button"
-                            onClick={() => toggleThird(t)}
-                            disabled={blocked || locked}
-                            aria-pressed={on}
-                            className={`inline-flex min-h-11 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pitch ${
-                              on
-                                ? "bg-pitch text-white"
-                                : "bg-surface-sunk text-ink hover:bg-pitch-tint disabled:opacity-40"
-                            }`}
-                          >
-                            <Flag code={t} size={14} />
-                            {TEAMS[t] ?? t}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-        <p className="mt-2 text-xs text-ink-3">
-          {thirdsCount}/{TARGET_THIRDS} third-place teams advancing.
-        </p>
-      </section>
 
       {/* Knockout cascade */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className={LABEL}>Knockout — pick every winner</h3>
+          <h3 className={LABEL}>Pick every winner</h3>
           <span className="font-mono text-xs tabular-nums text-ink-3">
             {progress.knockout.done}/{progress.knockout.total}
           </span>
@@ -297,7 +185,7 @@ export function PickForm({
         <button
           type="button"
           onClick={submit}
-          disabled={pending || issues.length > 0}
+          disabled={pending}
           className="inline-flex h-12 w-full items-center justify-center rounded-full bg-pitch px-4 font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
         >
           {pending ? "Saving…" : progress.complete ? "Save complete bracket" : "Save picks"}
