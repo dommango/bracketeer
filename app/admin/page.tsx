@@ -8,6 +8,7 @@ import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/da
 import { saveStandingsAction, saveAwardsAction } from "./actions";
 import { KnockoutEditor, type KnockoutRowData } from "./KnockoutEditor";
 import { signOutAction } from "@/lib/auth/actions";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,16 @@ export default async function AdminPage() {
           </button>
         </form>
       </header>
+
+      {/* QUICK LINKS */}
+      <nav className="mt-4 flex gap-2">
+        <Link
+          href="/admin/entries"
+          className="rounded-full border border-black/15 bg-white px-4 py-2 text-sm font-medium hover:bg-black/5"
+        >
+          Entry picks →
+        </Link>
+      </nav>
 
       {/* GROUP STANDINGS */}
       <section className="mt-6">
