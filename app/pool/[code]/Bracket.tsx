@@ -232,37 +232,14 @@ export function Bracket({ view }: { view: BracketView }) {
   );
 }
 
-// The group letter rendered as a concentric "logo" motif: the same glyph echoed
-// behind itself at growing scale in progressively lighter shades of the group's
-// city color, with a solid white glyph on top.
+// The group letter as a plain solid square in the group's city color.
 function GroupLetterMark({ letter, city }: { letter: string; city: string }) {
-  const echoes = [
-    { scale: 2.3, opacity: 0.14 },
-    { scale: 1.85, opacity: 0.24 },
-    { scale: 1.45, opacity: 0.42 },
-    { scale: 1.15, opacity: 0.66 },
-  ];
   return (
     <span
-      className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md"
-      style={{ background: `var(--city-${city})` }}
+      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm font-display text-[13px] text-white"
+      style={{ background: `var(--city-${city})`, textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
     >
-      {echoes.map((e, i) => (
-        <span
-          key={i}
-          aria-hidden
-          className="absolute font-display leading-none text-white"
-          style={{ transform: `scale(${e.scale})`, opacity: e.opacity, fontSize: "15px" }}
-        >
-          {letter}
-        </span>
-      ))}
-      <span
-        className="relative font-display leading-none text-white"
-        style={{ fontSize: "15px", textShadow: "0 1px 2px rgba(0,0,0,0.35)" }}
-      >
-        {letter}
-      </span>
+      {letter}
     </span>
   );
 }
