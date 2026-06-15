@@ -3,10 +3,11 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSessionUser, getPoolAccess } from "@/lib/pool/access";
-import { getPoolByCode } from "@/lib/pool/queries";
+import { getPoolByCode, getKnockoutState } from "@/lib/pool/queries";
 import { arePicksLocked } from "@/lib/pool/lock";
 import { upsertUiEntry } from "@/lib/pool/submit-picks";
-import { validatePicks } from "@/lib/pool/pick-form";
+import { validatePicks, inconsistentKnockoutPicks } from "@/lib/pool/pick-form";
+import { isKnockoutLocked, knockoutOnlyPicks } from "@/lib/pool/knockout";
 import { recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
 import { rateLimit } from "@/lib/rate-limit";
@@ -63,11 +64,31 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
   const access = await getPoolAccess(pool.id);
   if (!access) return { ok: false, error: "Join this pool before submitting picks." };
 
-  if (arePicksLocked(pool.tournament.startsAt)) {
+  // Lock gating differs by game: a knockout pool opens once the 32 are set and
+  // locks at the Round-of-32 kickoff; a full-bracket pool locks at the tournament
+  // kickoff. (For a knockout pool the tournament start is long past, so the
+  // full-bracket guard would wrongly reject every save.)
+  let picksToSave = picks as Picks;
+  if (pool.format === "KNOCKOUT") {
+    const { open, locksAt, seed } = await getKnockoutState(pool.tournament.id);
+    if (!open) {
+      return { ok: false, error: "Knockout picks aren't open yet — the last 32 aren't set." };
+    }
+    if (isKnockoutLocked(locksAt)) {
+      return { ok: false, error: "Picks are locked — the Round of 32 has kicked off." };
+    }
+    // Keep only knockout + awards (drop any group data adopted from a CSV import),
+    // then reject winners that aren't actually in their match per the official
+    // seed — the client is untrusted, so the seed is the authority, not the payload.
+    picksToSave = knockoutOnlyPicks(picksToSave);
+    if (inconsistentKnockoutPicks(picksToSave, seed).length > 0) {
+      return { ok: false, error: "Some picks aren't valid for this bracket — please reload." };
+    }
+  } else if (arePicksLocked(pool.tournament.startsAt)) {
     return { ok: false, error: "Picks are locked — the tournament has kicked off." };
   }
 
-  const errors = validatePicks(picks as Picks);
+  const errors = validatePicks(picksToSave);
   if (errors.length > 0) return { ok: false, error: errors[0] };
 
   try {
@@ -76,7 +97,7 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
       userId: user.id,
       entryId,
       label,
-      picks: picks as Picks,
+      picks: picksToSave,
       email: user.email,
       tiebreak,
     });

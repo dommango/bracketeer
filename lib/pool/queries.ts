@@ -6,6 +6,8 @@ import { getLeaderboard, asResults, asScoringConfig, type LeaderboardRow } from 
 import { assignRanks } from "@/lib/pool/rank";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
 import { resolveBracket } from "@/lib/pool/bracket";
+import { knockoutR32Seed, isKnockoutFieldSet } from "@/lib/pool/knockout";
+import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import {
@@ -189,6 +191,38 @@ export const isGroupStageComplete = cache(async (tournamentId: string): Promise<
     where: { tournamentId, roundCode: "GROUP", result: { status: "FINAL" } },
   });
   return finalGroupMatches >= 72;
+});
+
+export interface KnockoutState {
+  // The 32 qualifiers are decided in the answer key — picks can be made.
+  open: boolean;
+  // When picks lock: the Round-of-32 kickoff (Match 73). Null if unscheduled.
+  locksAt: Date | null;
+  // The official R32 matchups the pick form seeds from (a/b per match 73–88).
+  seed: ResolvedR32;
+}
+
+// Knockout-pool gating: whether picks are open (the 32 are set), when they lock
+// (the R32 kickoff), and the official R32 seed the editor renders. Derived from
+// the tournament answer key + the Match-73 schedule, so it tracks admin/API
+// result entry without any extra state.
+export const getKnockoutState = cache(async (tournamentId: string): Promise<KnockoutState> => {
+  const [tournament, firstR32] = await Promise.all([
+    prisma.tournament.findUniqueOrThrow({
+      where: { id: tournamentId },
+      select: { officialResults: true },
+    }),
+    prisma.match.findUnique({
+      where: { tournamentId_matchNo: { tournamentId, matchNo: 73 } },
+      select: { scheduledAt: true },
+    }),
+  ]);
+  const results = asResults(tournament.officialResults);
+  return {
+    open: isKnockoutFieldSet(results),
+    locksAt: firstR32?.scheduledAt ?? null,
+    seed: knockoutR32Seed(results),
+  };
 });
 
 // Knockout pick rows carry the match id in their CSV-mirrored category ("M73").

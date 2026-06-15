@@ -7,7 +7,7 @@
 // browser component can re-derive the live bracket on every selection.
 
 import { GROUPS, TEAMS, R32, R16, QF, SF, FINAL } from "@/lib/scoring/data";
-import { resolveR32Slots, winnerOf } from "@/lib/scoring/resolve";
+import { resolveR32Slots, winnerOf, type ResolvedR32 } from "@/lib/scoring/resolve";
 import type { GroupLetter, Picks, TeamCode } from "@/lib/scoring/types";
 
 export interface TeamRef {
@@ -46,10 +46,15 @@ function ref(code: TeamCode | null | undefined): TeamRef | null {
   return { code, name: TEAMS[code] ?? code };
 }
 
-// Resolve every knockout match's two competitors from the current picks,
-// cascading winners forward. Slots are null until their feeders are decided.
-export function resolveKnockout(picks: Picks): KnockoutModel {
-  const r32slots = resolveR32Slots(picks);
+// Resolve every knockout match's two competitors, cascading winners forward.
+// Slots are null until their feeders are decided.
+//
+// The R32 seed determines who contests each Round-of-32 match. In a full-bracket
+// pool that comes from the picker's own group picks (the default). In a knockout
+// pool the 32 qualifiers are already decided, so the caller passes the official
+// seed (resolveR32Slots(officialResults)) and the picker only chooses winners.
+export function resolveKnockout(picks: Picks, r32seed?: ResolvedR32): KnockoutModel {
+  const r32slots = r32seed ?? resolveR32Slots(picks);
 
   const r32: KnockoutSlot[] = R32.map((m) => ({
     matchNo: m.id,
@@ -72,6 +77,50 @@ export function resolveKnockout(picks: Picks): KnockoutModel {
   const [final] = fromFeeders([FINAL]);
 
   return { r32, r16, qf, sf, final };
+}
+
+// Every match slot across the knockout cascade, in bracket order — the single
+// list both reconcile and the consistency check walk.
+function knockoutSlots(model: KnockoutModel): KnockoutSlot[] {
+  return [...model.r32, ...model.r16, ...model.qf, ...model.sf, model.final];
+}
+
+// Drop any knockout pick that no longer matches its (re-resolved) matchup after
+// an upstream change, iterating forward until the bracket is internally
+// consistent. Shared by both bracket builders. A full-bracket pool re-resolves
+// R32 from the picker's group picks (no seed); a knockout pool passes the fixed
+// official seed, so only downstream rounds can shift when an earlier winner
+// changes. Pure + immutable: returns a new Picks, never mutates the input.
+export function reconcileKnockoutPicks(picks: Picks, seed?: ResolvedR32): Picks {
+  let next = picks;
+  for (let pass = 0; pass < 6; pass++) {
+    const slots = knockoutSlots(resolveKnockout(next, seed));
+    const knockout: Record<number, TeamCode> = { ...next.knockout };
+    let changed = false;
+    for (const s of slots) {
+      const pick = knockout[s.matchNo];
+      if (pick && pick !== s.a?.code && pick !== s.b?.code) {
+        delete knockout[s.matchNo];
+        changed = true;
+      }
+    }
+    if (!changed) return next;
+    next = { ...next, knockout };
+  }
+  return next;
+}
+
+// Match numbers whose stored winner is not one of the two teams that actually
+// contest that match (given the seed + the picker's own upstream winners). Empty
+// when every set pick is seated. Used server-side to reject crafted payloads.
+export function inconsistentKnockoutPicks(picks: Picks, seed?: ResolvedR32): number[] {
+  const slots = knockoutSlots(resolveKnockout(picks, seed));
+  const bad: number[] = [];
+  for (const s of slots) {
+    const pick = picks.knockout[s.matchNo];
+    if (pick && pick !== s.a?.code && pick !== s.b?.code) bad.push(s.matchNo);
+  }
+  return bad;
 }
 
 // Flat list of every scored knockout match number, in bracket order.
@@ -136,6 +185,42 @@ export function pickFormProgress(picks: Picks): PickFormProgress {
     knockoutDone === TARGET_KNOCKOUT;
 
   return { groups, thirds, knockout, awards, overall, complete };
+}
+
+// Progress for a knockout-only pool: just the 31 scored knockout winners plus
+// the 4 awards (no group / third-place sections — the qualifiers are fixed). The
+// group/thirds buckets report a zero total so a shared progress bar reads 100%
+// only when the knockout + awards are filled. "complete" mirrors the full form:
+// every scored knockout winner chosen (awards stay optional).
+export function knockoutOnlyProgress(picks: Picks): PickFormProgress {
+  let knockoutDone = 0;
+  for (const n of scoredKnockoutNumbers()) {
+    if (picks.knockout[n]) knockoutDone++;
+  }
+
+  let awardsDone = 0;
+  for (const k of AWARD_KEYS) {
+    if ((picks.awards?.[k] ?? "").trim()) awardsDone++;
+  }
+
+  const groups: SectionProgress = { done: 0, total: 0 };
+  const thirds: SectionProgress = { done: 0, total: 0 };
+  const knockout: SectionProgress = { done: knockoutDone, total: TARGET_KNOCKOUT };
+  const awards: SectionProgress = { done: awardsDone, total: TARGET_AWARDS };
+
+  const overall: SectionProgress = {
+    done: knockoutDone + awardsDone,
+    total: TARGET_KNOCKOUT + TARGET_AWARDS,
+  };
+
+  return {
+    groups,
+    thirds,
+    knockout,
+    awards,
+    overall,
+    complete: knockoutDone === TARGET_KNOCKOUT,
+  };
 }
 
 // Hard validation errors that block a *complete* bracket (a partial draft can

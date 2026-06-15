@@ -1,16 +1,33 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveKnockout,
+  reconcileKnockoutPicks,
+  inconsistentKnockoutPicks,
   pickFormProgress,
+  knockoutOnlyProgress,
   validatePicks,
   scoredKnockoutNumbers,
   TARGET_GROUPS,
   TARGET_THIRDS,
   TARGET_KNOCKOUT,
+  TARGET_AWARDS,
 } from "./pick-form";
 import { GROUPS, R32 } from "@/lib/scoring/data";
+import { resolveR32Slots, type ResolvedR32 } from "@/lib/scoring/resolve";
 import { emptyPicks } from "@/lib/scoring/types";
 import type { Picks } from "@/lib/scoring/types";
+
+// An official-results-style answer key whose group standings are fully set, used
+// to derive a concrete R32 seed (the 32 qualifiers) for knockout-pool tests.
+function officialR32Seed(): ResolvedR32 {
+  const results = emptyPicks();
+  for (const g of Object.keys(GROUPS)) {
+    results.groupFirst[g] = GROUPS[g][0];
+    results.groupSecond[g] = GROUPS[g][1];
+  }
+  results.thirdAdvance = Object.keys(GROUPS).slice(0, 8).map((g) => GROUPS[g][2]);
+  return resolveR32Slots(results);
+}
 
 // A fully-filled bracket: 1st = first listed team, 2nd = second, third = third,
 // advance the first 8 groups' thirds, and pick the "a" side of every knockout.
@@ -89,6 +106,123 @@ describe("resolveKnockout", () => {
     const m90 = ko2.r16.find((s) => s.matchNo === 90)!;
     expect(m90.a?.code).toBe(picks.knockout[73]);
     expect(m90.b?.code).toBe(picks.knockout[75]);
+  });
+});
+
+describe("resolveKnockout with an R32 seed", () => {
+  it("seeds R32 matchups from the supplied seed, ignoring the picker's group picks", () => {
+    const seed = officialR32Seed();
+    // Picker has NO group picks of their own — a knockout-pool entry never sets them.
+    const ko = resolveKnockout(emptyPicks(), seed);
+    const m73 = ko.r32.find((s) => s.matchNo === 73)!;
+    expect(m73.a?.code).toBe(seed[73].a);
+    expect(m73.b?.code).toBe(seed[73].b);
+    expect(m73.a?.name).toBeTruthy();
+  });
+
+  it("cascades the picker's R32 winner into the seeded R16 matchup", () => {
+    const seed = officialR32Seed();
+    const picks = emptyPicks();
+    const m73 = resolveKnockout(picks, seed).r32.find((s) => s.matchNo === 73)!;
+    const m75 = resolveKnockout(picks, seed).r32.find((s) => s.matchNo === 75)!;
+    picks.knockout[73] = m73.a!.code;
+    picks.knockout[75] = m75.a!.code;
+
+    // R16 match 90 feeds from 73 and 75.
+    const m90 = resolveKnockout(picks, seed).r16.find((s) => s.matchNo === 90)!;
+    expect(m90.a?.code).toBe(picks.knockout[73]);
+    expect(m90.b?.code).toBe(picks.knockout[75]);
+  });
+});
+
+describe("resolveKnockout with a JSON-serialized seed", () => {
+  it("works after the seed crosses the server→client boundary (numeric keys → strings)", () => {
+    const seed = officialR32Seed();
+    const wireSeed = JSON.parse(JSON.stringify(seed)) as ResolvedR32;
+    const direct = resolveKnockout(emptyPicks(), seed).r32.find((s) => s.matchNo === 73)!;
+    const overWire = resolveKnockout(emptyPicks(), wireSeed).r32.find((s) => s.matchNo === 73)!;
+    expect(overWire.a?.code).toBe(direct.a?.code);
+    expect(overWire.b?.code).toBe(direct.b?.code);
+  });
+});
+
+describe("reconcileKnockoutPicks", () => {
+  it("drops a downstream pick when its feeder winner changes (seeded)", () => {
+    const seed = officialR32Seed();
+    const picks = emptyPicks();
+    const m73 = resolveKnockout(picks, seed).r32.find((s) => s.matchNo === 73)!;
+    const m75 = resolveKnockout(picks, seed).r32.find((s) => s.matchNo === 75)!;
+    picks.knockout[73] = m73.a!.code;
+    picks.knockout[75] = m75.a!.code;
+    // R16 match 90 feeds from 73 and 75; pick its 'a' winner.
+    const m90 = resolveKnockout(picks, seed).r16.find((s) => s.matchNo === 90)!;
+    picks.knockout[90] = m90.a!.code;
+
+    // Now flip the 73 winner to the other team: M90's 'a' side no longer exists,
+    // so the M90 pick must be dropped.
+    const flipped = { ...picks, knockout: { ...picks.knockout, 73: m73.b!.code } };
+    const reconciled = reconcileKnockoutPicks(flipped, seed);
+    expect(reconciled.knockout[90]).toBeUndefined();
+    expect(reconciled.knockout[73]).toBe(m73.b!.code);
+  });
+
+  it("does not mutate the input picks", () => {
+    const seed = officialR32Seed();
+    const picks = emptyPicks();
+    picks.knockout[90] = "ZZZ"; // a winner with no valid feeders → should be dropped
+    const before = JSON.stringify(picks);
+    reconcileKnockoutPicks(picks, seed);
+    expect(JSON.stringify(picks)).toBe(before);
+  });
+});
+
+describe("inconsistentKnockoutPicks", () => {
+  it("returns no offenders for a seeded bracket filled by cascading", () => {
+    const seed = officialR32Seed();
+    const picks = emptyPicks();
+    for (let pass = 0; pass < 6; pass++) {
+      const ko = resolveKnockout(picks, seed);
+      for (const s of [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ko.final]) {
+        if (s.a) picks.knockout[s.matchNo] = s.a.code;
+      }
+    }
+    expect(inconsistentKnockoutPicks(picks, seed)).toEqual([]);
+  });
+
+  it("flags a winner that is not one of the match's two teams", () => {
+    const seed = officialR32Seed();
+    const picks = emptyPicks();
+    picks.knockout[73] = "ZZZ"; // not in match 73
+    expect(inconsistentKnockoutPicks(picks, seed)).toContain(73);
+  });
+});
+
+describe("knockoutOnlyProgress", () => {
+  it("counts only knockout winners + awards, not groups/thirds", () => {
+    const seed = officialR32Seed();
+    const picks = emptyPicks();
+    // Fill every scored knockout winner by cascading the 'a' side forward.
+    for (let pass = 0; pass < 6; pass++) {
+      const ko = resolveKnockout(picks, seed);
+      for (const slot of [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ko.final]) {
+        if (slot.a) picks.knockout[slot.matchNo] = slot.a.code;
+      }
+    }
+    picks.awards = { player: "A", young: "B", boot: "C", goal: "D" };
+
+    const p = knockoutOnlyProgress(picks);
+    expect(p.groups.total).toBe(0);
+    expect(p.thirds.total).toBe(0);
+    expect(p.knockout.done).toBe(TARGET_KNOCKOUT);
+    expect(p.awards.done).toBe(TARGET_AWARDS);
+    expect(p.overall.total).toBe(TARGET_KNOCKOUT + TARGET_AWARDS);
+    expect(p.complete).toBe(true);
+  });
+
+  it("is incomplete with knockout winners missing, regardless of awards", () => {
+    const p = knockoutOnlyProgress(emptyPicks());
+    expect(p.knockout.done).toBe(0);
+    expect(p.complete).toBe(false);
   });
 });
 
