@@ -27,6 +27,14 @@ const schema = z.object({
   ODDS_API_KEY: z.string().default(""),
   ODDS_API_BASE: z.string().default("https://api.the-odds-api.com/v4"),
   ODDS_API_REGION: z.string().default("eu"),
+  // Match tickets — Ticketmaster Discovery for the event list + official buy
+  // link (optional; the ticket line hides cleanly without a key).
+  TICKETMASTER_API_KEY: z.string().default(""),
+  TICKETMASTER_API_BASE: z.string().default("https://app.ticketmaster.com/discovery/v2"),
+  // Optional price overlay — SeatGeek's lowest_price, used only to fill a price
+  // when Ticketmaster's priceRanges is empty (common for WC resale inventory).
+  SEATGEEK_CLIENT_ID: z.string().default(""),
+  SEATGEEK_API_BASE: z.string().default("https://api.seatgeek.com/2"),
   // Giphy (optional — the GIF picker in chat disables cleanly without it).
   GIPHY_API_KEY: z.string().default(""),
   // Notion mirror for in-app feedback (optional — submissions still persist to
@@ -60,6 +68,10 @@ export const emailEnabled = Boolean(env.EMAIL_SERVER);
 export const sportsApiEnabled = Boolean(env.SPORTS_API_KEY);
 export const oddsApiEnabled = Boolean(env.ODDS_API_KEY);
 export const giphyEnabled = Boolean(env.GIPHY_API_KEY);
+// Tickets: Ticketmaster supplies the event list + buy link (the integration
+// gate). SeatGeek is an optional price overlay layered on top when configured.
+export const ticketsEnabled = Boolean(env.TICKETMASTER_API_KEY);
+export const seatgeekEnabled = Boolean(env.SEATGEEK_CLIENT_ID);
 // Feedback → Notion mirror needs both the token and the destination database id.
 // Missing either keeps feedback DB-only (the sync is fire-and-forget regardless).
 export const notionEnabled = Boolean(env.NOTION_API_KEY && env.NOTION_FEEDBACK_DB_ID);

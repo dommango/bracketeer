@@ -166,6 +166,7 @@ model Match {
   events     MatchEvent[]
   stats      MatchStats?
   odds       MatchOdds?
+  tickets    MatchTickets?
 
   @@unique([tournamentId, matchNo])
   @@index([tournamentId])
@@ -234,6 +235,23 @@ model MatchOdds {
   awayWinProb Float
   raw         Json     // raw decimal prices, for audit / re-derivation
   source      String   // "the-odds-api"
+  fetchedAt   DateTime
+}
+
+// Ticket availability per match. The event list + official buy link come from
+// Ticketmaster Discovery; the lowest price is whatever the poller could find
+// (Ticketmaster priceRanges when present, else an optional SeatGeek overlay).
+// Optional integration — absent rows just mean no ticket info to show.
+model MatchTickets {
+  id          String   @id @default(cuid())
+  matchId     String   @unique
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  minPrice    Float?
+  currency    String?
+  url         String? // official "buy tickets" link
+  priceSource String? // where minPrice came from: "ticketmaster" | "seatgeek"
+  source      String // event/link source: "ticketmaster"
+  raw         Json?
   fetchedAt   DateTime
 }
 
