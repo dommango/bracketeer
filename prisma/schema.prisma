@@ -223,14 +223,24 @@ enum MemberRole {
   MEMBER
 }
 
+// The game a pool plays. FULL_BRACKET is the classic whole-tournament pool
+// (imported picks, group + knockout). KNOCKOUT is the standalone knockout-stage
+// challenge: picks are made once the 32 qualifiers are known and lock at the
+// Round-of-32 kickoff.
+enum PoolFormat {
+  FULL_BRACKET
+  KNOCKOUT
+}
+
 model Pool {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   tournamentId String
   name         String
   ownerId      String
-  joinCode     String   @unique
+  joinCode     String     @unique
+  format       PoolFormat @default(FULL_BRACKET)
   settings     Json?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
 
   tournament  Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   owner       User            @relation("PoolOwner", fields: [ownerId], references: [id])

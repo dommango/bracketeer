@@ -54,6 +54,7 @@ export default async function PoolHomePage({
       bracket={bracket}
       showMedals={poolView?.groupStageComplete ?? false}
       recentChat={recentChat}
+      format={pool.format}
     />
   );
 }

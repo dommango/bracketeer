@@ -8,6 +8,7 @@ import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home"
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 import type { BracketView } from "@/lib/pool/bracket-view";
 import type { ChatView } from "@/lib/pool/chat";
+import type { PoolFormat } from "@/lib/pool/manage";
 import { DISPLAY_TZ } from "@/lib/tz";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
@@ -262,6 +263,31 @@ function ContextStrip({ mover }: { mover: HomeView["topMover"] }) {
   );
 }
 
+// Knockout Challenge pools play a different game: picks are made once the last 32
+// are known and lock at the Round-of-32 kickoff. Until the group stage resolves
+// there's nothing to pick yet, so we surface a clear "picks open at the draw"
+// state instead of the full-bracket flow. (The knockout pick editor lands next.)
+function KnockoutNotice({ groupStageComplete }: { groupStageComplete: boolean }) {
+  return (
+    <div className="rounded-2xl border border-pitch/30 bg-pitch/5 p-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-pitch-dark">
+        Knockout Challenge
+      </p>
+      {groupStageComplete ? (
+        <p className="mt-1.5 text-sm text-ink-2">
+          The last 32 are set — knockout picks are open. Fill out your bracket before the
+          Round-of-32 kickoff.
+        </p>
+      ) : (
+        <p className="mt-1.5 text-sm text-ink-2">
+          Picks open at the Round-of-32 draw, once the group stage wraps up (~June 28). Invite
+          your friends now with the join code — we’ll notify everyone when the bracket unlocks.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function Home({
   view,
   leaderboard,
@@ -275,6 +301,7 @@ export function Home({
   bracket,
   showMedals,
   recentChat,
+  format,
 }: {
   view: HomeView;
   // Already truncated to the top rows (+ your row when you're below it).
@@ -293,9 +320,13 @@ export function Home({
   showMedals: boolean;
   // The most recent chat messages (empty for non-members).
   recentChat: ChatView[];
+  // The game this pool plays — drives the knockout-only flow.
+  format: PoolFormat;
 }) {
   return (
     <div className="space-y-4">
+      {format === "KNOCKOUT" ? <KnockoutNotice groupStageComplete={showMedals} /> : null}
+
       <ScoreCards live={view.liveMatches} last={view.lastMatch} next={view.nextMatch} code={code} />
 
       <StandingCard
