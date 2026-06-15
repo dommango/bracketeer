@@ -42,20 +42,37 @@ function SignedOut() {
     <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
       <Hero />
 
-      <div className="mt-6 rounded-3xl border border-line bg-surface p-[22px]">
-        <h2 className="font-display text-lg text-ink">Sign in to get started</h2>
-        <p className="mt-1.5 text-[13px] text-ink-3">
-          Claim your bracket, follow the live leaderboard, and join the group chat.
+      <div className="mt-6 rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">
+          New · Knockout Challenge
         </p>
-        <Link href="/signin" className={`mt-4 ${PRIMARY_BTN}`}>
+        <h2 className="mt-1.5 font-display text-lg text-ink">
+          Predict the World Cup knockout bracket
+        </h2>
+        <p className="mt-1.5 text-[13px] text-ink-3">
+          Spin up a pool, invite your friends, and pick the bracket once the last 32 are set.
+          Picks lock at the Round-of-32 kickoff.
+        </p>
+        <Link href="/pool/create?game=knockout" className={`mt-4 ${PRIMARY_BTN}`}>
+          Create a Knockout Challenge →
+        </Link>
+      </div>
+
+      <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
+        <h2 className="font-display text-lg text-ink">Already playing?</h2>
+        <p className="mt-1.5 text-[13px] text-ink-3">
+          Sign in to claim your bracket, follow the live leaderboard, and join the group chat.
+        </p>
+        <Link href="/signin" className={`mt-4 ${SECONDARY_BTN}`}>
           Sign in →
         </Link>
       </div>
 
       <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
-        <h2 className="font-display text-lg text-ink">Running the pool?</h2>
+        <h2 className="font-display text-lg text-ink">Running a full-bracket pool?</h2>
         <p className="mt-1.5 text-[13px] text-ink-3">
-          Create a pool, share the code, and have everyone fill out their bracket.
+          Create the classic whole-tournament pool, share the code, and have everyone fill out
+          their bracket.
         </p>
         <Link href="/pool/create" className={`mt-4 ${SECONDARY_BTN}`}>
           Create a pool

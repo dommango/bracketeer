@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/pool/access";
-import { createPool } from "@/lib/pool/manage";
+import { createPool, type PoolFormat } from "@/lib/pool/manage";
 import { rateLimit } from "@/lib/rate-limit";
 
 export interface CreatePoolState {
@@ -27,9 +27,14 @@ export async function createPoolAction(
   const displayName = String(formData.get("displayName") || "").trim();
   if (!name) return { error: "Give your pool a name." };
 
+  // Only the two known game types are accepted; anything else falls back to the
+  // classic full-bracket pool.
+  const format: PoolFormat =
+    String(formData.get("format") || "") === "KNOCKOUT" ? "KNOCKOUT" : "FULL_BRACKET";
+
   let joinCode: string;
   try {
-    ({ joinCode } = await createPool({ userId: user.id, name, displayName }));
+    ({ joinCode } = await createPool({ userId: user.id, name, displayName, format }));
   } catch (err) {
     return { error: (err as Error).message };
   }

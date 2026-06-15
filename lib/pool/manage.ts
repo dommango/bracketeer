@@ -17,11 +17,15 @@ async function allocateJoinCode(): Promise<string> {
   throw new Error("Could not allocate a unique join code, please retry.");
 }
 
+export type PoolFormat = "FULL_BRACKET" | "KNOCKOUT";
+
 export interface CreatePoolInput {
   userId: string;
   name: string;
   displayName: string;
   tournamentSlug?: string;
+  // The game the pool plays. Defaults to the classic full-bracket pool.
+  format?: PoolFormat;
 }
 
 export interface CreatedPool {
@@ -47,6 +51,7 @@ export async function createPool(input: CreatePoolInput): Promise<CreatedPool> {
       name,
       ownerId: input.userId,
       joinCode,
+      format: input.format ?? "FULL_BRACKET",
       memberships: {
         create: { userId: input.userId, role: "OWNER", displayName },
       },

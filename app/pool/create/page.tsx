@@ -1,12 +1,20 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
+import type { PoolFormat } from "@/lib/pool/manage";
 import { CreatePoolForm } from "./CreatePoolForm";
 import { Hero } from "../../Hero";
 
 export const dynamic = "force-dynamic";
 
-export default async function CreatePoolPage() {
+export default async function CreatePoolPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ game?: string }>;
+}) {
   const user = await getSessionUser();
+  const { game } = await searchParams;
+  const defaultFormat: PoolFormat = game === "knockout" ? "KNOCKOUT" : "FULL_BRACKET";
+  const knockout = defaultFormat === "KNOCKOUT";
 
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-16 pt-12">
@@ -26,15 +34,16 @@ export default async function CreatePoolPage() {
           New pool
         </p>
         <h1 className="mt-1.5 font-display text-[26px] leading-tight text-ink">
-          Start a World Cup 2026 pool
+          {knockout ? "Start a Knockout Challenge" : "Start a World Cup 2026 pool"}
         </h1>
         <p className="mt-2 text-[13px] text-ink-3">
-          You&apos;ll get a join code to share. Friends sign in, join, and fill out their
-          bracket right here.
+          {knockout
+            ? "Predict the knockout bracket against your friends. You'll get a join code to share — picks open when the last 32 are set."
+            : "You'll get a join code to share. Friends sign in, join, and fill out their bracket right here."}
         </p>
 
         {user ? (
-          <CreatePoolForm defaultDisplayName={user.name ?? ""} />
+          <CreatePoolForm defaultDisplayName={user.name ?? ""} defaultFormat={defaultFormat} />
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-line bg-surface-sunk p-5 text-center">
             <p className="text-sm text-ink-3">Sign in to create a pool.</p>
