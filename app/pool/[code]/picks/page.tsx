@@ -97,7 +97,7 @@ export default async function PicksPage({
   // Round-of-32 kickoff (not the long-past tournament start). Until the field is
   // set there's nothing to pick, so show a clear "opens at the draw" gate.
   if (pool.format === "KNOCKOUT") {
-    const { open, locksAt, seed } = await getKnockoutState(pool.tournament.id);
+    const { open, opensAt, locksAt, seed } = await getKnockoutState(pool.tournament.id);
     if (!open) {
       return (
         <section className="space-y-4">
@@ -108,6 +108,10 @@ export default async function PicksPage({
               Once the group stage wraps and the last 32 are set, fill out your bracket here. We’ll
               notify the pool when it unlocks.
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
+              <span className="text-sm font-semibold text-pitch-dark">Picks open in</span>
+              <Countdown target={opensAt.toISOString()} className="text-sm text-pitch-dark" />
+            </div>
           </Gate>
         </section>
       );

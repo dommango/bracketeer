@@ -11,6 +11,13 @@ import { emptyPicks, type Picks, type Results } from "@/lib/scoring/types";
 
 const THIRDS_NEEDED = 8;
 
+// Fixed target for the "knockout picks open" countdown. The field is *actually*
+// opened data-drivenly (isKnockoutFieldSet, once the answer key seats all 32), but
+// that has no timestamp to count toward — so before it flips we count down to this
+// fixed instant: just after the final WC2026 group matches (June 27, last kickoffs
+// 23:30Z) confirm the bracket, ahead of the Round-of-32 kickoff (June 28 19:00Z).
+export const KNOCKOUT_PICKS_OPEN_UTC = "2026-06-28T02:00:00Z";
+
 // The official Round-of-32 matchups (the 32 qualifiers) from the answer key.
 // Identical resolution to the live bracket (resolveBracket reuses resolveR32Slots),
 // so the pick UI and the displayed bracket can never disagree on who plays whom.

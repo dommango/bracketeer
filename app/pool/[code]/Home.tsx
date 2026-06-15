@@ -268,23 +268,42 @@ function ContextStrip({ mover }: { mover: HomeView["topMover"] }) {
 // there's nothing to pick yet, so we surface a clear "picks open at the draw"
 // state instead of the full-bracket flow. (The knockout pick editor lands next.)
 function KnockoutNotice({
-  groupStageComplete,
+  open,
   code,
+  opensAt,
+  locksAt,
 }: {
-  groupStageComplete: boolean;
+  // The authoritative "picks can be made" signal — the same one the picks page
+  // gates on (KnockoutState.open / isKnockoutFieldSet), so the dashboard and the
+  // editor never disagree about whether the bracket is fillable.
+  open: boolean;
   code: string;
+  // Fixed "picks open" target, shown as a countdown while the field is still closed.
+  opensAt: string;
+  // R32 kickoff — the lock. Null until the schedule lands; then counted down to.
+  locksAt: string | null;
 }) {
   return (
     <div className="rounded-2xl border border-pitch/30 bg-pitch/5 p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-pitch-dark">
         Knockout Challenge
       </p>
-      {groupStageComplete ? (
+      {open ? (
         <>
           <p className="mt-1.5 text-sm text-ink-2">
             The last 32 are set — knockout picks are open. Fill out your bracket before the
             Round-of-32 kickoff.
           </p>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl bg-pitch-tint px-3 py-2">
+            <span className="text-xs font-bold uppercase tracking-[0.06em] text-pitch-dark">
+              Picks lock in
+            </span>
+            {locksAt ? (
+              <Countdown target={locksAt} showSeconds={false} className="text-sm text-pitch-dark" />
+            ) : (
+              <span className="text-sm text-pitch-dark">at the Round-of-32 kickoff</span>
+            )}
+          </div>
           <Link
             href={`/pool/${code}/picks`}
             className="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-pitch px-4 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.98]"
@@ -293,10 +312,18 @@ function KnockoutNotice({
           </Link>
         </>
       ) : (
-        <p className="mt-1.5 text-sm text-ink-2">
-          Picks open at the Round-of-32 draw, once the group stage wraps up (~June 28). Invite
-          your friends now with the join code — we’ll notify everyone when the bracket unlocks.
-        </p>
+        <>
+          <p className="mt-1.5 text-sm text-ink-2">
+            Picks open at the Round-of-32 draw, once the group stage wraps up. Invite your friends
+            now with the join code — we’ll notify everyone when the bracket unlocks.
+          </p>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl bg-pitch-tint px-3 py-2">
+            <span className="text-xs font-bold uppercase tracking-[0.06em] text-pitch-dark">
+              Picks open in
+            </span>
+            <Countdown target={opensAt} showSeconds={false} className="text-sm text-pitch-dark" />
+          </div>
+        </>
       )}
     </div>
   );
@@ -316,6 +343,9 @@ export function Home({
   showMedals,
   recentChat,
   format,
+  knockoutOpen,
+  knockoutOpensAt,
+  knockoutLocksAt,
 }: {
   view: HomeView;
   // Already truncated to the top rows (+ your row when you're below it).
@@ -336,11 +366,20 @@ export function Home({
   recentChat: ChatView[];
   // The game this pool plays — drives the knockout-only flow.
   format: PoolFormat;
+  // Knockout timing for the dashboard countdown (only used when format is KNOCKOUT).
+  knockoutOpen?: boolean;
+  knockoutOpensAt?: string;
+  knockoutLocksAt?: string | null;
 }) {
   return (
     <div className="space-y-4">
-      {format === "KNOCKOUT" ? (
-        <KnockoutNotice groupStageComplete={showMedals} code={code} />
+      {format === "KNOCKOUT" && knockoutOpensAt ? (
+        <KnockoutNotice
+          open={knockoutOpen ?? false}
+          code={code}
+          opensAt={knockoutOpensAt}
+          locksAt={knockoutLocksAt ?? null}
+        />
       ) : null}
 
       <ScoreCards live={view.liveMatches} last={view.lastMatch} next={view.nextMatch} code={code} />

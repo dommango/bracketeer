@@ -6,7 +6,11 @@ import { getLeaderboard, asResults, asScoringConfig, type LeaderboardRow } from 
 import { assignRanks } from "@/lib/pool/rank";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
 import { resolveBracket } from "@/lib/pool/bracket";
-import { knockoutR32Seed, isKnockoutFieldSet } from "@/lib/pool/knockout";
+import {
+  knockoutR32Seed,
+  isKnockoutFieldSet,
+  KNOCKOUT_PICKS_OPEN_UTC,
+} from "@/lib/pool/knockout";
 import { arePicksLocked } from "@/lib/pool/lock";
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
@@ -210,6 +214,9 @@ export const isGroupStageComplete = cache(async (tournamentId: string): Promise<
 export interface KnockoutState {
   // The 32 qualifiers are decided in the answer key — picks can be made.
   open: boolean;
+  // Fixed target for the "picks open" countdown shown while still closed (the
+  // bracket can't be filled until the last 32 are confirmed). See knockout.ts.
+  opensAt: Date;
   // When picks lock: the Round-of-32 kickoff (Match 73). Null if unscheduled.
   locksAt: Date | null;
   // The official R32 matchups the pick form seeds from (a/b per match 73–88).
@@ -234,6 +241,7 @@ export const getKnockoutState = cache(async (tournamentId: string): Promise<Knoc
   const results = asResults(tournament.officialResults);
   return {
     open: isKnockoutFieldSet(results),
+    opensAt: new Date(KNOCKOUT_PICKS_OPEN_UTC),
     locksAt: firstR32?.scheduledAt ?? null,
     seed: knockoutR32Seed(results),
   };

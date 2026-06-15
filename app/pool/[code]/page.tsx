@@ -1,5 +1,11 @@
 import { notFound } from "next/navigation";
-import { getPoolByCode, getHomeView, getPoolView, getPoolBracket } from "@/lib/pool/queries";
+import {
+  getPoolByCode,
+  getHomeView,
+  getPoolView,
+  getPoolBracket,
+  getKnockoutState,
+} from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { listMessages } from "@/lib/pool/chat";
 import { Home } from "./Home";
@@ -40,6 +46,10 @@ export default async function PoolHomePage({
     yourRow && yourRow.rank > TOP_N ? [...topRows, yourRow] : topRows;
   const hasMore = fullBoard.length > TOP_N;
 
+  // Knockout pools surface a live open/lock countdown on the dashboard.
+  const knockout =
+    pool.format === "KNOCKOUT" ? await getKnockoutState(pool.tournament.id) : null;
+
   return (
     <Home
       view={view}
@@ -55,6 +65,9 @@ export default async function PoolHomePage({
       showMedals={poolView?.groupStageComplete ?? false}
       recentChat={recentChat}
       format={pool.format}
+      knockoutOpen={knockout?.open}
+      knockoutOpensAt={knockout?.opensAt.toISOString()}
+      knockoutLocksAt={knockout?.locksAt ? knockout.locksAt.toISOString() : null}
     />
   );
 }
