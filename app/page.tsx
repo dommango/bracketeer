@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
+import { hasTournamentStarted } from "@/lib/pool/queries";
 import { signOutAction } from "@/lib/auth/actions";
+import { APP_VERSION } from "@/lib/version";
 import { Hero } from "./Hero";
 
 // Session-aware landing. Signed-out visitors are funnelled to sign-in; signed-in
@@ -11,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const user = await getSessionUser();
-  if (!user) return <SignedOut />;
+  if (!user) return <SignedOut fullGameAvailable={!(await hasTournamentStarted())} />;
 
   const memberships = await prisma.membership.findMany({
     where: { userId: user.id },
@@ -37,7 +39,7 @@ const PRIMARY_BTN =
 const SECONDARY_BTN =
   "inline-flex h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-[18px] font-semibold text-pitch-dark transition-colors hover:bg-surface-sunk active:scale-[0.97]";
 
-function SignedOut() {
+function SignedOut({ fullGameAvailable }: { fullGameAvailable: boolean }) {
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
       <Hero />
@@ -68,16 +70,18 @@ function SignedOut() {
         </Link>
       </div>
 
-      <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
-        <h2 className="font-display text-lg text-ink">Running a full-bracket pool?</h2>
-        <p className="mt-1.5 text-[13px] text-ink-3">
-          Create the classic whole-tournament pool, share the code, and have everyone fill out
-          their bracket.
-        </p>
-        <Link href="/pool/create" className={`mt-4 ${SECONDARY_BTN}`}>
-          Create a pool
-        </Link>
-      </div>
+      {fullGameAvailable ? (
+        <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
+          <h2 className="font-display text-lg text-ink">Running a full tournament game?</h2>
+          <p className="mt-1.5 text-[13px] text-ink-3">
+            Create the classic whole-tournament pool, share the code, and have everyone fill out
+            their bracket.
+          </p>
+          <Link href="/pool/create" className={`mt-4 ${SECONDARY_BTN}`}>
+            Create a pool
+          </Link>
+        </div>
+      ) : null}
 
       <Footer />
     </main>
@@ -154,10 +158,19 @@ function SignedInHub({
 
 function Footer() {
   return (
-    <div className="mt-7 flex justify-center gap-2 text-[11px] text-ink-3">
-      <span>FIFA World Cup 26™</span>
-      <span>·</span>
-      <span>June 11 – July 19, 2026</span>
-    </div>
+    <footer className="mt-7 space-y-1 text-center text-[11px] text-ink-3">
+      <div className="flex justify-center gap-2">
+        <span>FIFA World Cup 26™</span>
+        <span>·</span>
+        <span>June 11 – July 19, 2026</span>
+      </div>
+      <div className="flex justify-center gap-2">
+        <span>Dom Mangonon | 2026</span>
+        <span>·</span>
+        <Link href="/release-notes" className="text-pitch-dark hover:underline">
+          v{APP_VERSION}
+        </Link>
+      </div>
+    </footer>
   );
 }
