@@ -29,6 +29,11 @@ const schema = z.object({
   ODDS_API_REGION: z.string().default("eu"),
   // Giphy (optional — the GIF picker in chat disables cleanly without it).
   GIPHY_API_KEY: z.string().default(""),
+  // Stripe billing (optional — premium upgrades disable cleanly without it).
+  // All three are required to enable checkout + webhook handling.
+  STRIPE_SECRET_KEY: z.string().default(""),
+  STRIPE_WEBHOOK_SECRET: z.string().default(""),
+  STRIPE_PRICE_PREMIUM: z.string().default(""),
 });
 
 export const env = schema.parse(process.env);
@@ -38,6 +43,12 @@ export const emailEnabled = Boolean(env.EMAIL_SERVER);
 export const sportsApiEnabled = Boolean(env.SPORTS_API_KEY);
 export const oddsApiEnabled = Boolean(env.ODDS_API_KEY);
 export const giphyEnabled = Boolean(env.GIPHY_API_KEY);
+// Stripe needs all three secrets to operate: the API key to create checkout
+// sessions, the price id to subscribe to, and the webhook secret to trust
+// incoming events. Missing any one disables billing (upgrade UI shows a notice).
+export const stripeEnabled = Boolean(
+  env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_PREMIUM,
+);
 
 const adminEmails = new Set(
   env.ADMIN_EMAILS.split(",")

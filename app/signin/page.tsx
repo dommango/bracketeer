@@ -6,16 +6,29 @@ import { googleEnabled, emailEnabled } from "@/lib/env";
 // hands off to Auth.js, which performs the redirect.
 export const dynamic = "force-dynamic";
 
+// Only same-origin relative paths are honored as a post-sign-in destination, so
+// a crafted ?callbackUrl can't turn sign-in into an open redirect. Reject
+// protocol-relative (`//host`) and backslash forms (`/\host`, `/\/host`) —
+// browsers fold `\` to `/`, so those would otherwise resolve off-site.
+function safeCallback(raw: unknown): string {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value !== "string") return "/";
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/";
+  return value;
+}
+
 async function emailSignIn(formData: FormData) {
   "use server";
   const email = String(formData.get("email") || "").trim();
   if (!email) return;
-  await signIn("nodemailer", { email, redirectTo: "/" });
+  const redirectTo = safeCallback(String(formData.get("callbackUrl") || "/"));
+  await signIn("nodemailer", { email, redirectTo });
 }
 
-async function googleSignIn() {
+async function googleSignIn(formData: FormData) {
   "use server";
-  await signIn("google", { redirectTo: "/" });
+  const redirectTo = safeCallback(String(formData.get("callbackUrl") || "/"));
+  await signIn("google", { redirectTo });
 }
 
 export default async function SignInPage({
@@ -25,7 +38,8 @@ export default async function SignInPage({
 }) {
   const session = await auth();
   if (session?.user) redirect("/");
-  const { error } = await searchParams;
+  const { error, callbackUrl } = await searchParams;
+  const dest = safeCallback(callbackUrl ?? "/");
 
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
@@ -74,6 +88,7 @@ export default async function SignInPage({
       <div className="mt-6 space-y-4 rounded-3xl border border-line bg-surface p-6">
         {googleEnabled ? (
           <form action={googleSignIn}>
+            <input type="hidden" name="callbackUrl" value={dest} />
             <button
               type="submit"
               className="h-11 w-full rounded-full border border-line bg-surface font-semibold text-ink transition-colors hover:bg-surface-sunk active:scale-[0.99]"
@@ -84,6 +99,7 @@ export default async function SignInPage({
         ) : null}
 
         <form action={emailSignIn} className="space-y-3">
+          <input type="hidden" name="callbackUrl" value={dest} />
           <label className="block text-sm font-semibold text-ink-2" htmlFor="email">
             Email magic link
           </label>

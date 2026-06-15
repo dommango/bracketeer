@@ -17,6 +17,10 @@ import { parseSubmissionCsv, importSubmission } from "@/lib/pool/import";
 import { recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
 import { rateLimit } from "@/lib/rate-limit";
+import { createInvite, revokeInvite } from "@/lib/pool/invites";
+import { inviteUrl } from "@/lib/pool/invite-token";
+import { sendInviteEmail } from "@/lib/email/send";
+import { env } from "@/lib/env";
 
 const MAX_CSV_BYTES = 1_000_000;
 const MAX_FILES = 200;
@@ -99,6 +103,53 @@ export async function removeEntryAction(formData: FormData): Promise<void> {
     await recomputePool(poolId);
     await notifyPool(poolId, "leaderboard");
   }
+  refresh(code);
+}
+
+export interface InviteState {
+  url?: string;
+  email?: string | null;
+  // Soft note when the invite was created but its email couldn't be delivered.
+  error?: string;
+}
+
+// useActionState-compatible: mint an invite link (optionally pre-addressed) and,
+// when an email is given, send it. The link is always returned so the owner can
+// copy it even when email delivery isn't configured or fails.
+export async function createInviteAction(
+  _prev: InviteState,
+  formData: FormData,
+): Promise<InviteState> {
+  const code = String(formData.get("code") || "");
+  const { poolId, access } = await requireManage(code);
+
+  if (!rateLimit(`invite:${access.user.id}`, 30, 60_000).ok) {
+    return { error: "Too many invites — wait a minute and try again." };
+  }
+
+  const email = String(formData.get("email") || "").trim().toLowerCase() || null;
+  const { token } = await createInvite({ poolId, createdById: access.user.id, email });
+  const url = inviteUrl(env.APP_BASE_URL, token);
+
+  let error: string | undefined;
+  if (email) {
+    const pool = await getPoolByCode(code);
+    try {
+      await sendInviteEmail({ to: email, url, poolName: pool?.name ?? "your pool" });
+    } catch (err) {
+      error = `Invite created, but the email couldn't be sent: ${(err as Error).message}`;
+    }
+  }
+
+  refresh(code);
+  return { url, email, error };
+}
+
+export async function revokeInviteAction(formData: FormData): Promise<void> {
+  const code = String(formData.get("code") || "");
+  const { poolId } = await requireManage(code);
+  const inviteId = String(formData.get("inviteId") || "");
+  if (inviteId) await revokeInvite(inviteId, poolId);
   refresh(code);
 }
 
