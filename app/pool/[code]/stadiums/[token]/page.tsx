@@ -37,10 +37,10 @@ export default async function StadiumPage({
     <div className="space-y-5">
       <header className="space-y-2">
         <Link
-          href={`/pool/${code}/stadiums`}
+          href={`/pool/${code}/matches?view=groups&fx=city`}
           className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink-3 transition-colors hover:text-ink"
         >
-          ← All stadiums
+          ← Back to venues
         </Link>
         <div className="flex items-center gap-2">
           <span

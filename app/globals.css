@@ -184,6 +184,41 @@ body {
   }
 }
 
+/* Drill-down transition — one uniform motion for every in-section navigation
+   (group card → fixtures, city → venue, match → detail). The route content
+   fades + rises in on mount; the pool template.tsx re-mounts it per navigation
+   so it replays each time. Honoured by the reduce-motion guard below. */
+@keyframes drill-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.drill-enter {
+  animation: drill-enter var(--dur-3) var(--ease-standard);
+}
+
+/* Deep-link reveal — the standings group card lands on #group-X; flash its
+   target section so the jump reads as a deliberate drill-down. */
+@keyframes drill-highlight {
+  from {
+    background: var(--pitch-tint);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+[id^="group-"]:target {
+  animation: drill-highlight 1.2s var(--ease-standard);
+  border-radius: 0.5rem;
+}
+
 /* Accessibility: honour the OS "reduce motion" setting everywhere — collapse
    animations and transitions (the live pulse, count-ups, hover fades) to a
    single frame. Per-component motion-reduce: utilities reinforce this. */

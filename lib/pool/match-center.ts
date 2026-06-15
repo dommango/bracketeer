@@ -76,6 +76,7 @@ export interface MatchCenterSection {
   roundCode: string;
   label: string;
   matches: MatchCenterRow[];
+  anchor?: string; // optional scroll-target id (e.g. "group-A")
 }
 
 // A match is FINAL when the Result says so, or (no Result yet) when the answer

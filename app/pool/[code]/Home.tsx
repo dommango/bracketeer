@@ -352,7 +352,7 @@ export function Home({
             </Link>
           </div>
           <div className="mt-2.5">
-            <GroupStandings view={bracket} />
+            <GroupStandings view={bracket} code={code} />
           </div>
         </section>
       ) : null}

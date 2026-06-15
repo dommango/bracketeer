@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { BracketView, BracketMatch, BracketRound } from "@/lib/pool/bracket-view";
 import type { GroupTableRow } from "@/lib/pool/group-table";
 import { R16, QF, SF, FINAL } from "@/lib/scoring/data";
@@ -292,7 +293,7 @@ function FormChips({ w, d, l }: { w: number; d: number; l: number }) {
   );
 }
 
-export function GroupStandings({ view }: { view: BracketView }) {
+export function GroupStandings({ view, code }: { view: BracketView; code: string }) {
   // Tables are always populated (all 4 teams, 0–0 before play), so every group
   // renders the same full-size table; the empty state only shows pre-seed.
   const anySet = view.groups.some((g) => g.table.length > 0) || view.thirds.length > 0;
@@ -309,9 +310,11 @@ export function GroupStandings({ view }: { view: BracketView }) {
         {view.groups.map((g) => {
           const city = GROUP_CITY[g.group] ?? "mexico-city";
           return (
-            <div
+            <Link
               key={g.group}
-              className="relative overflow-hidden rounded-xl border border-line bg-surface p-3 text-sm"
+              href={`/pool/${code}/matches?view=groups&fx=group#group-${g.group}`}
+              aria-label={`Group ${g.group} fixtures`}
+              className="relative block overflow-hidden rounded-xl border border-line bg-surface p-3 text-sm transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch active:scale-[0.99]"
             >
               <div className="flex items-center gap-2">
                 <GroupLetterMark letter={g.group} city={city} />
@@ -330,7 +333,6 @@ export function GroupStandings({ view }: { view: BracketView }) {
                     <tr className="text-ink-4">
                       <th className="text-left font-medium">#</th>
                       <th className="text-left font-medium">Team</th>
-                      <th className="text-right font-medium">P</th>
                       <th className="text-left font-medium">Form</th>
                       <th className="text-right font-medium">GF</th>
                       <th className="text-right font-medium">GA</th>
@@ -355,10 +357,14 @@ export function GroupStandings({ view }: { view: BracketView }) {
                         >
                           <td className="py-0.5 text-left font-mono">{r.rank}</td>
                           <td className="py-0.5 text-left">
-                            {r.code}
-                            {r.tied && g.started ? <span className="ml-1 text-ink-4">=</span> : null}
+                            <span className="flex items-center gap-1.5">
+                              <Flag code={r.code} size={16} />
+                              {r.code}
+                              {r.tied && g.started ? (
+                                <span className="text-ink-4">=</span>
+                              ) : null}
+                            </span>
                           </td>
-                          <td className="py-0.5 text-right tabular-nums">{r.played}</td>
                           <td className="py-0.5 text-left">
                             <FormChips w={r.w} d={r.d} l={r.l} />
                           </td>
@@ -385,7 +391,7 @@ export function GroupStandings({ view }: { view: BracketView }) {
                   </p>
                 </>
               )}
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -400,7 +406,6 @@ export function GroupStandings({ view }: { view: BracketView }) {
                 <th className="text-left font-medium">#</th>
                 <th className="text-left font-medium">Grp</th>
                 <th className="text-left font-medium">Team</th>
-                <th className="text-right font-medium">P</th>
                 <th className="text-right font-medium">GD</th>
                 <th className="text-right font-medium">Pts</th>
               </tr>
@@ -410,8 +415,12 @@ export function GroupStandings({ view }: { view: BracketView }) {
                 <tr key={r.code} className={r.advancing ? "font-bold text-ink" : "text-ink-4"}>
                   <td className="py-0.5 text-left font-mono">{i + 1}</td>
                   <td className="py-0.5 text-left">{r.group}</td>
-                  <td className="py-0.5 text-left">{r.code}</td>
-                  <td className="py-0.5 text-right tabular-nums">{r.played}</td>
+                  <td className="py-0.5 text-left">
+                    <span className="flex items-center gap-1.5">
+                      <Flag code={r.code} size={16} />
+                      {r.code}
+                    </span>
+                  </td>
                   <td className="py-0.5 text-right tabular-nums">{r.gd > 0 ? `+${r.gd}` : r.gd}</td>
                   <td className="py-0.5 text-right font-mono tabular-nums">{r.pts}</td>
                 </tr>
