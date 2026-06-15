@@ -7,7 +7,7 @@ import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/da
 import { computeGroupTables, provisionalStandings, type GroupResultRow, type GroupTableRow } from "./group-table";
 import { slotLabel, KNOCKOUT_SLOT_REFS } from "./slot-label";
 import { matchTag } from "./rounds";
-import { kickoffFor } from "@/lib/scoring/schedule";
+import { kickoffFor, venueFor } from "@/lib/scoring/schedule";
 import type { Results } from "@/lib/scoring/types";
 
 // Earliest kickoff among a group's six matches. Groups are laid out A–L with six
@@ -34,6 +34,9 @@ export interface BracketMatch {
   live: boolean;
   tag: string; // per-match knockout tag, e.g. "R32-1"
   scheduledAt: string | null; // ISO kickoff
+  venue: string | null;
+  city: string | null;
+  cityToken: string | null;
 }
 
 export interface BracketRound {
@@ -84,6 +87,7 @@ export function buildBracketView(
     const m = bracket[matchNo];
     const s = scores.get(matchNo);
     const refs = KNOCKOUT_SLOT_REFS[matchNo];
+    const v = venueFor(matchNo);
     return {
       matchNo,
       homeCode: m?.home ?? null,
@@ -97,6 +101,9 @@ export function buildBracketView(
       live: s?.status === "LIVE",
       tag: matchTag(matchNo),
       scheduledAt: kickoffFor(matchNo)?.toISOString() ?? null,
+      venue: v?.venue ?? null,
+      city: v?.city ?? null,
+      cityToken: v?.cityToken ?? null,
     };
   };
 

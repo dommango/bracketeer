@@ -127,6 +127,12 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
         isWinner={decided && m.winnerCode === m.awayCode}
         decided={decided}
       />
+      {m.venue ? (
+        <div className="mt-1.5 truncate text-[10px] text-ink-4">
+          {m.venue}
+          {m.city ? <span className="text-ink-4"> · {m.city}</span> : null}
+        </div>
+      ) : null}
     </div>
   );
 }
