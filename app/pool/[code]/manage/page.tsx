@@ -4,8 +4,12 @@ import { env } from "@/lib/env";
 import { getPoolByCode } from "@/lib/pool/queries";
 import { getPoolAccess, canManagePool } from "@/lib/pool/access";
 import { listPoolMembers, listPoolEntries } from "@/lib/pool/admin";
+import { listPendingInvites } from "@/lib/pool/invites";
+import { inviteUrl } from "@/lib/pool/invite-token";
+import { isPremium, memberCap } from "@/lib/billing/entitlements";
 import { CopyButton } from "./CopyButton";
 import { ImportForm } from "./ImportForm";
+import { InviteForm } from "./InviteForm";
 import {
   setMemberRoleAction,
   removeMemberAction,
@@ -13,6 +17,7 @@ import {
   deletePoolAction,
   setEntryLockedAction,
   removeEntryAction,
+  revokeInviteAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +42,15 @@ export default async function ManagePage({
   if (!canManagePool(access)) notFound();
   const isOwner = access.isOwner;
 
-  const [members, entries] = await Promise.all([
+  const [members, entries, invites] = await Promise.all([
     listPoolMembers(pool.id),
     listPoolEntries(pool.id),
+    listPendingInvites(pool.id),
   ]);
 
   const joinUrl = `${env.APP_BASE_URL}/join?code=${pool.joinCode}`;
+  const premium = isPremium(pool.tier);
+  const cap = memberCap(pool.tier);
 
   return (
     <main className="mx-auto max-w-2xl px-4 pb-16">
@@ -81,7 +89,68 @@ export default async function ManagePage({
           />
           <CopyButton value={joinUrl} label="Copy link" />
         </div>
+
+        <div className="mt-4 border-t border-line pt-4">
+          <InviteForm code={code} />
+        </div>
+
+        {invites.length > 0 ? (
+          <div className="mt-4">
+            <p className="px-1 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+              Pending invites ({invites.length})
+            </p>
+            <ul className="mt-2 space-y-2">
+              {invites.map((inv) => (
+                <li
+                  key={inv.id}
+                  className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink">
+                      {inv.email ?? "Link invite"}
+                    </p>
+                    <p className="truncate text-xs text-ink-3">
+                      {inv.expiresAt
+                        ? `Expires ${inv.expiresAt.toLocaleDateString()}`
+                        : "No expiry"}
+                    </p>
+                  </div>
+                  <CopyButton value={inviteUrl(env.APP_BASE_URL, inv.token)} label="Copy link" />
+                  <form action={revokeInviteAction}>
+                    <input type="hidden" name="code" value={code} />
+                    <input type="hidden" name="inviteId" value={inv.id} />
+                    <button className="inline-flex h-9 items-center rounded-full border border-line px-3 text-xs font-semibold text-live hover:bg-surface-sunk">
+                      Revoke
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </Section>
+
+      {/* Plan — owner only */}
+      {isOwner ? (
+        <Section title="Plan">
+          <Link
+            href={`/pool/${code}/billing`}
+            className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
+          >
+            <div className="min-w-0">
+              <p className="font-semibold text-ink">
+                {premium ? "Premium" : "Free"} plan
+              </p>
+              <p className="text-xs text-ink-3">
+                {premium
+                  ? "Unlimited members."
+                  : `Up to ${cap} members. Upgrade for an unlimited pool.`}
+              </p>
+            </div>
+            <span className="font-display text-pitch-dark">→</span>
+          </Link>
+        </Section>
+      ) : null}
 
       {/* Members */}
       <Section title={`Members (${members.length})`}>

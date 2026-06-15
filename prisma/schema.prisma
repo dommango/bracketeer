@@ -232,6 +232,14 @@ enum PoolFormat {
   KNOCKOUT
 }
 
+// Billing tier for a pool. FREE caps the member count; PREMIUM (a per-pool Stripe
+// subscription) lifts the cap. Entitlements derive from this single field — see
+// lib/billing/entitlements.ts — and the Stripe webhook is its only writer.
+enum PoolTier {
+  FREE
+  PREMIUM
+}
+
 model Pool {
   id           String     @id @default(cuid())
   tournamentId String
@@ -239,6 +247,10 @@ model Pool {
   ownerId      String
   joinCode     String     @unique
   format       PoolFormat @default(FULL_BRACKET)
+  tier         PoolTier   @default(FREE)
+  // Stripe linkage for the pool's premium subscription (null until upgraded).
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
   settings     Json?
   createdAt    DateTime   @default(now())
 
@@ -248,8 +260,30 @@ model Pool {
   entries     Entry[]
   messages    ChatMessage[]
   snapshots   ScoreSnapshot[]
+  invites     PoolInvite[]
 
   @@index([tournamentId])
+}
+
+// A tokenized invite to a pool, beyond the shareable join code. Optionally
+// pre-addressed to an email (then sent via SMTP when configured) and optionally
+// expiring. Single-use: accepting stamps acceptedAt/acceptedById and enrolls the
+// user as a Membership (subject to the pool's member cap).
+model PoolInvite {
+  id           String     @id @default(cuid())
+  poolId       String
+  token        String     @unique
+  email        String?
+  role         MemberRole @default(MEMBER)
+  createdById  String
+  expiresAt    DateTime?
+  acceptedAt   DateTime?
+  acceptedById String?
+  createdAt    DateTime   @default(now())
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@index([poolId])
 }
 
 model Membership {

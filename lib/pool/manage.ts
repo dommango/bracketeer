@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { generateJoinCode, normalizeJoinCode } from "@/lib/pool/join-code";
 import { claimEntriesForUser } from "@/lib/auth/claim";
+import { canAddMember, POOL_FULL_MESSAGE } from "@/lib/billing/entitlements";
 
 // A unique join code, retrying on the (rare) collision against the unique index.
 async function allocateJoinCode(): Promise<string> {
@@ -83,7 +84,7 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
 
   const pool = await prisma.pool.findUnique({
     where: { joinCode: code },
-    select: { id: true, joinCode: true },
+    select: { id: true, joinCode: true, tier: true },
   });
   if (!pool) throw new Error("No pool found for that join code.");
 
@@ -94,6 +95,21 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
 
   const displayName =
     (input.displayName ?? "").trim() || user?.name?.trim() || "Player";
+
+  // Enforce the tier's member cap, but only for genuinely new members — an
+  // existing member re-joining (idempotent) must never be turned away even at cap.
+  // The count→insert isn't atomic: two simultaneous joins at the cap boundary
+  // could both pass. Acceptable for the single-instance MVP (same assumption the
+  // in-process rate limiter makes); a scaled deploy would enforce this in a
+  // serializable transaction or a DB constraint.
+  const existing = await prisma.membership.findUnique({
+    where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
+    select: { id: true },
+  });
+  if (!existing) {
+    const memberCount = await prisma.membership.count({ where: { poolId: pool.id } });
+    if (!canAddMember(pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
+  }
 
   await prisma.membership.upsert({
     where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
