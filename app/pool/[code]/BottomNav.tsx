@@ -9,7 +9,7 @@ import type { ReactNode, SVGProps } from "react";
 // a pitch-tint pill behind the icon + pitch-dark label — two reinforcing cues.
 // Home matches exactly; the other tabs match by prefix so nested children stay lit.
 
-type TabKey = "home" | "matches" | "stadiums" | "chat";
+type TabKey = "home" | "matches" | "chat";
 
 type Tab = {
   key: TabKey;
@@ -38,13 +38,6 @@ export function BottomNav({ code }: { code: string }) {
       href: `${base}/matches`,
       isActive: prefix(`${base}/matches`),
       icon: <MatchesGlyph />,
-    },
-    {
-      key: "stadiums",
-      label: "Stadiums",
-      href: `${base}/stadiums`,
-      isActive: prefix(`${base}/stadiums`),
-      icon: <StadiumGlyph />,
     },
     {
       key: "chat",
@@ -151,17 +144,6 @@ function MatchesGlyph() {
       <circle cx="12" cy="12" r="9" />
       <path d="m12 6.5 4.5 3.3-1.7 5.3H9.2L7.5 9.8 12 6.5Z" />
       <path d="M12 6.5V3.5M16.5 9.8 19.4 8M14.8 15.1 17 19M9.2 15.1 7 19M7.5 9.8 4.6 8" />
-    </svg>
-  );
-}
-
-function StadiumGlyph() {
-  // Stadium — an elliptical bowl with stand tiers. Reads at glance next to the ball.
-  return (
-    <svg {...svgProps}>
-      <ellipse cx="12" cy="9" rx="8.5" ry="4" />
-      <path d="M3.5 9v4c0 2.2 3.8 4 8.5 4s8.5-1.8 8.5-4V9" />
-      <ellipse cx="12" cy="9" rx="3.5" ry="1.6" />
     </svg>
   );
 }

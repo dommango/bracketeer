@@ -9,13 +9,16 @@ import {
 import { getSessionUser } from "@/lib/pool/access";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { formatMatchDate } from "@/lib/pool/format";
+import { byGroupSections, byDaySections, byCityVenues } from "@/lib/pool/fixture-views";
 import { MatchCenter } from "../MatchCenter";
+import { VenueGrid } from "../VenueGrid";
 import { GroupStandings, Bracket } from "../Bracket";
 
 // Fixtures + live status change at request time.
 export const dynamic = "force-dynamic";
 
 type FixturesView = "groups" | "knockouts";
+type FixtureGrouping = "group" | "day" | "city";
 
 // Date span of a contiguous matchNo range (e.g. "Thu, Jun 11 – Sat, Jun 27"),
 // from the static schedule. Null when none of the matches are scheduled.
@@ -68,15 +71,39 @@ function Toggle({ code, active }: { code: string; active: FixturesView }) {
   );
 }
 
+function GroupingToggle({ code, active }: { code: string; active: FixtureGrouping }) {
+  const tab = (fx: FixtureGrouping, label: string) => {
+    const on = active === fx;
+    return (
+      <Link
+        href={`/pool/${code}/matches?view=groups&fx=${fx}`}
+        aria-current={on ? "page" : undefined}
+        className={`flex-1 rounded-full px-3 py-1.5 text-center text-[13px] font-semibold transition-colors ${
+          on ? "bg-surface text-ink shadow-[var(--shadow-xs)]" : "text-ink-3 hover:text-ink"
+        }`}
+      >
+        {label}
+      </Link>
+    );
+  };
+  return (
+    <div className="flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
+      {tab("group", "By group")}
+      {tab("day", "By day")}
+      {tab("city", "By city")}
+    </div>
+  );
+}
+
 export default async function MatchesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; fx?: string }>;
 }) {
   const { code } = await params;
-  const { view } = await searchParams;
+  const { view, fx } = await searchParams;
   const pool = await getPoolByCode(code);
   if (!pool) notFound();
 
@@ -92,6 +119,9 @@ export default async function MatchesPage({
     view === "groups" || view === "knockouts" ? view : groupsDone ? "knockouts" : "groups";
 
   const groupSections = sections.filter((s) => s.roundCode === "GROUP");
+  const groupRows = groupSections.flatMap((s) => s.matches);
+  const grouping: FixtureGrouping =
+    fx === "group" || fx === "day" || fx === "city" ? fx : "group";
 
   return (
     <div className="space-y-5">
@@ -105,7 +135,7 @@ export default async function MatchesPage({
                 Group standings
               </h2>
               <div className="mt-2.5">
-                <GroupStandings view={bracket} />
+                <GroupStandings view={bracket} code={code} />
               </div>
             </section>
           ) : null}
@@ -115,7 +145,19 @@ export default async function MatchesPage({
               Group fixtures
             </h2>
             <div className="mt-2.5">
-              <MatchCenter sections={groupSections} code={code} />
+              <GroupingToggle code={code} active={grouping} />
+            </div>
+            <div className="mt-3">
+              {grouping === "city" ? (
+                <VenueGrid code={code} venues={byCityVenues(groupRows)} />
+              ) : (
+                <MatchCenter
+                  sections={
+                    grouping === "day" ? byDaySections(groupRows) : byGroupSections(groupSections)
+                  }
+                  code={code}
+                />
+              )}
             </div>
           </section>
         </>
