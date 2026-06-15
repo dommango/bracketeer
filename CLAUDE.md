@@ -2,9 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-HessFest is a tournament bracket-pool app. The near-term goal is a **World Cup 2026 MVP**
-for a friend group (kickoff 2026-06-11); the longer-term goal is a multi-tenant platform where
-anyone can create and run a pool. See `handoff.md` for current status and the remaining build plan.
+HessFest is a tournament bracket-pool app. It shipped as a **World Cup 2026 MVP** for a friend
+group (kickoff 2026-06-11) and is mid-pivot into **Bracketeer**, a multi-tenant platform where
+anyone can create and run a pool — HessFest is now one pool/instance. The pivot runs in phases
+(platform framing → knockout module → SaaS billing/invites → iOS/PWA/push → launch); see
+`handoff.md` for build status and the roadmap plan referenced there. Phase work is **additive
+and non-breaking** by rule: existing pools and oracle scoring parity must never change.
 
 ## Commands
 
@@ -84,8 +87,46 @@ in that tool and people's standings must not change. Everything below serves tha
   (used as the scoring key): group 1–72, R32 73–88, R16 89–96, QF 97–100, SF 101–102, bronze 103,
   final 104.
 
+- **A `Pool` has two orthogonal, additive dimensions** (the HessFest pool is the default of
+  both, so it's unaffected by either): `format` (`FULL_BRACKET` | `KNOCKOUT`) and `tier`
+  (`FREE` | `PREMIUM`). KNOCKOUT pools reuse the same `Pick`/`Entry` storage and knockout
+  scoring but enter only winners-from-the-real-qualifiers (`lib/pool/knockout.ts` seeds the
+  bracket from the official R32) and **lock at the R32 kickoff** (Match-73's `scheduledAt`), not
+  the group kickoff — distinct from full-bracket lock in `lib/pool/lock.ts`. `tier` gates pool
+  size via the pure `lib/billing/entitlements.ts` (`FREE_MEMBER_CAP`, PREMIUM uncapped), enforced
+  in `joinPool`/`acceptInvite`.
+
+- **Optional integrations degrade gracefully behind one env gate each.** `lib/env.ts` validates
+  `process.env` once (Zod, throws on missing required vars) and exports a boolean per integration:
+  `googleEnabled`, `emailEnabled`, `sportsApiEnabled`, `oddsApiEnabled`, `giphyEnabled`,
+  `stripeEnabled`, `pushEnabled`. Every feature that needs secrets checks its flag and no-ops
+  cleanly when unset, so the app builds and runs keyless. **New integrations follow this pattern.**
+
+- **External integrations are implemented SDK-free** (deliberate — keeps `npm install` light and
+  the build green without keys). Stripe billing (`lib/billing/`) and APNs push (`lib/push/`) both
+  use `fetch`/`node:http2` + `node:crypto` instead of a vendor SDK, each split into a **pure,
+  env-free half that's unit-tested** (signature/JWT/encoding — e.g. `stripe-webhook.ts`,
+  `apns-jwt.ts`) and an impure half bound to `env`/DB/network (verified via build + a tsx DB
+  smoke, since the sandbox can't reach the live services).
+
+- **Realtime + push fan-out share the result event.** Producers call `notifyPool(poolId, type)`
+  (`lib/realtime/notify.ts`) which emits Postgres `LISTEN/NOTIFY`; one process-wide `RealtimeHub`
+  (`hub.ts`) forwards to all open SSE streams (`/api/pool/[id]/stream`), with client polling as a
+  self-healing fallback. On knockout results, `recomputeTournamentPools` additionally fires
+  best-effort native push (`lib/push/send.ts`) on the same event. Both layers are best-effort: a
+  notify/push failure never breaks the operation that triggered it.
+
+- **Authorization lives in route handlers/server components, not middleware** (there is no
+  `middleware.ts`). `lib/pool/access.ts` resolves the Auth.js session (`getSessionUser`, memoized
+  per request via `react cache`) and the caller's membership: `getPoolAccess` / `canManagePool`
+  for pool-scoped access, `getTournamentAdmin` (+ `isAdminEmail` in `lib/env.ts`) for answer-key
+  writes. Admin tools fail **closed** outside local dev when `ADMIN_EMAILS` is unset.
+
 - **Infra conventions are copied from the sibling `carecover` project**
-  (`/home/dom/projects/carecover`): Prisma 7 + `@prisma/adapter-pg` (`lib/db.ts`), Zod-validated
-  env with graceful degradation (`lib/env.ts` — Google/email/sports-API each disable cleanly when
-  unset), and a Railway web-service + cron-service deploy with a `CRON_SECRET`-guarded
-  `/api/cron/*` route (`scripts/cron.mjs`, `railway*.json` — to be added).
+  (`/home/dom/projects/carecover`): Prisma 7 + `@prisma/adapter-pg` (`lib/db.ts`), the Zod env
+  pattern above, and a Railway web-service + cron-service deploy with a `CRON_SECRET`-guarded
+  `/api/cron/*` route (`scripts/cron.mjs`, `railway*.json` — to be added). The iOS app is a
+  **Capacitor** wrap of the hosted web app; the web bundle stays decoupled by talking to the
+  native runtime only through the injected `window.Capacitor` global (`lib/native/bridge.ts`),
+  never importing `@capacitor/*` (those install on the Mac build only; `capacitor.config.ts` is
+  excluded from `tsc`/eslint).
