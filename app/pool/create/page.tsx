@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
+import { hasTournamentStarted } from "@/lib/pool/queries";
 import type { PoolFormat } from "@/lib/pool/manage";
 import { CreatePoolForm } from "./CreatePoolForm";
 import { Hero } from "../../Hero";
@@ -13,7 +14,11 @@ export default async function CreatePoolPage({
 }) {
   const user = await getSessionUser();
   const { game } = await searchParams;
-  const defaultFormat: PoolFormat = game === "knockout" ? "KNOCKOUT" : "FULL_BRACKET";
+  // Once the tournament has started the full-tournament game is closed, so the
+  // page leads with the Knockout Challenge regardless of the requested format.
+  const fullGameAvailable = !(await hasTournamentStarted());
+  const defaultFormat: PoolFormat =
+    game === "knockout" || !fullGameAvailable ? "KNOCKOUT" : "FULL_BRACKET";
   const knockout = defaultFormat === "KNOCKOUT";
 
   return (
@@ -43,7 +48,11 @@ export default async function CreatePoolPage({
         </p>
 
         {user ? (
-          <CreatePoolForm defaultDisplayName={user.name ?? ""} defaultFormat={defaultFormat} />
+          <CreatePoolForm
+            defaultDisplayName={user.name ?? ""}
+            defaultFormat={defaultFormat}
+            fullGameAvailable={fullGameAvailable}
+          />
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-line bg-surface-sunk p-5 text-center">
             <p className="text-sm text-ink-3">Sign in to create a pool.</p>

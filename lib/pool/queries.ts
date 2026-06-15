@@ -7,6 +7,7 @@ import { assignRanks } from "@/lib/pool/rank";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
 import { resolveBracket } from "@/lib/pool/bracket";
 import { knockoutR32Seed, isKnockoutFieldSet } from "@/lib/pool/knockout";
+import { arePicksLocked } from "@/lib/pool/lock";
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
@@ -59,6 +60,19 @@ export async function getTournamentIdBySlug(
     select: { id: true },
   });
   return t.id;
+}
+
+// Whether a tournament's group stage has kicked off. Reuses the pick-lock signal
+// (`now >= startsAt`) so "creating a full-tournament game is too late" and
+// "full-bracket picks are locked" can never disagree. Gates full-game creation.
+export async function hasTournamentStarted(
+  slug: string = DEFAULT_TOURNAMENT_SLUG,
+): Promise<boolean> {
+  const t = await prisma.tournament.findUniqueOrThrow({
+    where: { slug },
+    select: { startsAt: true },
+  });
+  return arePicksLocked(t.startsAt);
 }
 
 // Memoized per request so the pool layout and its child route page share one

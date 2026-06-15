@@ -3,7 +3,8 @@
 // server actions.
 
 import { prisma } from "@/lib/db";
-import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
+import { DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
+import { arePicksLocked } from "@/lib/pool/lock";
 import { generateJoinCode, normalizeJoinCode } from "@/lib/pool/join-code";
 import { claimEntriesForUser } from "@/lib/auth/claim";
 import { canAddMember, POOL_FULL_MESSAGE } from "@/lib/billing/entitlements";
@@ -40,19 +41,32 @@ export async function createPool(input: CreatePoolInput): Promise<CreatedPool> {
   const name = input.name.trim();
   if (!name) throw new Error("Pool name is required.");
   const displayName = input.displayName.trim() || "Owner";
+  const format = input.format ?? "FULL_BRACKET";
 
-  const tournamentId = await getTournamentIdBySlug(
-    input.tournamentSlug ?? DEFAULT_TOURNAMENT_SLUG,
-  );
+  const tournament = await prisma.tournament.findUniqueOrThrow({
+    where: { slug: input.tournamentSlug ?? DEFAULT_TOURNAMENT_SLUG },
+    select: { id: true, startsAt: true },
+  });
+
+  // A full-tournament game's picks lock at the group kickoff — once that's past,
+  // creating one is pointless (every pick would already be locked). Knockout
+  // games are still creatable (they lock later, at the R32 kickoff). The create
+  // UI hides the option too; this is the server-side backstop.
+  if (format === "FULL_BRACKET" && arePicksLocked(tournament.startsAt)) {
+    throw new Error(
+      "The group stage has kicked off — full tournament games are closed. Create a Knockout Challenge instead.",
+    );
+  }
+
   const joinCode = await allocateJoinCode();
 
   const pool = await prisma.pool.create({
     data: {
-      tournamentId,
+      tournamentId: tournament.id,
       name,
       ownerId: input.userId,
       joinCode,
-      format: input.format ?? "FULL_BRACKET",
+      format,
       memberships: {
         create: { userId: input.userId, role: "OWNER", displayName },
       },

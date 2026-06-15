@@ -9,7 +9,8 @@ const INPUT =
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
 // The two game types, in display order. KNOCKOUT is the featured standalone
-// challenge; FULL_BRACKET is the classic whole-tournament pool.
+// challenge; FULL_BRACKET (shown as "Full Tournament Game") is the classic
+// whole-tournament pool — only creatable before the group stage kicks off.
 const GAME_TYPES: { value: PoolFormat; title: string; blurb: string }[] = [
   {
     value: "KNOCKOUT",
@@ -18,7 +19,7 @@ const GAME_TYPES: { value: PoolFormat; title: string; blurb: string }[] = [
   },
   {
     value: "FULL_BRACKET",
-    title: "Full Bracket",
+    title: "Full Tournament Game",
     blurb: "The classic pool — group stage through the final. Import or fill out the whole bracket.",
   },
 ];
@@ -26,15 +27,21 @@ const GAME_TYPES: { value: PoolFormat; title: string; blurb: string }[] = [
 export function CreatePoolForm({
   defaultDisplayName,
   defaultFormat = "FULL_BRACKET",
+  fullGameAvailable = true,
 }: {
   defaultDisplayName: string;
   defaultFormat?: PoolFormat;
+  // False once the tournament has kicked off — the full-tournament game is then
+  // shown disabled and the form falls back to the Knockout Challenge.
+  fullGameAvailable?: boolean;
 }) {
   const [state, action, pending] = useActionState<CreatePoolState, FormData>(
     createPoolAction,
     {},
   );
-  const [format, setFormat] = useState<PoolFormat>(defaultFormat);
+  const [format, setFormat] = useState<PoolFormat>(
+    fullGameAvailable ? defaultFormat : "KNOCKOUT",
+  );
 
   return (
     <form action={action} className="mt-5 space-y-4">
@@ -42,14 +49,17 @@ export function CreatePoolForm({
         <legend className={LABEL}>Game type</legend>
         <div className="mt-1.5 space-y-2">
           {GAME_TYPES.map((g) => {
-            const selected = format === g.value;
+            const disabled = g.value === "FULL_BRACKET" && !fullGameAvailable;
+            const selected = format === g.value && !disabled;
             return (
               <label
                 key={g.value}
-                className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors ${
-                  selected
-                    ? "border-pitch bg-pitch/5 shadow-[0_0_0_3px_rgba(11,107,58,0.12)]"
-                    : "border-line bg-surface hover:bg-surface-sunk"
+                className={`flex items-start gap-3 rounded-2xl border p-3.5 transition-colors ${
+                  disabled
+                    ? "cursor-not-allowed border-line bg-surface-sunk opacity-60"
+                    : selected
+                      ? "cursor-pointer border-pitch bg-pitch/5 shadow-[0_0_0_3px_rgba(11,107,58,0.12)]"
+                      : "cursor-pointer border-line bg-surface hover:bg-surface-sunk"
                 }`}
               >
                 <input
@@ -57,12 +67,18 @@ export function CreatePoolForm({
                   name="format"
                   value={g.value}
                   checked={selected}
+                  disabled={disabled}
                   onChange={() => setFormat(g.value)}
                   className="mt-1 h-4 w-4 shrink-0 accent-pitch"
                 />
                 <span className="min-w-0">
                   <span className="block font-semibold text-ink">{g.title}</span>
                   <span className="mt-0.5 block text-[13px] text-ink-3">{g.blurb}</span>
+                  {disabled ? (
+                    <span className="mt-1 block text-[12px] font-semibold text-ink-3">
+                      Closed — the group stage has kicked off.
+                    </span>
+                  ) : null}
                 </span>
               </label>
             );
