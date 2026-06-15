@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { usePoolStream } from "./usePoolStream";
 import { DISPLAY_TZ } from "@/lib/tz";
+import type { GifResult } from "@/lib/chat/giphy";
 
 export interface ReactionGroup {
   emoji: string;
@@ -47,10 +48,12 @@ export function Chat({
   poolId,
   currentUserId,
   initialMessages,
+  giphyEnabled = false,
 }: {
   poolId: string;
   currentUserId: string;
   initialMessages: ChatMessage[];
+  giphyEnabled?: boolean;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [body, setBody] = useState("");
@@ -58,6 +61,7 @@ export function Chat({
   const [error, setError] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const [gifOpen, setGifOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -83,30 +87,51 @@ export function Chat({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Single POST path shared by the text composer and the GIF picker. Returns
+  // true on success so callers can clear their own UI state.
+  const postChat = useCallback(
+    async (payload: {
+      body?: string;
+      attachmentUrl?: string;
+      attachmentType?: "GIF" | "IMAGE";
+    }): Promise<boolean> => {
+      setSending(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/pool/${poolId}/chat`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...payload, replyToId: replyTo?.id }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.success) {
+          setError(json?.error || "Failed to send");
+          return false;
+        }
+        setReplyTo(null);
+        await refresh();
+        return true;
+      } catch {
+        setError("Network error — try again");
+        return false;
+      } finally {
+        setSending(false);
+      }
+    },
+    [poolId, replyTo, refresh],
+  );
+
   async function send(e: FormEvent) {
     e.preventDefault();
     const text = body.trim();
     if (!text || sending) return;
-    setSending(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/pool/${poolId}/chat`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ body: text, replyToId: replyTo?.id }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) {
-        setError(json?.error || "Failed to send");
-      } else {
-        setBody("");
-        setReplyTo(null);
-        await refresh();
-      }
-    } catch {
-      setError("Network error — try again");
-    } finally {
-      setSending(false);
+    if (await postChat({ body: text })) setBody("");
+  }
+
+  async function sendGif(result: GifResult) {
+    if (sending) return;
+    if (await postChat({ attachmentUrl: result.url, attachmentType: "GIF" })) {
+      setGifOpen(false);
     }
   }
 
@@ -168,7 +193,26 @@ export function Chat({
         </div>
       ) : null}
 
+      {giphyEnabled && gifOpen ? (
+        <GifPicker onPick={sendGif} disabled={sending} />
+      ) : null}
+
       <form onSubmit={send} className="flex items-center gap-2 border-t border-line p-3">
+        {giphyEnabled ? (
+          <button
+            type="button"
+            onClick={() => setGifOpen((v) => !v)}
+            aria-label="Add a GIF"
+            aria-pressed={gifOpen}
+            className={`h-11 shrink-0 rounded-full border px-3 text-xs font-bold tracking-wide transition-colors ${
+              gifOpen
+                ? "border-pitch bg-pitch-tint text-pitch-dark"
+                : "border-line bg-surface text-ink-2 hover:bg-surface-sunk"
+            }`}
+          >
+            GIF
+          </button>
+        ) : null}
         <input
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -311,6 +355,86 @@ function MessageRow({
       ) : null}
 
       <ReactionBar reactions={m.reactions} onToggle={onReact} />
+    </div>
+  );
+}
+
+// Inline GIF search/trending panel. Debounces input and sends the picked GIF
+// immediately via onPick. Results are kept small (previewUrl thumbnails).
+function GifPicker({
+  onPick,
+  disabled,
+}: {
+  onPick: (result: GifResult) => void;
+  disabled: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<GifResult[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      if (cancelled) return;
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (query.trim()) params.set("q", query.trim());
+        const res = await fetch(`/api/giphy/search?${params.toString()}`, {
+          cache: "no-store",
+        });
+        const json = await res.json().catch(() => null);
+        if (!cancelled && Array.isArray(json?.data?.results)) {
+          setResults(json.data.results as GifResult[]);
+        }
+      } catch {
+        if (!cancelled) setResults([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [query]);
+
+  return (
+    <div className="border-t border-line bg-surface-sunk p-3">
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search GIFs…"
+        aria-label="Search GIFs"
+        className="mb-2 h-9 w-full rounded-full border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-pitch"
+      />
+      <div className="grid max-h-52 grid-cols-3 gap-1.5 overflow-y-auto sm:grid-cols-4">
+        {loading && results.length === 0 ? (
+          <p className="col-span-full py-4 text-center text-xs text-ink-3">Loading…</p>
+        ) : results.length === 0 ? (
+          <p className="col-span-full py-4 text-center text-xs text-ink-3">No GIFs found</p>
+        ) : (
+          results.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(r)}
+              aria-label="Send this GIF"
+              className="overflow-hidden rounded-lg border border-line bg-surface transition-transform hover:scale-[1.03] disabled:opacity-50"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={r.previewUrl}
+                alt="GIF preview"
+                className="h-20 w-full object-cover"
+                loading="lazy"
+              />
+            </button>
+          ))
+        )}
+      </div>
+      <p className="mt-1.5 text-right text-[10px] text-ink-3">Powered by GIPHY</p>
     </div>
   );
 }

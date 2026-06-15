@@ -27,6 +27,8 @@ const schema = z.object({
   ODDS_API_KEY: z.string().default(""),
   ODDS_API_BASE: z.string().default("https://api.the-odds-api.com/v4"),
   ODDS_API_REGION: z.string().default("eu"),
+  // Giphy (optional — the GIF picker in chat disables cleanly without it).
+  GIPHY_API_KEY: z.string().default(""),
 });
 
 export const env = schema.parse(process.env);
@@ -35,6 +37,7 @@ export const googleEnabled = Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRE
 export const emailEnabled = Boolean(env.EMAIL_SERVER);
 export const sportsApiEnabled = Boolean(env.SPORTS_API_KEY);
 export const oddsApiEnabled = Boolean(env.ODDS_API_KEY);
+export const giphyEnabled = Boolean(env.GIPHY_API_KEY);
 
 const adminEmails = new Set(
   env.ADMIN_EMAILS.split(",")

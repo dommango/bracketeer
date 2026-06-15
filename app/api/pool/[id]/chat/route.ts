@@ -11,13 +11,35 @@ import { apiOk, apiError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-// Attachments (GIF/image) are deliberately NOT accepted yet: rendering an
-// arbitrary attachmentUrl as <img src> is a tracking-pixel / SSRF surface. They
-// stay out of the schema until the sending UI ships with a host allowlist.
-const postSchema = z.object({
-  body: z.string().min(1, "Message is empty").max(2000),
-  replyToId: z.string().optional(),
-});
+// Attachments (GIF/image): only https URLs are accepted, and an attachmentType
+// requires its URL. The body may be empty when an attachment is present
+// (postMessage enforces "empty message" only when neither is set).
+const postSchema = z
+  .object({
+    body: z.string().max(2000).optional(),
+    replyToId: z.string().optional(),
+    attachmentUrl: z.string().url().max(2048).optional(),
+    attachmentType: z.enum(["GIF", "IMAGE"]).optional(),
+  })
+  .refine((v) => !v.attachmentType || Boolean(v.attachmentUrl), {
+    message: "attachmentType requires attachmentUrl",
+    path: ["attachmentUrl"],
+  })
+  .refine(
+    (v) => {
+      if (!v.attachmentUrl) return true;
+      try {
+        return new URL(v.attachmentUrl).protocol === "https:";
+      } catch {
+        return false;
+      }
+    },
+    { message: "attachmentUrl must be https", path: ["attachmentUrl"] },
+  )
+  .refine((v) => Boolean(v.body?.trim()) || Boolean(v.attachmentUrl), {
+    message: "Message is empty",
+    path: ["body"],
+  });
 
 // Per-sender cap so one member can't flood the pool chat.
 const CHAT_LIMIT = 20;
@@ -62,6 +84,8 @@ export async function POST(
     const message = await postMessage(poolId, access.user.id, {
       body: input.body,
       replyToId: input.replyToId,
+      attachmentUrl: input.attachmentUrl,
+      attachmentType: input.attachmentType,
     });
     await notifyPool(poolId, "chat");
     return apiOk(message, { status: 201 });
