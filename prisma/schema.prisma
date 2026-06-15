@@ -33,6 +33,7 @@ model User {
   messages    ChatMessage[]
   reactions   MessageReaction[]
   pushTokens  PushToken[]
+  feedback    Feedback[]
 }
 
 // Native-app push registration. One row per device token; a token is globally
@@ -453,4 +454,37 @@ model MessageReaction {
   // One row per (message, user, emoji): toggling is an upsert/delete.
   @@unique([messageId, userId, emoji])
   @@index([messageId])
+}
+
+// ---------------------------------------------------------------------------
+// In-app feedback / bug reports — a floating widget anyone can submit. Stored
+// here and (best-effort) mirrored to a Notion board; the user link is optional
+// so anonymous submissions are kept too.
+// ---------------------------------------------------------------------------
+
+enum FeedbackType {
+  BUG
+  IDEA
+  OTHER
+}
+
+model Feedback {
+  id          String       @id @default(cuid())
+  userId      String?
+  type        FeedbackType @default(BUG)
+  title       String
+  description String?
+  pageUrl     String?
+  userAgent   String?
+  userEmail   String?
+  // Base64 data-URL screenshots (region snips). Kept in-row for the single-
+  // instance MVP; the Notion mirror forwards only the text fields, not images.
+  screenshots Json?
+  // Back-link to the synced Notion card, when the integration is configured.
+  notionUrl   String?
+  createdAt   DateTime     @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }

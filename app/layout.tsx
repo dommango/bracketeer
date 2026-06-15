@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import PwaClient from "./PwaClient";
+import { FeedbackWidget } from "./feedback/FeedbackWidget";
 
 // FIFA's brand typeface is proprietary; Archivo Black stands in for the chunky
 // "26" display wordmark, Inter carries body/UI, JetBrains Mono the numerics.
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body className="min-h-screen">
         {children}
+        <FeedbackWidget />
         <PwaClient />
       </body>
     </html>
