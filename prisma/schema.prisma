@@ -32,6 +32,29 @@ model User {
   ownedPools  Pool[]        @relation("PoolOwner")
   messages    ChatMessage[]
   reactions   MessageReaction[]
+  pushTokens  PushToken[]
+}
+
+// Native-app push registration. One row per device token; a token is globally
+// unique (Apple/Google issue per-install), so re-registering the same token
+// just refreshes ownership + lastSeenAt. Pruned when APNs reports it dead.
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+model PushToken {
+  id         String         @id @default(cuid())
+  userId     String
+  token      String         @unique
+  platform   DevicePlatform @default(IOS)
+  createdAt  DateTime       @default(now())
+  lastSeenAt DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Account {

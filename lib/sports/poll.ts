@@ -23,7 +23,9 @@ import {
   recomputeTournamentPools,
 } from "@/lib/pool/results";
 import { resolveWinnerExternalId } from "./winner";
-import { buildGroupPairMatchNos } from "@/lib/scoring/data";
+import { buildGroupPairMatchNos, TEAMS } from "@/lib/scoring/data";
+import { knockoutResultPush } from "@/lib/push/messages";
+import type { ApnsPayload } from "@/lib/push/apns";
 import { postSystemMessage } from "@/lib/pool/chat";
 import { notifyPool } from "@/lib/realtime/notify";
 import {
@@ -188,6 +190,7 @@ export async function pollScores(): Promise<PollSummary> {
 
   // --- Pass 1: knockout results via fixture-id map ---
   let applied = 0;
+  const appliedKnockouts: { matchNo: number; winnerCode: string }[] = [];
   for (const f of fixtures) {
     const matchNo = EXTERNAL_TO_MATCHNO[f.externalId];
     if (!matchNo || !isScoredKnockout(matchNo)) continue;
@@ -204,7 +207,10 @@ export async function pollScores(): Promise<PollSummary> {
       awayPens: f.awayPens,
       final: true,
     });
-    if (didApply) applied += 1;
+    if (didApply) {
+      applied += 1;
+      appliedKnockouts.push({ matchNo, winnerCode });
+    }
   }
 
   // --- Pass 2: group match display scores + scheduledAt backfill ---
@@ -282,7 +288,17 @@ export async function pollScores(): Promise<PollSummary> {
   // key before recomputing so pools rescore (and the knockout resolves) against
   // the freshly-settled standings rather than the provisional overlay.
   if (groupsApplied > 0) await promoteCompletedGroupsToOfficial(tournamentId);
-  if (applied > 0 || groupsApplied > 0) await recomputeTournamentPools(tournamentId);
+  // Push only for newly-applied knockout results (the high-signal event). One
+  // applied match gets the specific round/winner copy; a multi-match poll run
+  // (rare — they kick off hours apart) gets an aggregate nudge.
+  let push: ApnsPayload | undefined;
+  if (appliedKnockouts.length === 1) {
+    const k = appliedKnockouts[0];
+    push = knockoutResultPush(k.matchNo, TEAMS[k.winnerCode] ?? k.winnerCode);
+  } else if (appliedKnockouts.length > 1) {
+    push = { title: "⚽ Knockout results are in", body: "Standings just moved — check the leaderboard." };
+  }
+  if (applied > 0 || groupsApplied > 0) await recomputeTournamentPools(tournamentId, push);
 
   // Full-time chat posts for group matches that just settled (best-effort).
   for (const fin of finals) {
