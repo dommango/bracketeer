@@ -12,6 +12,8 @@ import {
   clearKnockoutResult,
   recomputeTournamentPools,
 } from "@/lib/pool/results";
+import { knockoutResultPush } from "@/lib/push/messages";
+import { TEAMS } from "@/lib/scoring/data";
 import { apiOk, apiError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +55,11 @@ export async function POST(
       awayScore: body.awayScore ?? null,
       final: body.final,
     });
-    const pools = await recomputeTournamentPools(tournamentId);
+    const winnerName = TEAMS[body.winnerCode] ?? body.winnerCode;
+    const pools = await recomputeTournamentPools(
+      tournamentId,
+      knockoutResultPush(matchNo, winnerName),
+    );
     return apiOk(
       { matchNo, winner: results.knockout[matchNo] },
       { meta: { poolsRecomputed: pools } },

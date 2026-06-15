@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
-// Minimal installable PWA manifest (offline shell only — no live-data caching).
+// Installable PWA manifest. App-shell caching is handled by the service worker
+// (public/sw.js); this declares identity + icons. The maskable PNG keeps the
+// mark inside Android/iOS safe zones; the SVG covers any odd size.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Bracketeer × FIFA WC 2026",
@@ -12,6 +14,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#0b6b3a",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

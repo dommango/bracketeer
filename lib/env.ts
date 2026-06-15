@@ -34,6 +34,19 @@ const schema = z.object({
   STRIPE_SECRET_KEY: z.string().default(""),
   STRIPE_WEBHOOK_SECRET: z.string().default(""),
   STRIPE_PRICE_PREMIUM: z.string().default(""),
+  // Apple Push Notifications (APNs token-based auth — optional; native push
+  // disables cleanly when unset). APNS_PRIVATE_KEY is the .p8 contents (PEM);
+  // a literal "\n"-escaped value (common in dashboards) is normalized below.
+  APNS_KEY_ID: z.string().default(""),
+  APNS_TEAM_ID: z.string().default(""),
+  APNS_BUNDLE_ID: z.string().default(""),
+  APNS_PRIVATE_KEY: z.string().default("").transform((s) => s.replace(/\\n/g, "\n")),
+  // Send via Apple's production gateway (api.push.apple.com) vs the sandbox
+  // (api.development.push.apple.com). Default sandbox — safe for dev/TestFlight.
+  APNS_PRODUCTION: z
+    .string()
+    .default("")
+    .transform((s) => s === "1" || s.toLowerCase() === "true"),
 });
 
 export const env = schema.parse(process.env);
@@ -48,6 +61,12 @@ export const giphyEnabled = Boolean(env.GIPHY_API_KEY);
 // incoming events. Missing any one disables billing (upgrade UI shows a notice).
 export const stripeEnabled = Boolean(
   env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_PREMIUM,
+);
+// APNs needs all four: the key id + team id name the signing key, the bundle id
+// is the push topic, and the .p8 private key signs the provider JWT. Missing any
+// one disables push (registration still succeeds; nothing is ever sent).
+export const pushEnabled = Boolean(
+  env.APNS_KEY_ID && env.APNS_TEAM_ID && env.APNS_BUNDLE_ID && env.APNS_PRIVATE_KEY,
 );
 
 const adminEmails = new Set(

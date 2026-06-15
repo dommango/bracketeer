@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     ".superpowers/**",
     // Design-reference bundle (plain JSX, not app code) — see design/fifa26-handoff/README.md.
     "design/**",
+    // Native build config — imports @capacitor/cli, installed only on the Mac.
+    "capacitor.config.ts",
   ]),
 ]);
 

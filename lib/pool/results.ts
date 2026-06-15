@@ -8,6 +8,8 @@ import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { asResults, recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
+import { sendPushToPool } from "@/lib/push/send";
+import type { ApnsPayload } from "@/lib/push/apns";
 import { resolveBracket, validateKnockoutWinner } from "@/lib/pool/bracket";
 import { findStandingsConflict } from "@/lib/pool/standings";
 import { promoteCompletedGroups } from "@/lib/pool/group-promote";
@@ -384,7 +386,10 @@ export async function setAwards(
 // Recompute every pool under a tournament and notify each. Returns the count.
 // One pool's failure must not freeze standings for every later pool, so each
 // recompute is isolated; failures are logged and rethrown only if all failed.
-export async function recomputeTournamentPools(tournamentId: string): Promise<number> {
+export async function recomputeTournamentPools(
+  tournamentId: string,
+  push?: ApnsPayload,
+): Promise<number> {
   const pools = await prisma.pool.findMany({
     where: { tournamentId },
     select: { id: true },
@@ -394,6 +399,10 @@ export async function recomputeTournamentPools(tournamentId: string): Promise<nu
     try {
       await recomputePool(p.id);
       await notifyPool(p.id, "result");
+      // Native push is best-effort and additive to the in-app SSE event: a
+      // failure here is swallowed inside sendPushToPool, so it never counts as a
+      // recompute failure or blocks the next pool.
+      if (push) await sendPushToPool(p.id, push);
     } catch (err) {
       failures += 1;
       console.error(`recomputePool failed for pool ${p.id}:`, err);
