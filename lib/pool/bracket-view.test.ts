@@ -86,6 +86,27 @@ describe("buildBracketView group tables", () => {
     expect(a.started).toBe(true); // matches have been played
   });
 
+  it("builds a ranked third-place table flagging advancers", () => {
+    // Give group A a clear 3rd place by playing all of A's matches.
+    const rows: GroupResultRow[] = [
+      { homeCode: "MEX", awayCode: "RSA", homeScore: 2, awayScore: 0 },
+      { homeCode: "KOR", awayCode: "CZE", homeScore: 1, awayScore: 0 },
+      { homeCode: "MEX", awayCode: "KOR", homeScore: 1, awayScore: 0 },
+      { homeCode: "RSA", awayCode: "CZE", homeScore: 0, awayScore: 0 },
+      { homeCode: "MEX", awayCode: "CZE", homeScore: 3, awayScore: 0 },
+      { homeCode: "RSA", awayCode: "KOR", homeScore: 0, awayScore: 1 },
+    ];
+    const view = buildBracketView(results(), new Map(), rows);
+    const a = view.thirdsTable.find((r) => r.group === "A");
+    expect(a).toBeTruthy();
+    expect(a!.rank).toBe(3);
+    expect(a!.code).toBe("RSA");
+    // With only group A decided, A's 3rd place is among the best 8 → advancing.
+    expect(a!.advancing).toBe(true);
+    // Every row in the table is a genuine rank-3 team.
+    expect(view.thirdsTable.every((r) => r.rank === 3)).toBe(true);
+  });
+
   it("prefers the official result over the live table", () => {
     const rows: GroupResultRow[] = [
       { homeCode: "MEX", awayCode: "KOR", homeScore: 2, awayScore: 0 },
