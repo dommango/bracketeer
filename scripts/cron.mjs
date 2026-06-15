@@ -30,4 +30,19 @@ try {
   console.error("poll-odds fetch failed:", err);
 }
 
+// Tickets refresh ~every 30 min (prices move slowly + Ticketmaster has a daily
+// quota), so only fire near the half-hour. Best-effort; never affects exit code.
+if (new Date().getUTCMinutes() % 30 < 5) {
+  try {
+    const ticketsRes = await fetch(`${base}/api/cron/poll-tickets`, {
+      method: "POST",
+      headers: { "x-cron-secret": secret },
+    });
+    const ticketsBody = await ticketsRes.text();
+    console.log(`poll-tickets ${ticketsRes.status}: ${ticketsBody}`);
+  } catch (err) {
+    console.error("poll-tickets fetch failed:", err);
+  }
+}
+
 process.exit(res.ok ? 0 : 1);

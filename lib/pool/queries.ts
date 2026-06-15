@@ -832,6 +832,8 @@ export interface MatchDetail {
   timeline: TimelineItem[]; // goal/card events (empty when none fed)
   stats: StatBar[]; // paired team stats (empty when none fed)
   odds: ImpliedProbs | null;
+  // Lowest price + official buy link (Ticketmaster); null when not configured.
+  tickets: { minPrice: number | null; currency: string | null; url: string | null } | null;
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split
@@ -860,6 +862,7 @@ export async function getMatchDetail(
       homeSlotRef: true,
       awaySlotRef: true,
       odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
+      tickets: { select: { minPrice: true, currency: true, url: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -946,6 +949,7 @@ export async function getMatchDetail(
     timeline,
     stats,
     odds: match.odds ?? null,
+    tickets: match.tickets ?? null,
   };
 }
 

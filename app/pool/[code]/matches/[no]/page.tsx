@@ -93,6 +93,40 @@ function PickSplitCard({ split }: { split: PickSplit }) {
   );
 }
 
+function formatPrice(amount: number, currency: string | null): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `$${Math.round(amount)}`;
+  }
+}
+
+// Official "buy tickets" link with the lowest known price. Only shown once the
+// poller has a Ticketmaster link for this match; hidden entirely otherwise.
+function TicketLine({ tickets }: { tickets: MatchDetail["tickets"] }) {
+  if (!tickets?.url) return null;
+  const label =
+    tickets.minPrice != null && tickets.minPrice > 0
+      ? `From ${formatPrice(tickets.minPrice, tickets.currency)}`
+      : "Tickets";
+  return (
+    <a
+      href={tickets.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-pitch underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
+    >
+      <span aria-hidden>🎟️</span>
+      {label} · Buy tickets
+      <span aria-hidden>↗</span>
+    </a>
+  );
+}
+
 export default async function MatchDetailPage({
   params,
 }: {
@@ -174,6 +208,7 @@ export default async function MatchDetailPage({
         <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
         <div className="mt-3">
           <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} />
+          <TicketLine tickets={detail.tickets} />
         </div>
         <WinProbBar odds={detail.odds} />
         {detail.scored && detail.yourPick && detail.odds ? (() => {
