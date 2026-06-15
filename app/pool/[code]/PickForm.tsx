@@ -196,25 +196,15 @@ export function PickForm({
     });
   };
 
-  if (locked) {
-    return (
-      <div className="rounded-2xl border border-line bg-surface p-5 text-center">
-        <p className="text-sm text-ink-2">
-          Your picks are locked for the tournament and can no longer be edited.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Sticky progress + save */}
+      {/* Sticky progress + save (read-only when locked: shows the bracket but no save) */}
       <div className="sticky top-0 z-10 -mx-4 border-b border-line bg-paper/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between">
               <span className={LABEL}>
-                {progress.complete ? "Bracket complete" : "Your bracket"}
+                {locked ? "Your bracket — locked" : progress.complete ? "Bracket complete" : "Your bracket"}
               </span>
               <span className="font-mono text-xs tabular-nums text-ink-3">
                 {progress.overall.done}/{progress.overall.total}
@@ -224,20 +214,22 @@ export function PickForm({
               <Bar done={progress.overall.done} total={progress.overall.total} />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={pending || issues.length > 0}
-            className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-pitch px-4 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.98] disabled:opacity-60"
-          >
-            {pending ? "Saving…" : "Save picks"}
-          </button>
+          {locked ? null : (
+            <button
+              type="button"
+              onClick={submit}
+              disabled={pending || issues.length > 0}
+              className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-pitch px-4 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.98] disabled:opacity-60"
+            >
+              {pending ? "Saving…" : "Save picks"}
+            </button>
+          )}
         </div>
-        {saved ? (
+        {!locked && saved ? (
           <p className="mt-2 text-xs font-semibold text-positive">✓ {saved}</p>
         ) : null}
-        {error ? <p className="mt-2 text-xs font-semibold text-negative">{error}</p> : null}
-        {issues.length > 0 ? (
+        {!locked && error ? <p className="mt-2 text-xs font-semibold text-negative">{error}</p> : null}
+        {!locked && issues.length > 0 ? (
           <p className="mt-2 text-xs text-negative">{issues[0]}</p>
         ) : null}
       </div>
@@ -267,7 +259,8 @@ export function PickForm({
                     <select
                       value={first}
                       onChange={(e) => setGroupPlace(g, "groupFirst", e.target.value)}
-                      className="h-10 w-full rounded border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-pitch"
+                      disabled={locked}
+                      className="h-10 w-full rounded border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-pitch disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       <option value="">—</option>
                       {teams.map((t) => (
@@ -282,7 +275,8 @@ export function PickForm({
                     <select
                       value={second}
                       onChange={(e) => setGroupPlace(g, "groupSecond", e.target.value)}
-                      className="h-10 w-full rounded border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-pitch"
+                      disabled={locked}
+                      className="h-10 w-full rounded border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-pitch disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       <option value="">—</option>
                       {teams.map((t) => (
@@ -305,7 +299,7 @@ export function PickForm({
                             key={t}
                             type="button"
                             onClick={() => toggleThird(t)}
-                            disabled={blocked}
+                            disabled={blocked || locked}
                             aria-pressed={on}
                             className={`inline-flex min-h-11 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pitch ${
                               on
@@ -350,7 +344,7 @@ export function PickForm({
                   <KnockoutMatch
                     key={slot.matchNo}
                     slot={slot}
-                    disabled={false}
+                    disabled={locked}
                     onPick={pickWinner}
                   />
                 ))}
@@ -363,7 +357,7 @@ export function PickForm({
             Final
           </p>
           <div className="sm:max-w-[50%]">
-            <KnockoutMatch slot={ko.final} disabled={false} onPick={pickWinner} />
+            <KnockoutMatch slot={ko.final} disabled={locked} onPick={pickWinner} />
           </div>
         </div>
       </section>
@@ -378,9 +372,10 @@ export function PickForm({
               <input
                 value={picks.awards[a.key] ?? ""}
                 onChange={(e) => setAward(a.key, e.target.value)}
+                disabled={locked}
                 maxLength={60}
                 placeholder="Player or team name"
-                className="h-10 w-full rounded border border-line bg-surface px-2.5 text-sm text-ink outline-none focus:border-pitch"
+                className="h-10 w-full rounded border border-line bg-surface px-2.5 text-sm text-ink outline-none focus:border-pitch disabled:cursor-not-allowed disabled:opacity-70"
               />
             </label>
           ))}
@@ -394,24 +389,27 @@ export function PickForm({
                 setSaved(null);
                 setTiebreak(e.target.value);
               }}
+              disabled={locked}
               inputMode="numeric"
               maxLength={3}
               placeholder="e.g. 3"
-              className="h-10 w-24 rounded border border-line bg-surface px-2.5 text-sm tabular-nums text-ink outline-none focus:border-pitch"
+              className="h-10 w-24 rounded border border-line bg-surface px-2.5 text-sm tabular-nums text-ink outline-none focus:border-pitch disabled:cursor-not-allowed disabled:opacity-70"
             />
           </label>
         </div>
       </section>
 
-      {/* Bottom save (mirrors the sticky one for long scrolls) */}
-      <button
-        type="button"
-        onClick={submit}
-        disabled={pending || issues.length > 0}
-        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-pitch px-4 font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
-      >
-        {pending ? "Saving…" : progress.complete ? "Save complete bracket" : "Save picks"}
-      </button>
+      {/* Bottom save (mirrors the sticky one for long scrolls) — hidden when locked */}
+      {locked ? null : (
+        <button
+          type="button"
+          onClick={submit}
+          disabled={pending || issues.length > 0}
+          className="inline-flex h-12 w-full items-center justify-center rounded-full bg-pitch px-4 font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+        >
+          {pending ? "Saving…" : progress.complete ? "Save complete bracket" : "Save picks"}
+        </button>
+      )}
     </div>
   );
 }
