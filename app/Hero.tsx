@@ -26,9 +26,9 @@ export function Hero() {
             boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
           }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">HessFest 2026</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold">BRACKETEER × FIFA WC 2026</p>
           <h1 className="mt-1.5 font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
-            FIFA World Cup 2026 Pool
+            2026 World Cup — Tournament Game
           </h1>
         </div>
         <div className="mt-4 flex gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
