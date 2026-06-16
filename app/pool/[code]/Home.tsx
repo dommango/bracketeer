@@ -184,7 +184,9 @@ function HomeChat({ code, messages }: { code: string; messages: ChatView[] }) {
         </Link>
       </div>
       <ul className="mt-2.5 divide-y divide-line rounded-2xl border border-line bg-surface">
-        {messages.map((m) => (
+        {/* Newest first in this preview: the list arrives oldest→newest, so show a
+            reversed copy with the most recent message on top. */}
+        {[...messages].reverse().map((m) => (
           <li key={m.id} className="flex items-baseline gap-2 px-4 py-2.5 text-sm">
             <span className="shrink-0 font-semibold text-ink">
               {m.kind === "SYSTEM" ? "Match update" : (m.authorName ?? "Player")}

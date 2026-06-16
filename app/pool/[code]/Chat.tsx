@@ -62,7 +62,7 @@ export function Chat({
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [gifOpen, setGifOpen] = useState(false);
-  const topRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -84,8 +84,9 @@ export function Chat({
   );
 
   useEffect(() => {
-    // Newest messages render at the top, so keep the view pinned there as they arrive.
-    topRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Newest messages render at the bottom (normal chat), so keep the view pinned
+    // there as they arrive.
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Single POST path shared by the text composer and the GIF picker. Returns
@@ -153,12 +154,12 @@ export function Chat({
   return (
     <div className="rounded-2xl border border-line bg-surface">
       <div className="max-h-96 space-y-3 overflow-y-auto p-4">
-        <div ref={topRef} />
         {messages.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-3">No messages yet. Say hello 👋</p>
         ) : (
-          // Newest first: server returns oldest→newest, so reverse a copy for display.
-          [...messages].reverse().map((m) =>
+          // Server returns oldest→newest; render in that order so the newest sits
+          // at the bottom, as chats normally read.
+          messages.map((m) =>
             m.kind === "SYSTEM" ? (
               <SystemRow key={m.id} m={m} />
             ) : (
@@ -174,6 +175,7 @@ export function Chat({
             ),
           )
         )}
+        <div ref={bottomRef} />
       </div>
 
       {replyTo ? (
