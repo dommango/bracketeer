@@ -1,5 +1,8 @@
 import type { Profile as ProfileData, KnockoutHit } from "@/lib/pool/profile";
+import type { EntrySelections, TeamPick } from "@/lib/pool/pick-analytics";
 import { ROUND_ORDER, roundLabel } from "@/lib/pool/rounds";
+import { teamColor } from "@/lib/teams/colors";
+import { Flag } from "./Flag";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
@@ -55,6 +58,103 @@ function HitGrid({ hits }: { hits: KnockoutHit[] }) {
   );
 }
 
+function TeamLine({ pick, size = 18 }: { pick: TeamPick; size?: number }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <Flag code={pick.code} size={size} />
+      <span className="truncate text-sm text-ink">{pick.name}</span>
+    </span>
+  );
+}
+
+// This entry's headline picks — only rendered once picks have locked.
+function Selections({ selections }: { selections: EntrySelections }) {
+  const { champion, finalists, groupWinners, thirdAdvance, awards } = selections;
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-4">
+      <p className={`${LABEL} mb-3`}>Their picks</p>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 rounded-xl border border-line-soft bg-surface-sunk p-3">
+          <Flag code={champion.code} size={26} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">Champion</p>
+            <p className="truncate font-display text-lg text-ink">{champion.name}</p>
+          </div>
+          <span
+            aria-hidden
+            className="h-8 w-1.5 shrink-0 rounded-full"
+            style={{ background: teamColor(champion.code) }}
+          />
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+            Finalists
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {finalists.map((f, i) => (
+              <TeamLine key={`finalist-${i}`} pick={f} />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+            Group winners
+          </p>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            {groupWinners.map((g) => (
+              <div
+                key={g.group}
+                className="flex items-center gap-1.5 rounded-lg border border-line-soft bg-surface-sunk px-2 py-1.5"
+              >
+                <span className="w-4 shrink-0 font-mono text-[11px] font-bold text-ink-3">
+                  {g.group}
+                </span>
+                <Flag code={g.code} size={16} />
+                <span className="min-w-0 flex-1 truncate text-xs text-ink">{g.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {thirdAdvance.length > 0 ? (
+          <div>
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+              3rd-place advancers
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {thirdAdvance.map((t) => (
+                <span
+                  key={t.code}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink"
+                >
+                  <Flag code={t.code} size={14} /> {t.code}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div>
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+            Awards
+          </p>
+          <dl className="space-y-1">
+            {awards.map((a) => (
+              <div key={a.label} className="flex items-baseline justify-between gap-3 text-sm">
+                <dt className="shrink-0 text-ink-3">{a.label}</dt>
+                <dd className="min-w-0 truncate text-right font-medium text-ink">{a.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Profile({ profile }: { profile: ProfileData }) {
   const { accuracy, boldest } = profile;
   const isLeader = profile.rank === 1;
@@ -94,7 +194,7 @@ export function Profile({ profile }: { profile: ProfileData }) {
         </div>
         <div className="rounded-2xl border border-line bg-surface p-4">
           <p className={LABEL}>Boldest call</p>
-          {boldest ? (
+          {boldest && profile.locked ? (
             <>
               <p className="mt-2 truncate font-semibold text-ink">{boldest.pickName}</p>
               <p className="text-xs text-ink-3">
@@ -123,10 +223,21 @@ export function Profile({ profile }: { profile: ProfileData }) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface p-4">
-        <p className={`${LABEL} mb-3`}>Knockout hit grid</p>
-        <HitGrid hits={profile.hitGrid} />
-      </div>
+      {profile.locked ? (
+        <>
+          <Selections selections={profile.selections} />
+          <div className="rounded-2xl border border-line bg-surface p-4">
+            <p className={`${LABEL} mb-3`}>Knockout hit grid</p>
+            <HitGrid hits={profile.hitGrid} />
+          </div>
+        </>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-line bg-surface p-6 text-center">
+          <p className="text-sm text-ink-3">
+            Picks reveal at kickoff — come back once the tournament locks to see this bracket.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

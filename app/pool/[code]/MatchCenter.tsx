@@ -99,7 +99,7 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
       <div className="mt-1.5">
         <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
       </div>
-      <WinProbBar odds={row.odds} />
+      <WinProbBar odds={row.odds} homeCode={row.home.code} awayCode={row.away.code} />
     </Link>
   );
 }

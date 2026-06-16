@@ -1,4 +1,5 @@
 import { Flag } from "./Flag";
+import { teamColor } from "@/lib/teams/colors";
 import type { ChampionshipOdd } from "@/lib/pool/queries";
 
 // Tournament-winner futures: the market's implied "champion %" per team, highest
@@ -28,7 +29,7 @@ export function ChampionshipOdds({ odds }: { odds: ChampionshipOdd[] }) {
               <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-surface-sunk sm:block">
                 <span
                   className="block h-full rounded-full"
-                  style={{ width: `${(o.winProb / top) * 100}%`, background: "var(--pitch)" }}
+                  style={{ width: `${(o.winProb / top) * 100}%`, background: teamColor(o.teamCode) }}
                 />
               </div>
               <span className="w-11 shrink-0 text-right font-mono text-xs font-semibold tabular-nums text-pitch-dark">
