@@ -46,7 +46,7 @@ import type { LineupPlayer } from "@/lib/sports/lineups-parse";
 import type { InjuryItem } from "@/lib/sports/injuries-parse";
 import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone } from "@/lib/tz";
-import type { Picks, Results } from "@/lib/scoring/types";
+import type { Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
 import {
   buildStandings,
@@ -758,11 +758,8 @@ export async function getLiveMatches(
   return buildMatchCenter(inputs, yourPicks).flatMap((s) => s.matches);
 }
 
-export interface EntryPicks {
-  entryId: string;
-  label: string;
-  picks: Picks;
-}
+export type { EntryPicks } from "@/lib/pool/entry-picks";
+import type { EntryPicks } from "@/lib/pool/entry-picks";
 
 // Every entry's decoded picks for a pool. Shared by the pick-split, the what-if
 // projection feed, and the profile's contrarian-call math. Per-request memoized

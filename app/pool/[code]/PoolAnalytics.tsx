@@ -1,15 +1,20 @@
 import { Flag } from "./Flag";
+import { TeamLink } from "./TeamLink";
 import { teamColor } from "@/lib/teams/colors";
 import type { PickAnalytics, PickTally } from "@/lib/pool/pick-analytics";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
 // One ranked pick with a team-colored share bar (mirrors ChampionshipOdds).
-function TallyRow({ t }: { t: PickTally }) {
+function TallyRow({ t, code }: { t: PickTally; code: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <Flag code={t.code} size={18} />
-      <span className="min-w-0 flex-1 truncate text-sm text-ink">{t.name}</span>
+      <TeamLink poolCode={code} code={t.code}>
+        <Flag code={t.code} size={18} />
+      </TeamLink>
+      <TeamLink poolCode={code} code={t.code} className="min-w-0 flex-1 truncate text-sm text-ink underline-offset-2 hover:underline">
+        {t.name}
+      </TeamLink>
       <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-surface-sunk sm:block">
         <span
           className="block h-full rounded-full"
@@ -24,7 +29,7 @@ function TallyRow({ t }: { t: PickTally }) {
 }
 
 // Pool-wide pick consensus: who the group backed, drawn from everyone's brackets.
-export function PoolAnalytics({ analytics }: { analytics: PickAnalytics }) {
+export function PoolAnalytics({ analytics, code }: { analytics: PickAnalytics; code: string }) {
   const { champion, finalists, groupWinners, contrarian, totalEntries } = analytics;
   if (totalEntries === 0 || !champion.top) return null;
 
@@ -42,9 +47,13 @@ export function PoolAnalytics({ analytics }: { analytics: PickAnalytics }) {
         <div>
           <p className={LABEL}>Consensus champion</p>
           <div className="mt-2 flex items-center gap-3">
-            <Flag code={champion.top.code} size={28} />
+            <TeamLink poolCode={code} code={champion.top.code}>
+              <Flag code={champion.top.code} size={28} />
+            </TeamLink>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-xl text-ink">{champion.top.name}</p>
+              <TeamLink poolCode={code} code={champion.top.code} className="block truncate font-display text-xl text-ink underline-offset-2 hover:underline">
+                {champion.top.name}
+              </TeamLink>
               <p className="text-xs text-ink-3">
                 {champion.top.count} of {totalEntries} · {champion.distinctCount}{" "}
                 {champion.distinctCount === 1 ? "distinct pick" : "distinct picks"}
@@ -60,7 +69,7 @@ export function PoolAnalytics({ analytics }: { analytics: PickAnalytics }) {
           {champion.field.length > 1 ? (
             <div className="mt-2.5 space-y-1.5">
               {champion.field.slice(0, 6).map((t) => (
-                <TallyRow key={t.code} t={t} />
+                <TallyRow key={t.code} t={t} code={code} />
               ))}
             </div>
           ) : null}
@@ -72,7 +81,7 @@ export function PoolAnalytics({ analytics }: { analytics: PickAnalytics }) {
             <p className={LABEL}>Finalist favorites</p>
             <div className="mt-2 space-y-1.5">
               {finalists.slice(0, 5).map((t) => (
-                <TallyRow key={t.code} t={t} />
+                <TallyRow key={t.code} t={t} code={code} />
               ))}
             </div>
           </div>
@@ -92,8 +101,12 @@ export function PoolAnalytics({ analytics }: { analytics: PickAnalytics }) {
                 </span>
                 {g.top ? (
                   <>
-                    <Flag code={g.top.code} size={16} />
-                    <span className="min-w-0 flex-1 truncate text-xs text-ink">{g.top.name}</span>
+                    <TeamLink poolCode={code} code={g.top.code}>
+                      <Flag code={g.top.code} size={16} />
+                    </TeamLink>
+                    <TeamLink poolCode={code} code={g.top.code} className="min-w-0 flex-1 truncate text-xs text-ink underline-offset-2 hover:underline">
+                      {g.top.name}
+                    </TeamLink>
                     <span className="shrink-0 font-mono text-[10px] text-ink-4">{g.top.pct}%</span>
                   </>
                 ) : (
@@ -111,12 +124,14 @@ export function PoolAnalytics({ analytics }: { analytics: PickAnalytics }) {
             <p className="mt-1 text-[11px] text-ink-4">Backed by a single bracket.</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {contrarian.map((t) => (
-                <span
+                <TeamLink
                   key={t.code}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink"
+                  poolCode={code}
+                  code={t.code}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink hover:border-pitch"
                 >
                   <Flag code={t.code} size={14} /> {t.name}
-                </span>
+                </TeamLink>
               ))}
             </div>
           </div>

@@ -17,6 +17,7 @@ import { MatchCenter } from "../MatchCenter";
 import { VenueGrid } from "../VenueGrid";
 import { GroupStandings, Bracket } from "../Bracket";
 import { ChampionshipOdds } from "../ChampionshipOdds";
+import { OddsBoard } from "../OddsBoard";
 import { Scorers } from "../Scorers";
 
 // Fixtures + live status change at request time.
@@ -193,9 +194,22 @@ export default async function MatchesPage({
           </div>
         </section>
       ) : active === "scorers" ? (
-        <Scorers scorers={scorers} favorites={favorites} />
-      ) : titleOdds.length > 0 ? (
-        <ChampionshipOdds odds={titleOdds} />
+        <Scorers scorers={scorers} code={code} />
+      ) : titleOdds.length > 0 || favorites.length > 0 ? (
+        <div className="space-y-5">
+          <ChampionshipOdds odds={titleOdds} code={code} />
+          <OddsBoard
+            title="Golden Boot odds"
+            subtitle="Market-implied chance of finishing top scorer."
+            rows={favorites.map((f) => ({
+              key: f.playerName,
+              code: f.teamCode,
+              primary: f.playerName,
+              winProb: f.winProb,
+              href: `/pool/${code}/players/${encodeURIComponent(f.playerName)}`,
+            }))}
+          />
+        </div>
       ) : (
         <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
           Title odds will appear here once the betting market opens.
