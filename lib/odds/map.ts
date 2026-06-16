@@ -51,6 +51,28 @@ export function toOutrightProbs(
   }));
 }
 
+export interface GoalscorerProb {
+  playerName: string;
+  decimal: number;
+  winProb: number;
+}
+
+// Implied top-goalscorer probability per player: invert each price and normalize
+// across the whole field (like toOutrightProbs, but player names pass through
+// verbatim — there's no code mapping). Bad/zero prices are dropped.
+export function toGoalscorerProbs(
+  entries: Array<{ playerName: string; decimal: number }>,
+): GoalscorerProb[] {
+  const valid = entries.filter((e) => e.playerName && e.decimal > 0);
+  const total = valid.reduce((sum, e) => sum + 1 / e.decimal, 0);
+  if (total <= 0) return [];
+  return valid.map((e) => ({
+    playerName: e.playerName,
+    decimal: e.decimal,
+    winProb: 1 / e.decimal / total,
+  }));
+}
+
 // Provider name -> our 3-letter code. Built from TEAMS (code->name) plus aliases
 // for names The Odds API spells differently. Unknown names return null (skipped,
 // never guessed); scripts/verify-odds.ts surfaces any unmatched name vs live data.
