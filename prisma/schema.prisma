@@ -115,9 +115,10 @@ model Tournament {
   officialResults  Json?
   createdAt        DateTime         @default(now())
 
-  teams   Team[]
-  matches Match[]
-  pools   Pool[]
+  teams     Team[]
+  matches   Match[]
+  pools     Pool[]
+  outrights TeamOutright[]
 }
 
 model Team {
@@ -233,9 +234,30 @@ model MatchOdds {
   homeWinProb Float
   drawProb    Float
   awayWinProb Float
+  // Over/Under total-goals market (optional — populated by the slow-cadence extras
+  // poll, independent of the h2h fields above). Null until a totals line is found.
+  totalLine   Float? // the goals line, e.g. 2.5
+  overProb    Float? // implied P(over) after stripping the two-way overround
+  underProb   Float? // implied P(under)
   raw         Json     // raw decimal prices, for audit / re-derivation
   source      String   // "the-odds-api"
   fetchedAt   DateTime
+}
+
+// Tournament-winner futures (outrights): one row per team with the market's
+// implied championship probability. Tournament-wide, not per-match — populated
+// by the slow-cadence odds extras poll. Optional integration; absent = no data.
+model TeamOutright {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamCode     String // internal 3-letter code
+  winProb      Float // implied P(champion), normalized across all listed teams
+  decimal      Float // raw decimal price, for audit / re-derivation
+  source       String // "the-odds-api"
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, teamCode])
 }
 
 // Ticket availability per match. The event list + official buy link come from

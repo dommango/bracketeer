@@ -4,6 +4,7 @@ import {
   getPoolByCode,
   getGroupMatchCenter,
   getPoolBracket,
+  getChampionshipOdds,
   isGroupStageComplete,
 } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
@@ -13,6 +14,7 @@ import { byGroupSections, byDaySections, byCityVenues } from "@/lib/pool/fixture
 import { MatchCenter } from "../MatchCenter";
 import { VenueGrid } from "../VenueGrid";
 import { GroupStandings, Bracket } from "../Bracket";
+import { ChampionshipOdds } from "../ChampionshipOdds";
 
 // Fixtures + live status change at request time.
 export const dynamic = "force-dynamic";
@@ -108,10 +110,11 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [sections, bracket, groupsDone] = await Promise.all([
+  const [sections, bracket, groupsDone, titleOdds] = await Promise.all([
     getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
     getPoolBracket(pool.id),
     isGroupStageComplete(pool.tournamentId),
+    getChampionshipOdds(pool.tournamentId),
   ]);
 
   // Default to groups until the group stage finishes, then default to knockouts.
@@ -162,18 +165,21 @@ export default async function MatchesPage({
           </section>
         </>
       ) : (
-        <section>
-          <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Bracket</h2>
-          <div className="mt-2.5">
-            {bracket ? (
-              <Bracket view={bracket} />
-            ) : (
-              <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
-                The knockout bracket will appear here.
-              </p>
-            )}
-          </div>
-        </section>
+        <>
+          <ChampionshipOdds odds={titleOdds} />
+          <section>
+            <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Bracket</h2>
+            <div className="mt-2.5">
+              {bracket ? (
+                <Bracket view={bracket} />
+              ) : (
+                <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
+                  The knockout bracket will appear here.
+                </p>
+              )}
+            </div>
+          </section>
+        </>
       )}
     </div>
   );

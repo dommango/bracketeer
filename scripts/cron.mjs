@@ -30,6 +30,22 @@ try {
   console.error("poll-odds fetch failed:", err);
 }
 
+// Odds extras (Over/Under totals + tournament-winner outrights) refresh ~hourly:
+// these markets move slowly and each is billed per API call, so they run on a far
+// slower cadence than the every-5-min h2h poll. Best-effort; no effect on exit code.
+if (new Date().getUTCMinutes() < 5) {
+  try {
+    const extrasRes = await fetch(`${base}/api/cron/poll-odds-extras`, {
+      method: "POST",
+      headers: { "x-cron-secret": secret },
+    });
+    const extrasBody = await extrasRes.text();
+    console.log(`poll-odds-extras ${extrasRes.status}: ${extrasBody}`);
+  } catch (err) {
+    console.error("poll-odds-extras fetch failed:", err);
+  }
+}
+
 // Tickets refresh ~every 30 min (prices move slowly + Ticketmaster has a daily
 // quota), so only fire near the half-hour. Best-effort; never affects exit code.
 if (new Date().getUTCMinutes() % 30 < 5) {
