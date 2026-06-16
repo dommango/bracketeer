@@ -5,8 +5,14 @@
 
 import { prisma } from "@/lib/db";
 import { oddsApiEnabled } from "@/lib/env";
-import { fetchTotalsEvents, fetchOutrights } from "@/lib/odds/client";
-import { normalizeTeam, resolveMatchNo, toTwoWayProbs, toOutrightProbs } from "@/lib/odds/map";
+import { fetchTotalsEvents, fetchOutrights, fetchGoalscorerOutrights } from "@/lib/odds/client";
+import {
+  normalizeTeam,
+  resolveMatchNo,
+  toTwoWayProbs,
+  toOutrightProbs,
+  toGoalscorerProbs,
+} from "@/lib/odds/map";
 import { loadCodedMatches } from "@/lib/odds/coded";
 
 export interface OddsExtrasSummary {
@@ -14,6 +20,8 @@ export interface OddsExtrasSummary {
   totalsUpdated: number;
   outrightsFetched: number;
   outrightsUpserted: number;
+  goalscorersFetched: number;
+  goalscorersUpserted: number;
 }
 
 // Each market is isolated: a failure fetching outrights must not lose the totals
@@ -24,6 +32,8 @@ export async function pollOddsExtras(): Promise<OddsExtrasSummary> {
     totalsUpdated: 0,
     outrightsFetched: 0,
     outrightsUpserted: 0,
+    goalscorersFetched: 0,
+    goalscorersUpserted: 0,
   };
   if (!oddsApiEnabled) return summary;
 
@@ -84,6 +94,34 @@ export async function pollOddsExtras(): Promise<OddsExtrasSummary> {
     }
   } catch (err) {
     console.error("odds extras: outrights failed:", err);
+  }
+
+  // --- Top-goalscorer outrights: same replace-all-in-a-transaction pattern as the
+  // champion outrights. Isolated so a missing market / wrong sport key (404) just
+  // leaves the Golden Boot favorites empty rather than failing the whole poll. ---
+  try {
+    const entries = await fetchGoalscorerOutrights();
+    summary.goalscorersFetched = entries.length;
+    const probs = toGoalscorerProbs(entries);
+    if (probs.length > 0) {
+      const now = new Date();
+      await prisma.$transaction([
+        prisma.goalscorerOutright.deleteMany({ where: { tournamentId: tournament.id } }),
+        prisma.goalscorerOutright.createMany({
+          data: probs.map((p) => ({
+            tournamentId: tournament.id,
+            playerName: p.playerName,
+            winProb: p.winProb,
+            decimal: p.decimal,
+            source: "the-odds-api",
+            fetchedAt: now,
+          })),
+        }),
+      ]);
+      summary.goalscorersUpserted = probs.length;
+    }
+  } catch (err) {
+    console.error("odds extras: goalscorers failed:", err);
   }
 
   return summary;

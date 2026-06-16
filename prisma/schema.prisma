@@ -118,8 +118,9 @@ model Tournament {
   teams      Team[]
   matches    Match[]
   pools      Pool[]
-  outrights  TeamOutright[]
-  topScorers TopScorer[]
+  outrights        TeamOutright[]
+  topScorers       TopScorer[]
+  goalscorerOdds   GoalscorerOutright[]
 }
 
 model Team {
@@ -262,6 +263,23 @@ model TeamOutright {
   fetchedAt    DateTime
 
   @@unique([tournamentId, teamCode])
+}
+
+// Top-goalscorer (Golden Boot) futures: per-player implied probability to finish
+// the tournament's leading scorer. Tournament-wide, populated by the slow-cadence
+// odds extras poll and replaced wholesale each run. Optional integration; absent =
+// no data. Player names are the bookmaker's verbatim spelling (no internal id).
+model GoalscorerOutright {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  playerName   String
+  winProb      Float // implied P(top scorer), normalized across all listed players
+  decimal      Float // raw decimal price, for audit / re-derivation
+  source       String // "the-odds-api"
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, playerName])
 }
 
 // Ticket availability per match. The event list + official buy link come from

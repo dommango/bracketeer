@@ -26,6 +26,12 @@ export interface OutrightEntry {
   decimal: number;
 }
 
+// One player's top-goalscorer (outright) price.
+export interface GoalscorerEntry {
+  playerName: string;
+  decimal: number;
+}
+
 interface ApiOutcome { name: string; price: number; point?: number }
 interface ApiMarket { key: string; outcomes: ApiOutcome[] }
 interface ApiBookmaker { markets: ApiMarket[] }
@@ -94,6 +100,19 @@ export function parseOutrights(raw: ApiEvent[]): OutrightEntry[] {
   for (const o of market.outcomes) {
     if (o.price == null || !o.name) continue;
     out.push({ teamName: o.name, decimal: o.price });
+  }
+  return out;
+}
+
+// The top-goalscorer market lists every player as an outright outcome on a single
+// event (same `outrights` market key as the winner sport, just player names).
+export function parseGoalscorerOutrights(raw: ApiEvent[]): GoalscorerEntry[] {
+  const market = raw[0]?.bookmakers?.[0]?.markets?.find((m) => m.key === "outrights");
+  if (!market) return [];
+  const out: GoalscorerEntry[] = [];
+  for (const o of market.outcomes) {
+    if (o.price == null || !o.name) continue;
+    out.push({ playerName: o.name.trim(), decimal: o.price });
   }
   return out;
 }

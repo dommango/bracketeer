@@ -34,6 +34,7 @@ import {
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { buildPickAnalytics, type PickAnalytics } from "@/lib/pool/pick-analytics";
 import { buildUpsetRadar, stakedTeamCodes, type UpsetMatchInput } from "@/lib/odds/upset";
+import { matchPlayerCode } from "@/lib/odds/player-match";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
@@ -1087,6 +1088,39 @@ export async function getTopScorers(tournamentId: string, limit = 30): Promise<T
     },
   });
   return rows.map((r) => ({ ...r, teamName: teamName(r.teamCode) }));
+}
+
+export interface GoalscorerOdd {
+  playerName: string;
+  winProb: number;
+  decimal: number;
+  teamCode: string | null; // resolved from the top-scorer board when the name matches
+}
+
+// Top-goalscorer (Golden Boot) futures, highest implied probability first. Each row
+// is tagged with a team code when its player can be matched to the scoring board (for
+// a flag) via the best-effort, never-guess matcher; unmatched names render without
+// one. Empty when the market isn't polled (or the odds integration isn't configured
+// / doesn't offer the market).
+export async function getGoalscorerOutrights(
+  tournamentId: string,
+  limit = 12,
+): Promise<GoalscorerOdd[]> {
+  const [rows, board] = await Promise.all([
+    prisma.goalscorerOutright.findMany({
+      where: { tournamentId },
+      orderBy: { winProb: "desc" },
+      take: limit,
+      select: { playerName: true, winProb: true, decimal: true },
+    }),
+    prisma.topScorer.findMany({ where: { tournamentId }, select: { playerName: true, teamCode: true } }),
+  ]);
+  return rows.map((r) => ({
+    playerName: r.playerName,
+    winProb: r.winProb,
+    decimal: r.decimal,
+    teamCode: matchPlayerCode(r.playerName, board),
+  }));
 }
 
 // A single entry's player profile (hit-grid, accuracy, breakdown, boldest call).

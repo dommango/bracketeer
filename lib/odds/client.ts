@@ -8,13 +8,22 @@ import {
   parseOddsEvents,
   parseTotalsEvents,
   parseOutrights,
+  parseGoalscorerOutrights,
   type ApiEvent,
   type OddsEvent,
   type TotalsEvent,
   type OutrightEntry,
+  type GoalscorerEntry,
 } from "@/lib/odds/parse";
 
-export type { OddsEvent, TotalsEvent, OutrightEntry } from "@/lib/odds/parse";
+export type { OddsEvent, TotalsEvent, OutrightEntry, GoalscorerEntry } from "@/lib/odds/parse";
+
+// The Odds API exposes tournament outrights as dedicated sport keys. This is the
+// top-goalscorer market's key; verify it against the live catalogue at execution
+// (`/sports`). If the market isn't offered on our plan the call 404s, fetchGoalscorer
+// Outrights surfaces the error, and the poller's isolated try/catch leaves the
+// section simply empty — no crash, no bad data.
+const GOALSCORER_SPORT_KEY = "soccer_fifa_world_cup_top_goal_scorer";
 
 export async function fetchOddsEvents(signal?: AbortSignal): Promise<OddsEvent[]> {
   const url =
@@ -51,4 +60,18 @@ export async function fetchOutrights(signal?: AbortSignal): Promise<OutrightEntr
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected outrights response shape");
   return parseOutrights(json as ApiEvent[]);
+}
+
+// Top-goalscorer futures: every player's outright price on a single event. Uses
+// the dedicated goalscorer sport key (see GOALSCORER_SPORT_KEY). One call covers
+// the whole board.
+export async function fetchGoalscorerOutrights(signal?: AbortSignal): Promise<GoalscorerEntry[]> {
+  const url =
+    `${env.ODDS_API_BASE}/sports/${GOALSCORER_SPORT_KEY}/odds` +
+    `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=outrights&oddsFormat=decimal`;
+  const res = await fetch(url, { cache: "no-store", signal });
+  if (!res.ok) throw new Error(`Odds API (goalscorer) responded ${res.status}`);
+  const json = await res.json();
+  if (!Array.isArray(json)) throw new Error("Odds API: unexpected goalscorer response shape");
+  return parseGoalscorerOutrights(json as ApiEvent[]);
 }
