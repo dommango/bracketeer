@@ -56,6 +56,7 @@ async function tick() {
   if (due("odds-extras", 60)) await hit("/api/cron/poll-odds-extras");
   if (due("lineups", 15)) await hit("/api/cron/poll-lineups");
   if (due("predictions", 60)) await hit("/api/cron/poll-predictions");
+  if (due("injuries", 60)) await hit("/api/cron/poll-injuries");
   if (due("tickets", 30)) await hit("/api/cron/poll-tickets");
   if (due("topscorers", 60)) await hit("/api/cron/poll-topscorers");
 }
