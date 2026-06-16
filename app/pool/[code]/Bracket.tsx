@@ -337,9 +337,6 @@ export function GroupStandings({ view, code }: { view: BracketView; code: string
                             <span className="flex items-center gap-1.5">
                               <Flag code={r.code} size={16} />
                               {r.code}
-                              {r.tied && g.started ? (
-                                <span className="text-ink-4">=</span>
-                              ) : null}
                             </span>
                           </td>
                           <td className="py-0.5 text-left">

@@ -14,8 +14,10 @@ export function WinProbBar({ odds }: { odds: ImpliedProbs | null }) {
         <span style={{ width: `${d}%`, background: "var(--ink-4)" }} />
         <span style={{ width: `${a}%`, background: "var(--round-r16)" }} />
       </div>
-      <div className="mt-0.5 flex justify-between text-[10px] font-mono text-ink-3">
-        <span>{h}%</span><span>D {d}%</span><span>{a}%</span>
+      <div className="mt-0.5 flex justify-between text-[10px] font-mono">
+        <span style={{ color: "var(--pitch)" }}>{h}%</span>
+        <span style={{ color: "var(--ink-4)" }}>D {d}%</span>
+        <span style={{ color: "var(--round-r16)" }}>{a}%</span>
       </div>
     </div>
   );
