@@ -33,6 +33,7 @@ import {
 } from "@/lib/pool/match-live";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { buildPickAnalytics, type PickAnalytics } from "@/lib/pool/pick-analytics";
+import { buildUpsetRadar, stakedTeamCodes, type UpsetMatchInput } from "@/lib/odds/upset";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
@@ -1149,20 +1150,86 @@ async function getPoolAnalytics(poolId: string): Promise<PickAnalytics | null> {
 
 // Aggregate the landing context: your standing(s), today's mover, the next match,
 // any live matches, your headline stats, and the pool-wide pick consensus.
+// Upcoming, not-yet-started matches that carry an odds row, as upset-radar inputs.
+// Scoped to `odds: { isNot: null }` so the Home page pulls only the handful of
+// priced fixtures (not all 104 matches). Team codes resolve the same way the
+// Match-Center does (group teams from the slot ref, knockout from the answer-key
+// bracket); `buildUpsetRadar`'s `hasUsableOdds` is the authoritative odds gate.
+async function getUpsetMatches(poolId: string): Promise<UpsetMatchInput[]> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+  });
+  if (!pool) return [];
+
+  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const matches = await prisma.match.findMany({
+    where: { tournamentId: pool.tournamentId, odds: { isNot: null } },
+    select: {
+      matchNo: true,
+      roundCode: true,
+      scheduledAt: true,
+      homeSlotRef: true,
+      awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
+      result: { select: { homeTeamCode: true, awayTeamCode: true, winnerCode: true, status: true } },
+    },
+  });
+
+  const inputs: UpsetMatchInput[] = [];
+  for (const m of matches) {
+    const isGroup = m.roundCode === "GROUP";
+    const r = resolved[m.matchNo];
+    const winnerCode = m.result?.winnerCode ?? r?.winner ?? null;
+    // Mirror match-center's statusOf: SCHEDULED only when nothing's decided yet.
+    const status = m.result?.status ?? (winnerCode ? "FINAL" : "SCHEDULED");
+    if (status !== "SCHEDULED") continue;
+
+    const homeCode = isGroup
+      ? (m.result?.homeTeamCode ?? m.homeSlotRef)
+      : (m.result?.homeTeamCode ?? r?.home ?? null);
+    const awayCode = isGroup
+      ? (m.result?.awayTeamCode ?? m.awaySlotRef)
+      : (m.result?.awayTeamCode ?? r?.away ?? null);
+
+    inputs.push({
+      matchNo: m.matchNo,
+      scheduledAt: m.scheduledAt ? m.scheduledAt.toISOString() : null,
+      homeCode,
+      awayCode,
+      odds: m.odds,
+    });
+  }
+  return inputs;
+}
+
 export async function getHomeView(poolId: string, userId: string | null): Promise<HomeView> {
-  const [leaderboard, topMover, nextMatch, liveMatches, lastMatch, analytics] = await Promise.all([
-    liveLeaderboard(poolId),
-    getTodaysMover(poolId),
-    getNextMatch(poolId, userId),
-    getLiveMatches(poolId, userId),
-    getLastMatch(poolId, userId),
-    getPoolAnalytics(poolId),
-  ]);
+  const [leaderboard, topMover, nextMatch, liveMatches, lastMatch, analytics, upsetMatches] =
+    await Promise.all([
+      liveLeaderboard(poolId),
+      getTodaysMover(poolId),
+      getNextMatch(poolId, userId),
+      getLiveMatches(poolId, userId),
+      getLastMatch(poolId, userId),
+      getPoolAnalytics(poolId),
+      getUpsetMatches(poolId),
+    ]);
 
   const leader = leaderboard[0] ?? null;
   const standings = buildStandings(leaderboard, userId);
   const you = standings[0] ?? null;
   const stats = you ? await getHomeStats(poolId, you.entryId) : null;
+
+  // Personalise the radar with the teams the viewer backed (across all their
+  // brackets). Anonymous / unclaimed viewers get an untagged radar.
+  const staked = new Set<string>();
+  if (you) {
+    const mine = new Set(standings.map((s) => s.entryId));
+    for (const e of await getEntriesWithPicks(poolId)) {
+      if (mine.has(e.entryId)) for (const code of stakedTeamCodes(e.picks)) staked.add(code);
+    }
+  }
+  const upsets = buildUpsetRadar(upsetMatches, staked);
 
   return {
     you,
@@ -1174,6 +1241,7 @@ export async function getHomeView(poolId: string, userId: string | null): Promis
     lastMatch,
     stats,
     analytics,
+    upsets,
   };
 }
 
