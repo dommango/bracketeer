@@ -168,6 +168,7 @@ model Match {
   stats      MatchStats?
   odds       MatchOdds?
   tickets    MatchTickets?
+  prediction MatchPrediction?
 
   @@unique([tournamentId, matchNo])
   @@index([tournamentId])
@@ -274,6 +275,24 @@ model MatchTickets {
   priceSource String? // where minPrice came from: "ticketmaster" | "seatgeek"
   source      String // event/link source: "ticketmaster"
   raw         Json?
+  fetchedAt   DateTime
+}
+
+// Pre-match insights from API-Football's /predictions endpoint: model win %,
+// an advice line, each side's recent form ("WWDLW"), and a head-to-head summary.
+// One call covers all of it. Optional integration — absent = nothing to show.
+model MatchPrediction {
+  id          String   @id @default(cuid())
+  matchId     String   @unique
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  homePercent Float? // model-implied P(home win), 0–100
+  drawPercent Float?
+  awayPercent Float?
+  advice      String? // e.g. "Double chance : Brazil or draw"
+  homeForm    String? // last-5 form string, most recent last (e.g. "WWDLW")
+  awayForm    String?
+  h2h         Json? // compact { played, homeWins, awayWins, draws } summary
+  raw         Json // full provider response, for audit / re-derivation
   fetchedAt   DateTime
 }
 

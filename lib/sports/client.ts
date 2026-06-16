@@ -2,6 +2,7 @@
 // poller short-circuits otherwise. Manual entry remains the reliable core.
 
 import { env } from "@/lib/env";
+import type { ApiPredictionResponse } from "@/lib/sports/predictions-parse";
 
 export interface FinishedFixture {
   fixtureId: number; // numeric API id, used for events/stats sub-requests
@@ -125,6 +126,24 @@ function parseTeamStats(stats: ApiStatEntry[]): RawTeamStats {
     yellowCards: findStat(stats, "Yellow Cards"),
     redCards: findStat(stats, "Red Cards"),
   };
+}
+
+// Pre-match predictions (win %, advice, form, h2h) for a single fixture. Returns
+// null when the provider has no prediction row yet. Parsing lives in
+// predictions-parse.ts (env-free, unit-tested).
+export async function fetchPrediction(
+  fixtureId: number,
+  signal?: AbortSignal,
+): Promise<ApiPredictionResponse | null> {
+  const url = `${env.SPORTS_API_BASE}/predictions?fixture=${fixtureId}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /predictions responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiPredictionResponse[] };
+  return json.response?.[0] ?? null;
 }
 
 export async function fetchMatchEvents(fixtureId: number): Promise<RawMatchEvent[]> {
