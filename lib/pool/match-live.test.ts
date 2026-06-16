@@ -1,9 +1,47 @@
 import { describe, it, expect } from "vitest";
-import { buildTimeline, buildStatBars, type EventInput, type TeamStatValues } from "./match-live";
+import {
+  buildTimeline,
+  buildStatBars,
+  teamScoreboardLines,
+  type EventInput,
+  type TeamStatValues,
+} from "./match-live";
 
 function ev(p: Partial<EventInput> & { type: EventInput["type"]; teamCode: string }): EventInput {
   return { minute: 10, extraMinute: null, playerName: null, assistName: null, ...p };
 }
+
+describe("teamScoreboardLines", () => {
+  const timeline = buildTimeline(
+    [
+      ev({ type: "GOAL", teamCode: "SCO", minute: 45, playerName: "McTominay" }),
+      ev({ type: "GOAL", teamCode: "SCO", minute: 45, extraMinute: 2, playerName: "McTominay" }),
+      ev({ type: "PENALTY_MISSED", teamCode: "SCO", minute: 60, playerName: "Robertson" }),
+      ev({ type: "OWN_GOAL", teamCode: "HAI", minute: 70, playerName: "Pierre" }),
+      ev({ type: "YELLOW_CARD", teamCode: "HAI", minute: 12, playerName: "Saint" }),
+      ev({ type: "RED_CARD", teamCode: "SCO", minute: 80, playerName: "Tierney" }),
+    ],
+    "HAI",
+    "SCO",
+  );
+
+  it("groups a scorer's goals and excludes missed penalties", () => {
+    const { scorers } = teamScoreboardLines(timeline, "away"); // SCO
+    expect(scorers).toEqual([
+      { label: "McTominay", minutes: ["45'", "45+2'"] },
+      { label: "Pierre (OG)", minutes: ["70'"] }, // own goal credited to the benefiting side
+    ]);
+  });
+
+  it("lists a team's cards with player and minute", () => {
+    const home = teamScoreboardLines(timeline, "home"); // HAI
+    expect(home.scorers).toEqual([]); // the own goal counts for the away side
+    expect(home.cards.map((c) => `${c.player} ${c.minuteLabel}`)).toEqual(["Saint 12'"]);
+
+    const away = teamScoreboardLines(timeline, "away"); // SCO
+    expect(away.cards.map((c) => `${c.player} ${c.minuteLabel}`)).toEqual(["Tierney 80'"]);
+  });
+});
 
 describe("buildTimeline", () => {
   it("orders by minute then extra minute and labels stoppage time", () => {

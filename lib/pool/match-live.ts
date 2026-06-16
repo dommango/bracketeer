@@ -118,6 +118,46 @@ export function buildTimeline(
     .sort((a, b) => a.sortKey - b.sortKey);
 }
 
+// One scorer's goals on the inline scoreboard: a label and the minutes they scored.
+export interface ScorerLine {
+  label: string; // scorer name, or "Name (OG)" for an own goal
+  minutes: string[]; // e.g. ["23'", "67'"], in timeline order
+}
+
+export interface TeamScoreboardLines {
+  scorers: ScorerLine[];
+  cards: TimelineItem[];
+}
+
+// Inline-scoreboard view of one team's timeline: goals grouped per scorer (missed
+// penalties excluded — they aren't goals) and the card events as-is. Pure so the
+// grouping is unit-tested; the component just renders the result.
+export function teamScoreboardLines(
+  timeline: TimelineItem[],
+  side: "home" | "away",
+): TeamScoreboardLines {
+  const mine = timeline.filter((it) => it.side === side);
+  const goals = mine.filter((it) => it.kind === "goal" && it.type !== "PENALTY_MISSED");
+  const cards = mine.filter((it) => it.kind === "card");
+
+  const order: string[] = [];
+  const minutesByScorer = new Map<string, string[]>();
+  for (const g of goals) {
+    const name = g.player ?? g.teamCode;
+    const label = g.type === "OWN_GOAL" ? `${name} (OG)` : name;
+    if (!minutesByScorer.has(label)) {
+      minutesByScorer.set(label, []);
+      order.push(label);
+    }
+    minutesByScorer.get(label)!.push(g.minuteLabel);
+  }
+
+  return {
+    scorers: order.map((label) => ({ label, minutes: minutesByScorer.get(label)! })),
+    cards,
+  };
+}
+
 // --- Team stats bars -------------------------------------------------------
 
 // MatchStats.home / .away are stored verbatim as the poller's RawTeamStats Json.

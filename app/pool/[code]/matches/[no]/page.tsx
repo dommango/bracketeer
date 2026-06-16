@@ -8,7 +8,7 @@ import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "../../Flag";
 import { WhatIf } from "../../WhatIf";
 import { Chat } from "../../Chat";
-import { MatchTimeline, MatchStatsBars } from "./MatchLive";
+import { MatchTimeline, MatchStatsBars, TeamScorers } from "./MatchLive";
 import { VenueLine } from "../../VenueLine";
 import { WinProbBar } from "../../WinProbBar";
 import { UpsetBadge } from "../../UpsetBadge";
@@ -219,8 +219,10 @@ export default async function MatchDetailPage({
           ) : null}
         </div>
         <TeamRow side={detail.home} pens={detail.homePens} isWinner={decided && detail.winnerCode === detail.home.code} decided={decided} />
+        <TeamScorers timeline={detail.timeline} side="home" />
         <div className="h-px bg-line-soft" />
         <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
+        <TeamScorers timeline={detail.timeline} side="away" />
         <div className="mt-3">
           <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} />
           <TicketLine tickets={detail.tickets} />
