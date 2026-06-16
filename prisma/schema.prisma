@@ -169,6 +169,7 @@ model Match {
   odds       MatchOdds?
   tickets    MatchTickets?
   prediction MatchPrediction?
+  lineup     MatchLineup?
 
   @@unique([tournamentId, matchNo])
   @@index([tournamentId])
@@ -294,6 +295,21 @@ model MatchPrediction {
   h2h         Json? // compact { played, homeWins, awayWins, draws } summary
   raw         Json // full provider response, for audit / re-derivation
   fetchedAt   DateTime
+}
+
+// Starting XI + formation per team from API-Football's /fixtures/lineups endpoint
+// (publishes ~1h before kickoff). home/away are player arrays ({ name, number, pos }).
+// Optional integration — absent = no lineup to show.
+model MatchLineup {
+  id            String   @id @default(cuid())
+  matchId       String   @unique
+  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  homeFormation String? // e.g. "4-3-3"
+  awayFormation String?
+  home          Json // [{ name, number, pos }] starting XI
+  away          Json
+  raw           Json // full provider response, for audit / re-derivation
+  fetchedAt     DateTime
 }
 
 // ---------------------------------------------------------------------------

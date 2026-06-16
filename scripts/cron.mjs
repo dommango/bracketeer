@@ -66,6 +66,22 @@ if (new Date().getUTCMinutes() < 5) {
   }
 }
 
+// Lineups publish ~1h before kickoff and don't change, so poll a few times an hour
+// near matches (the poller targets only near-KO fixtures and skips ones already
+// stored). Fire at minute :05 to stay off the :00 and :10 windows. Best-effort.
+if (new Date().getUTCMinutes() % 15 === 5) {
+  try {
+    const lineupsRes = await fetch(`${base}/api/cron/poll-lineups`, {
+      method: "POST",
+      headers: { "x-cron-secret": secret },
+    });
+    const lineupsBody = await lineupsRes.text();
+    console.log(`poll-lineups ${lineupsRes.status}: ${lineupsBody}`);
+  } catch (err) {
+    console.error("poll-lineups fetch failed:", err);
+  }
+}
+
 // Tickets refresh ~every 30 min (prices move slowly + Ticketmaster has a daily
 // quota), so only fire near the half-hour. Best-effort; never affects exit code.
 if (new Date().getUTCMinutes() % 30 < 5) {
