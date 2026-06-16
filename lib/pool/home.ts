@@ -6,6 +6,7 @@ import type { Mover } from "@/lib/pool/movers";
 import type { Accuracy, BoldestCall } from "@/lib/pool/profile";
 import type { MatchCenterRow } from "@/lib/pool/match-center";
 import type { PickAnalytics } from "@/lib/pool/pick-analytics";
+import type { UpsetRow } from "@/lib/odds/upset";
 
 // A leaderboard row reduced to what the standing card needs. `projected` is the
 // live (provisional group + knockout) delta; gaps and the displayed total use the
@@ -144,6 +145,7 @@ export interface HomeView {
   lastMatch: MatchCenterRow | null; // most recently finalised match
   stats: HomeStats | null;
   analytics: PickAnalytics | null; // pool-wide pick consensus (null pre-lock / empty)
+  upsets: UpsetRow[]; // upcoming matches most likely to defy the favorite
 }
 
 // Fold a computed Mover + its label into the HomeMover shape.

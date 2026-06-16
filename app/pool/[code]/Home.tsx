@@ -4,6 +4,7 @@ import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
 import { ScoreCards } from "./ScoreCards";
 import { PoolAnalytics } from "./PoolAnalytics";
+import { UpsetRadar } from "./UpsetRadar";
 import { GroupStandings } from "./Bracket";
 import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
@@ -384,6 +385,8 @@ export function Home({
       ) : null}
 
       <ScoreCards live={view.liveMatches} last={view.lastMatch} next={view.nextMatch} code={code} />
+
+      <UpsetRadar rows={view.upsets} />
 
       <StandingCard
         you={view.you}
