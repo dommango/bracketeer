@@ -1,7 +1,52 @@
-import type { TimelineItem, StatBar } from "@/lib/pool/match-live";
+import { type TimelineItem, type StatBar, teamScoreboardLines } from "@/lib/pool/match-live";
 import { Flag } from "../../Flag";
 
 const SECTION_LABEL = "px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+
+// Inline scorers + cards for one team, shown directly under its scoreboard row.
+// Goals are grouped per scorer ("Messi 23', 67'"); own goals carry an (OG) marker
+// and missed penalties are excluded (they're not goals). Cards list player + minute.
+// Reads the same timeline the full "Match events" rail below already uses.
+export function TeamScorers({
+  timeline,
+  side,
+}: {
+  timeline: TimelineItem[];
+  side: "home" | "away";
+}) {
+  const { scorers, cards } = teamScoreboardLines(timeline, side);
+  if (scorers.length === 0 && cards.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-0.5 pb-2 pl-10 text-[12px]">
+      {scorers.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span aria-hidden className="text-[11px] leading-none">
+            {"⚽"}
+          </span>
+          {scorers.map((s) => (
+            <span key={s.label} className="text-ink-2">
+              {s.label} <span className="font-mono text-ink-3">{s.minutes.join(", ")}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {cards.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+          {cards.map((c, i) => (
+            <span key={`${c.sortKey}-${i}`} className="inline-flex items-center gap-1">
+              <span aria-hidden className="text-[11px] leading-none">
+                {c.icon}
+              </span>
+              <span className="text-ink-2">{c.player ?? c.teamCode}</span>
+              <span className="font-mono text-ink-3">{c.minuteLabel}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 // Goal & card timeline. Home events hang left, away events right, around a
 // central minute marker — the familiar broadcast match-event rail.
