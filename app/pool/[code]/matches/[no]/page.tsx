@@ -127,6 +127,21 @@ function TicketLine({ tickets }: { tickets: MatchDetail["tickets"] }) {
   );
 }
 
+// Over/Under total-goals market, shown under the win-probability bar once the
+// totals line has been polled. Hidden entirely otherwise.
+function TotalsLine({ totals }: { totals: MatchDetail["totals"] }) {
+  if (!totals) return null;
+  const over = Math.round(totals.overProb * 100);
+  const under = Math.round(totals.underProb * 100);
+  return (
+    <p className="mt-2 text-xs text-ink-3">
+      <span className="font-semibold text-ink-2">O/U {totals.line}</span>
+      {" — Over "}
+      {over}% · Under {under}%
+    </p>
+  );
+}
+
 export default async function MatchDetailPage({
   params,
 }: {
@@ -211,6 +226,7 @@ export default async function MatchDetailPage({
           <TicketLine tickets={detail.tickets} />
         </div>
         <WinProbBar odds={detail.odds} />
+        <TotalsLine totals={detail.totals} />
         {detail.scored && detail.yourPick && detail.odds ? (() => {
           const code = detail.yourPick.code;
           const p = code === detail.home.code ? detail.odds.homeWinProb

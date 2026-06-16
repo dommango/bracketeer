@@ -832,6 +832,8 @@ export interface MatchDetail {
   timeline: TimelineItem[]; // goal/card events (empty when none fed)
   stats: StatBar[]; // paired team stats (empty when none fed)
   odds: ImpliedProbs | null;
+  // Over/Under total-goals market; null until a totals line has been polled.
+  totals: { line: number; overProb: number; underProb: number } | null;
   // Lowest price + official buy link (Ticketmaster); null when not configured.
   tickets: { minPrice: number | null; currency: string | null; url: string | null } | null;
 }
@@ -861,7 +863,16 @@ export async function getMatchDetail(
       city: true,
       homeSlotRef: true,
       awaySlotRef: true,
-      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
+      odds: {
+        select: {
+          homeWinProb: true,
+          drawProb: true,
+          awayWinProb: true,
+          totalLine: true,
+          overProb: true,
+          underProb: true,
+        },
+      },
       tickets: { select: { minPrice: true, currency: true, url: true } },
       result: {
         select: {
@@ -949,8 +960,45 @@ export async function getMatchDetail(
     timeline,
     stats,
     odds: match.odds ?? null,
+    totals:
+      match.odds?.totalLine != null &&
+      match.odds.overProb != null &&
+      match.odds.underProb != null
+        ? {
+            line: match.odds.totalLine,
+            overProb: match.odds.overProb,
+            underProb: match.odds.underProb,
+          }
+        : null,
     tickets: match.tickets ?? null,
   };
+}
+
+export interface ChampionshipOdd {
+  teamCode: string;
+  name: string;
+  winProb: number;
+  decimal: number;
+}
+
+// Tournament-winner futures, highest implied probability first. Empty when the
+// outrights poll hasn't run (or the odds integration isn't configured).
+export async function getChampionshipOdds(
+  tournamentId: string,
+  limit = 12,
+): Promise<ChampionshipOdd[]> {
+  const rows = await prisma.teamOutright.findMany({
+    where: { tournamentId },
+    orderBy: { winProb: "desc" },
+    take: limit,
+    select: { teamCode: true, winProb: true, decimal: true },
+  });
+  return rows.map((r) => ({
+    teamCode: r.teamCode,
+    name: teamName(r.teamCode),
+    winProb: r.winProb,
+    decimal: r.decimal,
+  }));
 }
 
 // A single entry's player profile (hit-grid, accuracy, breakdown, boldest call).

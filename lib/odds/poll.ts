@@ -4,9 +4,8 @@
 import { prisma } from "@/lib/db";
 import { oddsApiEnabled } from "@/lib/env";
 import { fetchOddsEvents } from "@/lib/odds/client";
-import { normalizeTeam, resolveMatchNo, toImpliedProbs, type CodedMatch } from "@/lib/odds/map";
-import { resolveBracket } from "@/lib/pool/bracket";
-import { asResults } from "@/lib/pool/scoring";
+import { normalizeTeam, resolveMatchNo, toImpliedProbs } from "@/lib/odds/map";
+import { loadCodedMatches } from "@/lib/odds/coded";
 
 export interface OddsPollSummary {
   fetched: number;
@@ -24,33 +23,9 @@ export async function pollOdds(): Promise<OddsPollSummary> {
   });
   if (!tournament) return { fetched: 0, mapped: 0, upserted: 0, unmatched: [] };
 
-  const resolved = resolveBracket(asResults(tournament.officialResults));
-
-  const rows = await prisma.match.findMany({
-    where: { tournamentId: tournament.id },
-    select: {
-      id: true,
-      matchNo: true,
-      roundCode: true,
-      homeSlotRef: true,
-      awaySlotRef: true,
-      result: { select: { homeTeamCode: true, awayTeamCode: true } },
-    },
-  });
-
+  const coded = await loadCodedMatches(tournament.id, tournament.officialResults);
   const idByMatchNo = new Map<number, string>();
-  const coded: CodedMatch[] = rows.map((m) => {
-    idByMatchNo.set(m.matchNo, m.id);
-    const isGroup = m.roundCode === "GROUP";
-    const r = resolved[m.matchNo];
-    const homeCode = isGroup
-      ? (m.result?.homeTeamCode ?? m.homeSlotRef)
-      : (m.result?.homeTeamCode ?? r?.home ?? null);
-    const awayCode = isGroup
-      ? (m.result?.awayTeamCode ?? m.awaySlotRef)
-      : (m.result?.awayTeamCode ?? r?.away ?? null);
-    return { matchNo: m.matchNo, homeCode, awayCode };
-  });
+  for (const m of coded) idByMatchNo.set(m.matchNo, m.matchId);
 
   const events = await fetchOddsEvents();
   let mapped = 0;

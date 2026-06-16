@@ -13,6 +13,44 @@ export function toImpliedProbs(dH: number, dD: number, dA: number): ImpliedProbs
   return { homeWinProb: rH / total, drawProb: rD / total, awayWinProb: rA / total };
 }
 
+export interface TwoWayProbs {
+  overProb: number;
+  underProb: number;
+}
+
+// Two-outcome (Over/Under) implied probs, normalized to sum to 1. Bad prices
+// (zero/negative/NaN) yield 0/0 rather than letting Infinity/NaN reach the DB or UI.
+export function toTwoWayProbs(dOver: number, dUnder: number): TwoWayProbs {
+  if (!(dOver > 0) || !(dUnder > 0)) return { overProb: 0, underProb: 0 };
+  const rOver = 1 / dOver, rUnder = 1 / dUnder;
+  const total = rOver + rUnder;
+  return { overProb: rOver / total, underProb: rUnder / total };
+}
+
+export interface OutrightProb {
+  teamCode: string;
+  decimal: number;
+  winProb: number;
+}
+
+// Implied championship probability per team: invert each price and normalize
+// across the whole field (futures overrounds are large, so normalization matters).
+// Names that don't resolve to an internal code are dropped, never guessed.
+export function toOutrightProbs(
+  entries: Array<{ teamName: string; decimal: number }>,
+): OutrightProb[] {
+  const coded = entries
+    .map((e) => ({ teamCode: normalizeTeam(e.teamName), decimal: e.decimal }))
+    .filter((e): e is { teamCode: string; decimal: number } => e.teamCode != null && e.decimal > 0);
+  const total = coded.reduce((sum, e) => sum + 1 / e.decimal, 0);
+  if (total <= 0) return [];
+  return coded.map((e) => ({
+    teamCode: e.teamCode,
+    decimal: e.decimal,
+    winProb: 1 / e.decimal / total,
+  }));
+}
+
 // Provider name -> our 3-letter code. Built from TEAMS (code->name) plus aliases
 // for names The Odds API spells differently. Unknown names return null (skipped,
 // never guessed); scripts/verify-odds.ts surfaces any unmatched name vs live data.
