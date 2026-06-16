@@ -9,7 +9,7 @@ import type { ReactNode, SVGProps } from "react";
 // a pitch-tint pill behind the icon + pitch-dark label — two reinforcing cues.
 // Home matches exactly; the other tabs match by prefix so nested children stay lit.
 
-type TabKey = "home" | "matches" | "chat";
+type TabKey = "home" | "matches" | "scorers" | "chat";
 
 type Tab = {
   key: TabKey;
@@ -38,6 +38,13 @@ export function BottomNav({ code }: { code: string }) {
       href: `${base}/matches`,
       isActive: prefix(`${base}/matches`),
       icon: <MatchesGlyph />,
+    },
+    {
+      key: "scorers",
+      label: "Scorers",
+      href: `${base}/scorers`,
+      isActive: prefix(`${base}/scorers`),
+      icon: <BootGlyph />,
     },
     {
       key: "chat",
@@ -144,6 +151,17 @@ function MatchesGlyph() {
       <circle cx="12" cy="12" r="9" />
       <path d="m12 6.5 4.5 3.3-1.7 5.3H9.2L7.5 9.8 12 6.5Z" />
       <path d="M12 6.5V3.5M16.5 9.8 19.4 8M14.8 15.1 17 19M9.2 15.1 7 19M7.5 9.8 4.6 8" />
+    </svg>
+  );
+}
+
+function BootGlyph() {
+  // Football boot — the Golden Boot / top-scorers tab.
+  return (
+    <svg {...svgProps}>
+      <path d="M4 5h3l1.4 4.4L17 11a3 3 0 0 1 2.8 2l.4 1.2a1.5 1.5 0 0 1-1.4 2H6a2 2 0 0 1-2-2V5Z" />
+      <path d="M5 16.2h14" />
+      <path d="M8 16.2v2.3M12 16.2v2.3M16 16.2v2.3" />
     </svg>
   );
 }

@@ -115,10 +115,11 @@ model Tournament {
   officialResults  Json?
   createdAt        DateTime         @default(now())
 
-  teams     Team[]
-  matches   Match[]
-  pools     Pool[]
-  outrights TeamOutright[]
+  teams      Team[]
+  matches    Match[]
+  pools      Pool[]
+  outrights  TeamOutright[]
+  topScorers TopScorer[]
 }
 
 model Team {
@@ -310,6 +311,25 @@ model MatchLineup {
   away          Json
   raw           Json // full provider response, for audit / re-derivation
   fetchedAt     DateTime
+}
+
+// Tournament top scorers (the Golden Boot race) from API-Football /players/topscorers.
+// One cheap call returns the whole board; rows are replaced wholesale each poll.
+// Optional integration — absent = nothing to show.
+model TopScorer {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  rank         Int // 1-based position in the goals ranking
+  playerName   String
+  teamCode     String // internal 3-letter code
+  goals        Int
+  assists      Int?
+  appearances  Int?
+  raw          Json
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, rank])
 }
 
 // ---------------------------------------------------------------------------
