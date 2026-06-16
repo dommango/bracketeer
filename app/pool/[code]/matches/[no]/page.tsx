@@ -9,6 +9,7 @@ import { Flag } from "../../Flag";
 import { WhatIf } from "../../WhatIf";
 import { Chat } from "../../Chat";
 import { MatchTimeline, MatchStatsBars, TeamScorers } from "./MatchLive";
+import { MatchInsights } from "./MatchInsights";
 import { VenueLine } from "../../VenueLine";
 import { WinProbBar } from "../../WinProbBar";
 import { UpsetBadge } from "../../UpsetBadge";
@@ -239,6 +240,7 @@ export default async function MatchDetailPage({
         })() : null}
       </div>
 
+      <MatchInsights prediction={detail.prediction} home={detail.home} away={detail.away} />
       <MatchTimeline items={detail.timeline} />
       <MatchStatsBars bars={detail.stats} homeCode={detail.home.code} awayCode={detail.away.code} />
 

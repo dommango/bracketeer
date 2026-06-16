@@ -46,6 +46,26 @@ if (new Date().getUTCMinutes() < 5) {
   }
 }
 
+// Match predictions (win %, advice, form, h2h) refresh ~hourly. Billed per fixture,
+// so the poller itself only touches upcoming fixtures (capped); the cron fires on a
+// staggered window (minute 10–14) so it doesn't pile onto the :00 odds-extras call.
+// Best-effort; never affects exit code.
+{
+  const min = new Date().getUTCMinutes();
+  if (min >= 10 && min < 15) {
+    try {
+      const predRes = await fetch(`${base}/api/cron/poll-predictions`, {
+        method: "POST",
+        headers: { "x-cron-secret": secret },
+      });
+      const predBody = await predRes.text();
+      console.log(`poll-predictions ${predRes.status}: ${predBody}`);
+    } catch (err) {
+      console.error("poll-predictions fetch failed:", err);
+    }
+  }
+}
+
 // Tickets refresh ~every 30 min (prices move slowly + Ticketmaster has a daily
 // quota), so only fire near the half-hour. Best-effort; never affects exit code.
 if (new Date().getUTCMinutes() % 30 < 5) {

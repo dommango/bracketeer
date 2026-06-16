@@ -38,6 +38,7 @@ import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { TEAMS } from "@/lib/scoring/data";
 import type { ImpliedProbs } from "@/lib/odds/map";
+import type { H2HSummary } from "@/lib/sports/predictions-parse";
 import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone } from "@/lib/tz";
 import type { Picks, Results } from "@/lib/scoring/types";
@@ -836,6 +837,16 @@ export interface MatchDetail {
   totals: { line: number; overProb: number; underProb: number } | null;
   // Lowest price + official buy link (Ticketmaster); null when not configured.
   tickets: { minPrice: number | null; currency: string | null; url: string | null } | null;
+  // Pre-match insights (model win %, advice, form, h2h); null until polled.
+  prediction: {
+    homePercent: number | null;
+    drawPercent: number | null;
+    awayPercent: number | null;
+    advice: string | null;
+    homeForm: string | null;
+    awayForm: string | null;
+    h2h: H2HSummary | null;
+  } | null;
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split
@@ -874,6 +885,17 @@ export async function getMatchDetail(
         },
       },
       tickets: { select: { minPrice: true, currency: true, url: true } },
+      prediction: {
+        select: {
+          homePercent: true,
+          drawPercent: true,
+          awayPercent: true,
+          advice: true,
+          homeForm: true,
+          awayForm: true,
+          h2h: true,
+        },
+      },
       result: {
         select: {
           homeTeamCode: true,
@@ -971,6 +993,17 @@ export async function getMatchDetail(
           }
         : null,
     tickets: match.tickets ?? null,
+    prediction: match.prediction
+      ? {
+          homePercent: match.prediction.homePercent,
+          drawPercent: match.prediction.drawPercent,
+          awayPercent: match.prediction.awayPercent,
+          advice: match.prediction.advice,
+          homeForm: match.prediction.homeForm,
+          awayForm: match.prediction.awayForm,
+          h2h: (match.prediction.h2h as H2HSummary | null) ?? null,
+        }
+      : null,
   };
 }
 
