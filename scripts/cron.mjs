@@ -1,7 +1,14 @@
-// Railway cron entrypoint. Configure a separate Railway service that runs
-// `node scripts/cron.mjs` on a schedule (`*/5 * * * *` — Railway's minimum cron
-// interval is 5 minutes, so per-minute polling isn't possible on Railway cron).
-// It pings the score poller on the web service with the shared secret.
+// Railway worker entrypoint (always-on). Polls live scores every minute and runs
+// the slower pollers on their own cadences from the same loop.
+//
+// Why a loop and not Railway cron: Railway's cron minimum interval is 5 minutes,
+// which is the dominant source of match-update latency (a goal isn't seen until the
+// next 5-min tick). An always-on worker can poll every 60s. poll-scores is cheap
+// when idle — it returns with zero sports-API calls when no match is in the live
+// window — so frequent polling only spends credits during live matches.
+//
+// Deploy as a normal (always-on) Railway service, NOT a cron service:
+// railway.cron.json has no cronSchedule and restarts on failure.
 const base = process.env.APP_BASE_URL;
 const secret = process.env.CRON_SECRET;
 
@@ -10,107 +17,57 @@ if (!base || !secret) {
   process.exit(1);
 }
 
-const res = await fetch(`${base}/api/cron/poll-scores`, {
-  method: "POST",
-  headers: { "x-cron-secret": secret },
-});
+const TICK_MS = 60_000; // live-score cadence
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const body = await res.text();
-console.log(`poll-scores ${res.status}: ${body}`);
-
-// Odds poll is best-effort: a failure here does not affect the score poll exit code.
-try {
-  const oddsRes = await fetch(`${base}/api/cron/poll-odds`, {
-    method: "POST",
-    headers: { "x-cron-secret": secret },
-  });
-  const oddsBody = await oddsRes.text();
-  console.log(`poll-odds ${oddsRes.status}: ${oddsBody}`);
-} catch (err) {
-  console.error("poll-odds fetch failed:", err);
-}
-
-// Odds extras (Over/Under totals + tournament-winner outrights) refresh ~hourly:
-// these markets move slowly and each is billed per API call, so they run on a far
-// slower cadence than the every-5-min h2h poll. Best-effort; no effect on exit code.
-if (new Date().getUTCMinutes() < 5) {
+async function hit(path) {
   try {
-    const extrasRes = await fetch(`${base}/api/cron/poll-odds-extras`, {
+    const res = await fetch(`${base}${path}`, {
       method: "POST",
       headers: { "x-cron-secret": secret },
     });
-    const extrasBody = await extrasRes.text();
-    console.log(`poll-odds-extras ${extrasRes.status}: ${extrasBody}`);
+    const body = await res.text();
+    console.log(`${path} ${res.status}: ${body}`);
   } catch (err) {
-    console.error("poll-odds-extras fetch failed:", err);
+    console.error(`${path} fetch failed:`, err);
   }
 }
 
-// Match predictions (win %, advice, form, h2h) refresh ~hourly. Billed per fixture,
-// so the poller itself only touches upcoming fixtures (capped); the cron fires on a
-// staggered window (minute 10–14) so it doesn't pile onto the :00 odds-extras call.
-// Best-effort; never affects exit code.
-{
-  const min = new Date().getUTCMinutes();
-  if (min >= 10 && min < 15) {
-    try {
-      const predRes = await fetch(`${base}/api/cron/poll-predictions`, {
-        method: "POST",
-        headers: { "x-cron-secret": secret },
-      });
-      const predBody = await predRes.text();
-      console.log(`poll-predictions ${predRes.status}: ${predBody}`);
-    } catch (err) {
-      console.error("poll-predictions fetch failed:", err);
-    }
-  }
+// Fire a named job at most once per `minutes`-wide wall-clock bucket. Drift-proof:
+// a slow or slightly-late tick still runs each job exactly once per window, and the
+// jobs stay phase-aligned to real time rather than to process start.
+const lastBucket = {};
+function due(name, minutes) {
+  const bucket = Math.floor(Date.now() / (minutes * 60_000));
+  if (lastBucket[name] === bucket) return false;
+  lastBucket[name] = bucket;
+  return true;
 }
 
-// Lineups publish ~1h before kickoff and don't change, so poll a few times an hour
-// near matches (the poller targets only near-KO fixtures and skips ones already
-// stored). Fire at minute :05 to stay off the :00 and :10 windows. Best-effort.
-if (new Date().getUTCMinutes() % 15 === 5) {
+async function tick() {
+  // Live scores every minute (the latency-critical poll).
+  await hit("/api/cron/poll-scores");
+
+  // h2h odds stay at the prior ~5-min cadence — The Odds API is a separate, tighter
+  // quota than API-Football, so this poll is NOT accelerated to 1 minute.
+  if (due("odds", 5)) await hit("/api/cron/poll-odds");
+
+  // Slow, credit-billed pollers keep their prior cadences.
+  if (due("odds-extras", 60)) await hit("/api/cron/poll-odds-extras");
+  if (due("lineups", 15)) await hit("/api/cron/poll-lineups");
+  if (due("predictions", 60)) await hit("/api/cron/poll-predictions");
+  if (due("tickets", 30)) await hit("/api/cron/poll-tickets");
+  if (due("topscorers", 60)) await hit("/api/cron/poll-topscorers");
+}
+
+// Always-on loop. Each tick is isolated so one failure never stops the poller, and
+// the next tick is scheduled a fixed TICK_MS after the previous one finished.
+for (;;) {
+  const started = Date.now();
   try {
-    const lineupsRes = await fetch(`${base}/api/cron/poll-lineups`, {
-      method: "POST",
-      headers: { "x-cron-secret": secret },
-    });
-    const lineupsBody = await lineupsRes.text();
-    console.log(`poll-lineups ${lineupsRes.status}: ${lineupsBody}`);
+    await tick();
   } catch (err) {
-    console.error("poll-lineups fetch failed:", err);
+    console.error("cron tick failed:", err);
   }
+  await sleep(Math.max(0, TICK_MS - (Date.now() - started)));
 }
-
-// Top scorers (Golden Boot) refresh ~hourly — one cheap call returns the whole
-// board. Fire at minute :25, clear of every other window (:00 extras, :05 lineups,
-// :10 predictions, :30 tickets). Best-effort.
-if (new Date().getUTCMinutes() % 60 === 25) {
-  try {
-    const scorersRes = await fetch(`${base}/api/cron/poll-topscorers`, {
-      method: "POST",
-      headers: { "x-cron-secret": secret },
-    });
-    const scorersBody = await scorersRes.text();
-    console.log(`poll-topscorers ${scorersRes.status}: ${scorersBody}`);
-  } catch (err) {
-    console.error("poll-topscorers fetch failed:", err);
-  }
-}
-
-// Tickets refresh ~every 30 min (prices move slowly + Ticketmaster has a daily
-// quota), so only fire near the half-hour. Best-effort; never affects exit code.
-if (new Date().getUTCMinutes() % 30 < 5) {
-  try {
-    const ticketsRes = await fetch(`${base}/api/cron/poll-tickets`, {
-      method: "POST",
-      headers: { "x-cron-secret": secret },
-    });
-    const ticketsBody = await ticketsRes.text();
-    console.log(`poll-tickets ${ticketsRes.status}: ${ticketsBody}`);
-  } catch (err) {
-    console.error("poll-tickets fetch failed:", err);
-  }
-}
-
-process.exit(res.ok ? 0 : 1);
