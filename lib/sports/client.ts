@@ -4,6 +4,7 @@
 import { env } from "@/lib/env";
 import type { ApiPredictionResponse } from "@/lib/sports/predictions-parse";
 import type { ApiLineupEntry } from "@/lib/sports/lineups-parse";
+import type { ApiTopScorer } from "@/lib/sports/topscorers-parse";
 
 export interface FinishedFixture {
   fixtureId: number; // numeric API id, used for events/stats sub-requests
@@ -161,6 +162,20 @@ export async function fetchLineups(
   });
   if (!res.ok) throw new Error(`Sports API /lineups responded ${res.status}`);
   const json = (await res.json()) as { response?: ApiLineupEntry[] };
+  return json.response ?? [];
+}
+
+// Tournament top scorers (Golden Boot race). One call returns the whole ranked
+// board. Parsing/team-code mapping lives in topscorers-parse.ts (env-free, tested).
+export async function fetchTopScorers(signal?: AbortSignal): Promise<ApiTopScorer[]> {
+  const url = `${env.SPORTS_API_BASE}/players/topscorers?league=1&season=2026`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /topscorers responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTopScorer[] };
   return json.response ?? [];
 }
 

@@ -1053,6 +1053,35 @@ export async function getChampionshipOdds(
   }));
 }
 
+export interface TopScorerRow {
+  rank: number;
+  playerName: string;
+  teamCode: string;
+  teamName: string;
+  goals: number;
+  assists: number | null;
+  appearances: number | null;
+}
+
+// The Golden Boot leaderboard, lowest rank first. Empty when the top-scorers poll
+// hasn't run (or the sports integration isn't configured).
+export async function getTopScorers(tournamentId: string, limit = 30): Promise<TopScorerRow[]> {
+  const rows = await prisma.topScorer.findMany({
+    where: { tournamentId },
+    orderBy: { rank: "asc" },
+    take: limit,
+    select: {
+      rank: true,
+      playerName: true,
+      teamCode: true,
+      goals: true,
+      assists: true,
+      appearances: true,
+    },
+  });
+  return rows.map((r) => ({ ...r, teamName: teamName(r.teamCode) }));
+}
+
 // A single entry's player profile (hit-grid, accuracy, breakdown, boldest call).
 // Returns null when the entry doesn't belong to this pool.
 export async function getProfile(poolId: string, entryId: string): Promise<Profile | null> {

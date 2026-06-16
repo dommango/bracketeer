@@ -82,6 +82,22 @@ if (new Date().getUTCMinutes() % 15 === 5) {
   }
 }
 
+// Top scorers (Golden Boot) refresh ~hourly — one cheap call returns the whole
+// board. Fire at minute :25, clear of every other window (:00 extras, :05 lineups,
+// :10 predictions, :30 tickets). Best-effort.
+if (new Date().getUTCMinutes() % 60 === 25) {
+  try {
+    const scorersRes = await fetch(`${base}/api/cron/poll-topscorers`, {
+      method: "POST",
+      headers: { "x-cron-secret": secret },
+    });
+    const scorersBody = await scorersRes.text();
+    console.log(`poll-topscorers ${scorersRes.status}: ${scorersBody}`);
+  } catch (err) {
+    console.error("poll-topscorers fetch failed:", err);
+  }
+}
+
 // Tickets refresh ~every 30 min (prices move slowly + Ticketmaster has a daily
 // quota), so only fire near the half-hour. Best-effort; never affects exit code.
 if (new Date().getUTCMinutes() % 30 < 5) {
