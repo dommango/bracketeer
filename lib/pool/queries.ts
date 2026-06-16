@@ -39,6 +39,7 @@ import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-prov
 import { TEAMS } from "@/lib/scoring/data";
 import type { ImpliedProbs } from "@/lib/odds/map";
 import type { H2HSummary } from "@/lib/sports/predictions-parse";
+import type { LineupPlayer } from "@/lib/sports/lineups-parse";
 import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone } from "@/lib/tz";
 import type { Picks, Results } from "@/lib/scoring/types";
@@ -847,6 +848,13 @@ export interface MatchDetail {
     awayForm: string | null;
     h2h: H2HSummary | null;
   } | null;
+  // Starting XI + formation per team; null until the lineups poll has data.
+  lineup: {
+    homeFormation: string | null;
+    awayFormation: string | null;
+    home: LineupPlayer[];
+    away: LineupPlayer[];
+  } | null;
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split
@@ -895,6 +903,9 @@ export async function getMatchDetail(
           awayForm: true,
           h2h: true,
         },
+      },
+      lineup: {
+        select: { homeFormation: true, awayFormation: true, home: true, away: true },
       },
       result: {
         select: {
@@ -1002,6 +1013,14 @@ export async function getMatchDetail(
           homeForm: match.prediction.homeForm,
           awayForm: match.prediction.awayForm,
           h2h: (match.prediction.h2h as H2HSummary | null) ?? null,
+        }
+      : null,
+    lineup: match.lineup
+      ? {
+          homeFormation: match.lineup.homeFormation,
+          awayFormation: match.lineup.awayFormation,
+          home: (match.lineup.home as unknown as LineupPlayer[]) ?? [],
+          away: (match.lineup.away as unknown as LineupPlayer[]) ?? [],
         }
       : null,
   };

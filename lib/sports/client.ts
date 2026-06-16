@@ -3,6 +3,7 @@
 
 import { env } from "@/lib/env";
 import type { ApiPredictionResponse } from "@/lib/sports/predictions-parse";
+import type { ApiLineupEntry } from "@/lib/sports/lineups-parse";
 
 export interface FinishedFixture {
   fixtureId: number; // numeric API id, used for events/stats sub-requests
@@ -144,6 +145,23 @@ export async function fetchPrediction(
   if (!res.ok) throw new Error(`Sports API /predictions responded ${res.status}`);
   const json = (await res.json()) as { response?: ApiPredictionResponse[] };
   return json.response?.[0] ?? null;
+}
+
+// Starting lineups for a fixture (publishes ~1h before kickoff). Empty array until
+// then. Parsing/normalization lives in lineups-parse.ts (env-free, unit-tested).
+export async function fetchLineups(
+  fixtureId: number,
+  signal?: AbortSignal,
+): Promise<ApiLineupEntry[]> {
+  const url = `${env.SPORTS_API_BASE}/fixtures/lineups?fixture=${fixtureId}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /lineups responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiLineupEntry[] };
+  return json.response ?? [];
 }
 
 export async function fetchMatchEvents(fixtureId: number): Promise<RawMatchEvent[]> {
