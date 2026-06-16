@@ -4,6 +4,7 @@
 
 import { TEAMS } from "@/lib/scoring/data";
 import { roundOf, roundLabel } from "@/lib/pool/rounds";
+import { entrySelections, type EntrySelections } from "@/lib/pool/pick-analytics";
 import type { Picks, Results } from "@/lib/scoring/types";
 
 const teamName = (code: string | null | undefined): string =>
@@ -62,6 +63,9 @@ export interface Profile {
   hitGrid: KnockoutHit[];
   categories: CategoryLine[];
   boldest: BoldestCall | null;
+  // This entry's headline picks. Pick-revealing UI is hidden until `locked`.
+  selections: EntrySelections;
+  locked: boolean; // picks revealed (tournament has kicked off / entry locked)
 }
 
 const CATEGORY_LABELS: [string, string][] = [
@@ -93,6 +97,7 @@ export interface ProfileInput {
   breakdown: Record<string, number> | null;
   // Pool-wide winner-pick counts per scored knockout match (for the boldest call).
   pickShareByMatch: Record<number, MatchPickShare>;
+  locked: boolean; // whether this entry's picks may be revealed
 }
 
 export function buildProfile(input: ProfileInput): Profile {
@@ -166,6 +171,8 @@ export function buildProfile(input: ProfileInput): Profile {
     hitGrid,
     categories,
     boldest,
+    selections: entrySelections(picks),
+    locked: input.locked,
   };
 }
 

@@ -20,6 +20,7 @@ function input(overrides: Partial<ProfileInput> = {}): ProfileInput {
     results: results({}),
     breakdown: null,
     pickShareByMatch: {},
+    locked: true,
     ...overrides,
   };
 }

@@ -32,6 +32,7 @@ import {
   type TeamStatValues,
 } from "@/lib/pool/match-live";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
+import { buildPickAnalytics, type PickAnalytics } from "@/lib/pool/pick-analytics";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
@@ -1093,7 +1094,7 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
 
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
-    select: { tournament: { select: { officialResults: true } } },
+    select: { tournament: { select: { officialResults: true, startsAt: true } } },
   });
   if (!pool) return null;
 
@@ -1120,6 +1121,7 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
     results: asResults(pool.tournament.officialResults),
     breakdown: (entry.breakdown?.byCategory as Record<string, number> | null) ?? null,
     pickShareByMatch: tallyPickShare(allEntries.map((e) => e.picks)),
+    locked: arePicksLocked(pool.tournament.startsAt),
   });
 }
 
@@ -1131,15 +1133,30 @@ async function getHomeStats(poolId: string, entryId: string): Promise<HomeStats 
   return { accuracy: profile.accuracy, boldest: profile.boldest };
 }
 
+// Pool-wide pick consensus for the Home analytics card. Gated to reveal only once
+// picks lock (kickoff), so brackets aren't exposed pre-lock; null when no entries.
+async function getPoolAnalytics(poolId: string): Promise<PickAnalytics | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournament: { select: { startsAt: true } } },
+  });
+  if (!pool || !arePicksLocked(pool.tournament.startsAt)) return null;
+
+  const entries = await getEntriesWithPicks(poolId);
+  if (entries.length === 0) return null;
+  return buildPickAnalytics(entries.map((e) => e.picks));
+}
+
 // Aggregate the landing context: your standing(s), today's mover, the next match,
-// any live matches, and your headline stats.
+// any live matches, your headline stats, and the pool-wide pick consensus.
 export async function getHomeView(poolId: string, userId: string | null): Promise<HomeView> {
-  const [leaderboard, topMover, nextMatch, liveMatches, lastMatch] = await Promise.all([
+  const [leaderboard, topMover, nextMatch, liveMatches, lastMatch, analytics] = await Promise.all([
     liveLeaderboard(poolId),
     getTodaysMover(poolId),
     getNextMatch(poolId, userId),
     getLiveMatches(poolId, userId),
     getLastMatch(poolId, userId),
+    getPoolAnalytics(poolId),
   ]);
 
   const leader = leaderboard[0] ?? null;
@@ -1156,6 +1173,7 @@ export async function getHomeView(poolId: string, userId: string | null): Promis
     liveMatches,
     lastMatch,
     stats,
+    analytics,
   };
 }
 

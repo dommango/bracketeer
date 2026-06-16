@@ -3,6 +3,7 @@ import { CountUp } from "./CountUp";
 import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
 import { ScoreCards } from "./ScoreCards";
+import { PoolAnalytics } from "./PoolAnalytics";
 import { GroupStandings } from "./Bracket";
 import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
@@ -422,6 +423,8 @@ export function Home({
           <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} showMedals={showMedals} />
         </div>
       </section>
+
+      {view.analytics ? <PoolAnalytics analytics={view.analytics} /> : null}
 
       {bracket &&
       bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (

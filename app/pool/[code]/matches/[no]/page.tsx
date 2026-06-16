@@ -229,7 +229,7 @@ export default async function MatchDetailPage({
           <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} />
           <TicketLine tickets={detail.tickets} />
         </div>
-        <WinProbBar odds={detail.odds} />
+        <WinProbBar odds={detail.odds} homeCode={detail.home.code} awayCode={detail.away.code} />
         <TotalsLine totals={detail.totals} />
         {detail.scored && detail.yourPick && detail.odds ? (() => {
           const code = detail.yourPick.code;
