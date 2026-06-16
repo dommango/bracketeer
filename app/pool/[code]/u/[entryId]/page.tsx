@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPoolByCode, getProfile } from "@/lib/pool/queries";
 import { Profile } from "../../Profile";
+import { BracketsTabNav } from "../../BracketsTabNav";
 
 export const dynamic = "force-dynamic";
 
@@ -19,15 +20,16 @@ export default async function ProfilePage({
 
   return (
     <section className="space-y-4">
+      <BracketsTabNav code={code} />
       <div className="flex items-center justify-between">
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           Player profile
         </h2>
         <Link
-          href={`/pool/${code}`}
+          href={`/pool/${code}/leaderboard`}
           className="rounded-full px-2 py-1 text-xs font-semibold text-pitch underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
         >
-          ← Leaderboard
+          ← Contestants
         </Link>
       </div>
       <Profile profile={profile} />

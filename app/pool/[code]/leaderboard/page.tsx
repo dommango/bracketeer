@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPoolByCode, getPoolView } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
 import { Leaderboard } from "../Leaderboard";
+import { BracketsTabNav } from "../BracketsTabNav";
 
 // Standings change at request time as results land.
 export const dynamic = "force-dynamic";
@@ -20,7 +21,8 @@ export default async function LeaderboardPage({
   const leaderboard = poolView?.leaderboard ?? [];
 
   return (
-    <section>
+    <section className="space-y-4">
+      <BracketsTabNav code={code} />
       <div className="flex items-center justify-between px-1">
         <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           Leaderboard

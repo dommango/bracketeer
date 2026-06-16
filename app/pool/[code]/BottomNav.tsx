@@ -7,9 +7,10 @@ import type { ReactNode, SVGProps } from "react";
 // Designed in Claude Design (handoff bundle "nav-bar"); wired to the real pool
 // routes here. Active treatment: gold top accent (gold = winning state only) +
 // a pitch-tint pill behind the icon + pitch-dark label — two reinforcing cues.
-// Home matches exactly; the other tabs match by prefix so nested children stay lit.
+// Home matches exactly; Brackets and Matches each light up across a family of
+// related routes (a tab is a section, not a single page).
 
-type TabKey = "home" | "matches" | "scorers" | "chat";
+type TabKey = "home" | "brackets" | "matches";
 
 type Tab = {
   key: TabKey;
@@ -22,7 +23,10 @@ type Tab = {
 export function BottomNav({ code }: { code: string }) {
   const pathname = usePathname() ?? "";
   const base = `/pool/${code}`;
-  const prefix = (href: string) => (p: string) => p === href || p.startsWith(`${href}/`);
+  // A tab stays lit across every route in its section. Match a path against any
+  // of the section's hrefs (exact, or a nested child under `${href}/`).
+  const anyPrefix = (hrefs: string[]) => (p: string) =>
+    hrefs.some((h) => p === h || p.startsWith(`${h}/`));
 
   const tabs: Tab[] = [
     {
@@ -33,25 +37,32 @@ export function BottomNav({ code }: { code: string }) {
       icon: <HomeGlyph />,
     },
     {
+      key: "brackets",
+      label: "Brackets",
+      href: `${base}/brackets`,
+      // The contestant-centric section: hub, your picks, contestants
+      // (leaderboard + profiles), and the compare tool.
+      isActive: anyPrefix([
+        `${base}/brackets`,
+        `${base}/picks`,
+        `${base}/compare`,
+        `${base}/leaderboard`,
+        `${base}/u`,
+      ]),
+      icon: <BracketGlyph />,
+    },
+    {
       key: "matches",
-      label: "Fixtures",
+      label: "Matches",
       href: `${base}/matches`,
-      isActive: prefix(`${base}/matches`),
+      // Fixtures + folded-in scorers, plus the Phase-2 team/player drill-downs.
+      isActive: anyPrefix([
+        `${base}/matches`,
+        `${base}/scorers`,
+        `${base}/teams`,
+        `${base}/players`,
+      ]),
       icon: <MatchesGlyph />,
-    },
-    {
-      key: "scorers",
-      label: "Scorers",
-      href: `${base}/scorers`,
-      isActive: prefix(`${base}/scorers`),
-      icon: <BootGlyph />,
-    },
-    {
-      key: "chat",
-      label: "Chat",
-      href: `${base}/chat`,
-      isActive: prefix(`${base}/chat`),
-      icon: <ChatGlyph />,
     },
   ];
 
@@ -155,22 +166,14 @@ function MatchesGlyph() {
   );
 }
 
-function BootGlyph() {
-  // Football boot — the Golden Boot / top-scorers tab.
+function BracketGlyph() {
+  // Knockout bracket — two left-hand pairs feeding a single final on the right.
   return (
     <svg {...svgProps}>
-      <path d="M4 5h3l1.4 4.4L17 11a3 3 0 0 1 2.8 2l.4 1.2a1.5 1.5 0 0 1-1.4 2H6a2 2 0 0 1-2-2V5Z" />
-      <path d="M5 16.2h14" />
-      <path d="M8 16.2v2.3M12 16.2v2.3M16 16.2v2.3" />
-    </svg>
-  );
-}
-
-function ChatGlyph() {
-  return (
-    <svg {...svgProps}>
-      <path d="M4.5 6.5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-5.5l-3.5 3.5V15.5H6.5a2 2 0 0 1-2-2v-7Z" />
-      <path d="M8 9h8M8 12h5" />
+      <path d="M3 5h3M3 11h3M6 5v6h3M6 11v0" />
+      <path d="M3 13h3M3 19h3M6 13v6h3M6 19v0" />
+      <path d="M9 8v8h3M12 12h4" />
+      <path d="M18 10.5h3M18 13.5h3" />
     </svg>
   );
 }

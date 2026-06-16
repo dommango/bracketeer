@@ -5,6 +5,8 @@ import {
   getGroupMatchCenter,
   getPoolBracket,
   getChampionshipOdds,
+  getTopScorers,
+  getGoalscorerOutrights,
   isGroupStageComplete,
 } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
@@ -15,11 +17,15 @@ import { MatchCenter } from "../MatchCenter";
 import { VenueGrid } from "../VenueGrid";
 import { GroupStandings, Bracket } from "../Bracket";
 import { ChampionshipOdds } from "../ChampionshipOdds";
+import { Scorers } from "../Scorers";
 
 // Fixtures + live status change at request time.
 export const dynamic = "force-dynamic";
 
-type FixturesView = "groups" | "knockouts";
+// The Matches tab is the home for everything fixture-shaped: the group/knockout
+// fixtures, the live Golden Boot (scorers), and the betting markets (odds).
+type FixturesView = "groups" | "knockouts" | "scorers" | "odds";
+const FIXTURE_VIEWS: FixturesView[] = ["groups", "knockouts", "scorers", "odds"];
 type FixtureGrouping = "group" | "day" | "city";
 
 // Date span of a contiguous matchNo range (e.g. "Thu, Jun 11 – Sat, Jun 27"),
@@ -50,7 +56,7 @@ function Toggle({ code, active }: { code: string; active: FixturesView }) {
       <Link
         href={`/pool/${code}/matches?view=${view}`}
         aria-current={on ? "page" : undefined}
-        className={`flex-1 rounded-full px-4 py-2 text-center text-sm font-semibold transition-colors ${
+        className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors ${
           on ? "bg-pitch text-white shadow-[var(--shadow-xs)]" : "text-ink-2 hover:text-ink"
         }`}
       >
@@ -58,16 +64,17 @@ function Toggle({ code, active }: { code: string; active: FixturesView }) {
       </Link>
     );
   };
+  const range = active === "groups" ? GROUP_RANGE : active === "knockouts" ? KNOCKOUT_RANGE : null;
   return (
     <div>
       <div className="flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
-        {tab("groups", "Group Stage")}
-        {tab("knockouts", "Knockout Stage")}
+        {tab("groups", "Groups")}
+        {tab("knockouts", "Knockouts")}
+        {tab("scorers", "Scorers")}
+        {tab("odds", "Odds")}
       </div>
-      {(active === "groups" ? GROUP_RANGE : KNOCKOUT_RANGE) ? (
-        <p className="mt-1.5 text-center font-mono text-[11px] text-ink-3">
-          {active === "groups" ? GROUP_RANGE : KNOCKOUT_RANGE}
-        </p>
+      {range ? (
+        <p className="mt-1.5 text-center font-mono text-[11px] text-ink-3">{range}</p>
       ) : null}
     </div>
   );
@@ -102,24 +109,32 @@ export default async function MatchesPage({
   searchParams,
 }: {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ view?: string; fx?: string }>;
+  searchParams: Promise<{ view?: string | string[]; fx?: string | string[] }>;
 }) {
   const { code } = await params;
-  const { view, fx } = await searchParams;
+  const { view: viewParam, fx: fxParam } = await searchParams;
+  // A repeated query param arrives as an array — take the first, like picks/page.tsx.
+  const view = Array.isArray(viewParam) ? viewParam[0] : viewParam;
+  const fx = Array.isArray(fxParam) ? fxParam[0] : fxParam;
   const pool = await getPoolByCode(code);
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [sections, bracket, groupsDone, titleOdds] = await Promise.all([
+  const [sections, bracket, groupsDone, titleOdds, scorers, favorites] = await Promise.all([
     getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
     getPoolBracket(pool.id),
     isGroupStageComplete(pool.tournamentId),
     getChampionshipOdds(pool.tournamentId),
+    getTopScorers(pool.tournamentId),
+    getGoalscorerOutrights(pool.tournamentId),
   ]);
 
   // Default to groups until the group stage finishes, then default to knockouts.
-  const active: FixturesView =
-    view === "groups" || view === "knockouts" ? view : groupsDone ? "knockouts" : "groups";
+  const active: FixturesView = FIXTURE_VIEWS.includes(view as FixturesView)
+    ? (view as FixturesView)
+    : groupsDone
+      ? "knockouts"
+      : "groups";
 
   const groupSections = sections.filter((s) => s.roundCode === "GROUP");
   const groupRows = groupSections.flatMap((s) => s.matches);
@@ -164,22 +179,27 @@ export default async function MatchesPage({
             </div>
           </section>
         </>
+      ) : active === "knockouts" ? (
+        <section>
+          <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Bracket</h2>
+          <div className="mt-2.5">
+            {bracket ? (
+              <Bracket view={bracket} />
+            ) : (
+              <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
+                The knockout bracket will appear here.
+              </p>
+            )}
+          </div>
+        </section>
+      ) : active === "scorers" ? (
+        <Scorers scorers={scorers} favorites={favorites} />
+      ) : titleOdds.length > 0 ? (
+        <ChampionshipOdds odds={titleOdds} />
       ) : (
-        <>
-          <ChampionshipOdds odds={titleOdds} />
-          <section>
-            <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Bracket</h2>
-            <div className="mt-2.5">
-              {bracket ? (
-                <Bracket view={bracket} />
-              ) : (
-                <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
-                  The knockout bracket will appear here.
-                </p>
-              )}
-            </div>
-          </section>
-        </>
+        <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
+          Title odds will appear here once the betting market opens.
+        </p>
       )}
     </div>
   );
