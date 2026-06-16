@@ -10,6 +10,7 @@ import { WhatIf } from "../../WhatIf";
 import { Chat } from "../../Chat";
 import { MatchTimeline, MatchStatsBars, TeamScorers } from "./MatchLive";
 import { MatchInsights } from "./MatchInsights";
+import { MatchInjuries } from "./MatchInjuries";
 import { MatchLineups } from "./MatchLineups";
 import { VenueLine } from "../../VenueLine";
 import { WinProbBar } from "../../WinProbBar";
@@ -242,6 +243,7 @@ export default async function MatchDetailPage({
       </div>
 
       <MatchInsights prediction={detail.prediction} home={detail.home} away={detail.away} />
+      <MatchInjuries injuries={detail.injuries} home={detail.home} away={detail.away} />
       <MatchLineups lineup={detail.lineup} home={detail.home} away={detail.away} />
       <MatchTimeline items={detail.timeline} />
       <MatchStatsBars bars={detail.stats} homeCode={detail.home.code} awayCode={detail.away.code} />

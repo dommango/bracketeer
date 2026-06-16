@@ -42,6 +42,7 @@ import { TEAMS } from "@/lib/scoring/data";
 import type { ImpliedProbs } from "@/lib/odds/map";
 import type { H2HSummary } from "@/lib/sports/predictions-parse";
 import type { LineupPlayer } from "@/lib/sports/lineups-parse";
+import type { InjuryItem } from "@/lib/sports/injuries-parse";
 import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone } from "@/lib/tz";
 import type { Picks, Results } from "@/lib/scoring/types";
@@ -857,6 +858,8 @@ export interface MatchDetail {
     home: LineupPlayer[];
     away: LineupPlayer[];
   } | null;
+  // Injured / suspended players (flat, each carries its teamCode); empty until polled.
+  injuries: InjuryItem[];
 }
 
 // One match's detail view: resolved teams, live status, the pool's pick-split
@@ -909,6 +912,7 @@ export async function getMatchDetail(
       lineup: {
         select: { homeFormation: true, awayFormation: true, home: true, away: true },
       },
+      injuries: { select: { players: true } },
       result: {
         select: {
           homeTeamCode: true,
@@ -1025,6 +1029,7 @@ export async function getMatchDetail(
           away: (match.lineup.away as unknown as LineupPlayer[]) ?? [],
         }
       : null,
+    injuries: (match.injuries?.players as unknown as InjuryItem[] | undefined) ?? [],
   };
 }
 
