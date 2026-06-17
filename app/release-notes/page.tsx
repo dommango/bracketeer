@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
     version: "0.7.0",
-    date: "June 2026",
+    date: "June 17, 2026",
     title: "Navigation refresh",
     notes: [
       "Streamlined three-tab navigation: Home, Brackets, and Matches (Scorers now lives under Matches).",
@@ -21,7 +21,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
   },
   {
     version: "0.6.0",
-    date: "June 2026",
+    date: "June 16, 2026",
     title: "Match intelligence & odds",
     notes: [
       "Match Insights on every fixture: model predictions, recent form, and head-to-head records.",
@@ -33,7 +33,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
   },
   {
     version: "0.5.0",
-    date: "June 2026",
+    date: "June 15, 2026",
     title: "iOS app foundation",
     notes: [
       "Installable PWA: home-screen icons, offline app shell, and standalone display.",
@@ -43,7 +43,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
   },
   {
     version: "0.4.0",
-    date: "June 2026",
+    date: "June 15, 2026",
     title: "Pools that scale",
     notes: [
       "Premium pool tier lifts the free member cap.",
@@ -53,7 +53,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
   },
   {
     version: "0.3.0",
-    date: "June 2026",
+    date: "June 15, 2026",
     title: "Knockout Challenge",
     notes: [
       "Standalone knockout-bracket game: pick winners once the last 32 are set.",
@@ -62,7 +62,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
   },
   {
     version: "0.2.0",
-    date: "June 2026",
+    date: "June 15, 2026",
     title: "Bracketeer platform",
     notes: [
       "Rebranded to Bracketeer — HessFest is now one pool on the platform.",

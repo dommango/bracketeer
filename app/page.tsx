@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { hasTournamentStarted } from "@/lib/pool/queries";
 import { signOutAction } from "@/lib/auth/actions";
-import { APP_VERSION } from "@/lib/version";
 import { Hero } from "./Hero";
+import { Footer } from "./Footer";
 
 // Session-aware landing. Signed-out visitors are funnelled to sign-in; signed-in
 // visitors go straight to their pool (single membership) or a pools hub.
@@ -153,24 +153,5 @@ function SignedInHub({
 
       <Footer />
     </main>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="mt-7 space-y-1 text-center text-[11px] text-ink-3">
-      <div className="flex justify-center gap-2">
-        <span>FIFA World Cup 26™</span>
-        <span>·</span>
-        <span>June 11 – July 19, 2026</span>
-      </div>
-      <div className="flex justify-center gap-2">
-        <span>Dom Mangonon | 2026</span>
-        <span>·</span>
-        <Link href="/release-notes" className="text-pitch-dark hover:underline">
-          v{APP_VERSION}
-        </Link>
-      </div>
-    </footer>
   );
 }
