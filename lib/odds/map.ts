@@ -79,6 +79,8 @@ export function toGoalscorerProbs(
 const ALIASES: Record<string, string> = {
   "South Korea": "KOR",
   "Korea Republic": "KOR",
+  "Bosnia and Herzegovina": "BIH",
+  "Bosnia-Herzegovina": "BIH",
   "United States": "USA",
   "USA": "USA",
   "Ivory Coast": "CIV",
@@ -123,6 +125,24 @@ export function resolveMatchNo(
       (m.homeCode === away && m.awayCode === home),
   );
   return hit.length === 1 ? hit[0].matchNo : null;
+}
+
+// Reorient h2h implied probs to a target home side. The Odds API's `home_team`
+// is arbitrary at neutral-site World Cup venues and frequently differs from our
+// fixture's designated home, so when its home maps to our away side we swap the
+// home/away win-probs (the draw is orientation-independent). Without this the bar
+// renders the away team's probability under the home team (and vice-versa).
+export function orientToHome(
+  probs: ImpliedProbs,
+  apiHomeCode: string,
+  targetHomeCode: string | null,
+): ImpliedProbs {
+  if (targetHomeCode == null || apiHomeCode === targetHomeCode) return probs;
+  return {
+    homeWinProb: probs.awayWinProb,
+    drawProb: probs.drawProb,
+    awayWinProb: probs.homeWinProb,
+  };
 }
 
 export interface LiveState { status: string; homeScore: number | null; awayScore: number | null }

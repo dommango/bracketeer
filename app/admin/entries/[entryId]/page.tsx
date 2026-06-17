@@ -7,9 +7,19 @@ import { resolveKnockout, inconsistentKnockoutPicks, scoredKnockoutNumbers } fro
 import { TEAMS, R32, R16, QF, SF, FINAL } from "@/lib/scoring/data";
 import type { PickRow } from "@/lib/pool/picks";
 import type { Picks } from "@/lib/scoring/types";
+import { AWARD_MAP, AWARD_KEYS } from "@/lib/scoring/csv";
 import { KnockoutPickForm } from "./KnockoutPickForm";
 
 export const dynamic = "force-dynamic";
+
+// UI labels for the player-award keys. Keys come from AWARD_KEYS (the shared,
+// decoder-derived source of truth); only the human labels live here.
+const AWARD_LABELS: Record<string, string> = {
+  player_of_the_tournament: "Player of the Tournament",
+  young_player_of_the_tournament: "Young Player",
+  golden_boot: "Golden Boot",
+  goal_of_the_tournament: "Goal of the Tournament",
+};
 
 const ROUND_LABEL: Record<string, string> = {
   r32: "Round of 32",
@@ -63,6 +73,12 @@ export default async function EntryPicksPage({
   const storedCount = scoredKnockoutNumbers().filter((n) => picks.knockout[n]).length;
   const validCount = slotData.filter((s) => s.currentPick && !s.isBad).length;
 
+  const awardFields = AWARD_KEYS.map((key) => ({
+    key,
+    label: AWARD_LABELS[key] ?? key,
+    value: picks.awards[AWARD_MAP[key]] ?? "",
+  }));
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <div className="flex items-center gap-3">
@@ -93,7 +109,7 @@ export default async function EntryPicksPage({
         )}
       </div>
 
-      <KnockoutPickForm entryId={entryId} slots={slotData} />
+      <KnockoutPickForm entryId={entryId} slots={slotData} awards={awardFields} />
     </main>
   );
 }

@@ -42,77 +42,117 @@ export interface ApiEvent {
   bookmakers: ApiBookmaker[];
 }
 
-// Pull the first bookmaker's h2h prices; map the three outcomes to home/draw/away
-// by name ("Draw" is literal; the other two match home_team/away_team).
+// Median of a non-empty list — the consensus price across bookmakers, robust to a
+// single book posting a stale/outlier line in a way a mean is not.
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const n = s.length;
+  return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+}
+
+// Append a value to the list keyed by `k` in `map` (small accumulator helper).
+function push<K>(map: Map<K, number[]>, k: K, v: number): void {
+  const arr = map.get(k);
+  if (arr) arr.push(v);
+  else map.set(k, [v]);
+}
+
+// Consensus h2h prices: median each of home/draw/away across every bookmaker that
+// quotes the match (not just bookmakers[0]). Outcomes map by name ("Draw" is
+// literal; the other two match home_team/away_team).
 export function parseOddsEvents(raw: ApiEvent[]): OddsEvent[] {
   const out: OddsEvent[] = [];
   for (const ev of raw) {
-    const h2h = ev.bookmakers?.[0]?.markets?.find((m) => m.key === "h2h");
-    if (!h2h) continue;
-    const priceOf = (name: string) => h2h.outcomes.find((o) => o.name === name)?.price;
-    const dh = priceOf(ev.home_team);
-    const da = priceOf(ev.away_team);
-    const dd = priceOf("Draw");
-    if (dh == null || da == null || dd == null) continue;
+    const hs: number[] = [], ds: number[] = [], as: number[] = [];
+    for (const bk of ev.bookmakers ?? []) {
+      const h2h = bk.markets?.find((m) => m.key === "h2h");
+      if (!h2h) continue;
+      const priceOf = (name: string) => h2h.outcomes.find((o) => o.name === name)?.price;
+      const dh = priceOf(ev.home_team);
+      const da = priceOf(ev.away_team);
+      const dd = priceOf("Draw");
+      if (dh == null || da == null || dd == null) continue;
+      hs.push(dh); ds.push(dd); as.push(da);
+    }
+    if (hs.length === 0) continue;
     out.push({
       homeName: ev.home_team,
       awayName: ev.away_team,
       commenceTime: ev.commence_time,
-      decimalHome: dh,
-      decimalDraw: dd,
-      decimalAway: da,
+      decimalHome: median(hs),
+      decimalDraw: median(ds),
+      decimalAway: median(as),
     });
   }
   return out;
 }
 
-// Pull the first bookmaker's totals market; the Over and Under outcomes share a
-// single `point` (the goals line). Skip events without a usable totals line.
+// Consensus totals: bookmakers may quote different goals lines, so group prices by
+// line and use the line with the most quotes (ties → lower line), then median the
+// Over/Under at that line. Reject asymmetric Over/Under (Over@2.5 vs Under@3.5).
 export function parseTotalsEvents(raw: ApiEvent[]): TotalsEvent[] {
   const out: TotalsEvent[] = [];
   for (const ev of raw) {
-    const totals = ev.bookmakers?.[0]?.markets?.find((m) => m.key === "totals");
-    if (!totals) continue;
-    const over = totals.outcomes.find((o) => o.name === "Over");
-    const under = totals.outcomes.find((o) => o.name === "Under");
-    // Require both prices and a single shared line — reject asymmetric/alternate
-    // totals so we never pair an Over@2.5 prob with an Under@3.5.
-    if (over?.price == null || under?.price == null || over.point == null) continue;
-    if (under.point != null && under.point !== over.point) continue;
+    const overByLine = new Map<number, number[]>();
+    const underByLine = new Map<number, number[]>();
+    for (const bk of ev.bookmakers ?? []) {
+      const totals = bk.markets?.find((m) => m.key === "totals");
+      if (!totals) continue;
+      const over = totals.outcomes.find((o) => o.name === "Over");
+      const under = totals.outcomes.find((o) => o.name === "Under");
+      if (over?.price == null || under?.price == null || over.point == null) continue;
+      if (under.point != null && under.point !== over.point) continue;
+      push(overByLine, over.point, over.price);
+      push(underByLine, over.point, under.price);
+    }
+    // Pick the consensus line: most-quoted, lower line breaks ties.
+    let best: number | null = null;
+    let bestCount = 0;
+    for (const [line, prices] of overByLine) {
+      if (prices.length > bestCount || (prices.length === bestCount && (best == null || line < best))) {
+        best = line;
+        bestCount = prices.length;
+      }
+    }
+    if (best == null) continue;
     out.push({
       homeName: ev.home_team,
       awayName: ev.away_team,
       commenceTime: ev.commence_time,
-      totalLine: over.point,
-      decimalOver: over.price,
-      decimalUnder: under.price,
+      totalLine: best,
+      decimalOver: median(overByLine.get(best)!),
+      decimalUnder: median(underByLine.get(best)!),
     });
   }
   return out;
 }
 
-// The winner market lists every team as an outright outcome on a single event.
-// Take the first event's `outrights` market.
+// Consensus tournament-winner prices: median each team's outright across every
+// bookmaker on the first event (not just bookmakers[0]).
 export function parseOutrights(raw: ApiEvent[]): OutrightEntry[] {
-  const market = raw[0]?.bookmakers?.[0]?.markets?.find((m) => m.key === "outrights");
-  if (!market) return [];
-  const out: OutrightEntry[] = [];
-  for (const o of market.outcomes) {
-    if (o.price == null || !o.name) continue;
-    out.push({ teamName: o.name, decimal: o.price });
-  }
-  return out;
+  const byName = aggregateOutrights(raw[0]);
+  return [...byName].map(([teamName, prices]) => ({ teamName, decimal: median(prices) }));
 }
 
-// The top-goalscorer market lists every player as an outright outcome on a single
-// event (same `outrights` market key as the winner sport, just player names).
+// Consensus top-goalscorer prices: same per-outcome median as parseOutrights, but
+// player names pass through (trimmed) since there's no code mapping.
 export function parseGoalscorerOutrights(raw: ApiEvent[]): GoalscorerEntry[] {
-  const market = raw[0]?.bookmakers?.[0]?.markets?.find((m) => m.key === "outrights");
-  if (!market) return [];
-  const out: GoalscorerEntry[] = [];
-  for (const o of market.outcomes) {
-    if (o.price == null || !o.name) continue;
-    out.push({ playerName: o.name.trim(), decimal: o.price });
+  const byName = aggregateOutrights(raw[0]);
+  return [...byName].map(([playerName, prices]) => ({ playerName: playerName.trim(), decimal: median(prices) }));
+}
+
+// Collect each named outcome's prices across all bookmakers' `outrights` markets
+// on a single event. Shared by the winner + goalscorer parsers.
+function aggregateOutrights(ev: ApiEvent | undefined): Map<string, number[]> {
+  const byName = new Map<string, number[]>();
+  if (!ev) return byName;
+  for (const bk of ev.bookmakers ?? []) {
+    const market = bk.markets?.find((m) => m.key === "outrights");
+    if (!market) continue;
+    for (const o of market.outcomes) {
+      if (o.price == null || !o.name) continue;
+      push(byName, o.name, o.price);
+    }
   }
-  return out;
+  return byName;
 }

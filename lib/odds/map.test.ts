@@ -6,6 +6,7 @@ import {
   normalizeTeam,
   resolveMatchNo,
   liveUpset,
+  orientToHome,
 } from "./map";
 
 describe("toImpliedProbs", () => {
@@ -61,8 +62,30 @@ describe("normalizeTeam", () => {
     expect(normalizeTeam("Czech Republic")).toBe("CZE");
     expect(normalizeTeam("Turkey")).toBe("TUR");
   });
+  it("resolves Bosnia & Herzegovina across spelling variants", () => {
+    expect(normalizeTeam("Bosnia and Herzegovina")).toBe("BIH");
+    expect(normalizeTeam("Bosnia-Herzegovina")).toBe("BIH");
+    expect(normalizeTeam("Bosnia & Herzegovina")).toBe("BIH"); // canonical from TEAMS
+  });
   it("returns null for unknown", () => {
     expect(normalizeTeam("Atlantis")).toBeNull();
+  });
+});
+
+describe("orientToHome", () => {
+  const probs = { homeWinProb: 0.6, drawProb: 0.25, awayWinProb: 0.15 };
+  it("leaves probs untouched when the provider home matches our home", () => {
+    expect(orientToHome(probs, "BRA", "BRA")).toEqual(probs);
+  });
+  it("swaps home/away win-probs when the provider home is our away (neutral venue)", () => {
+    expect(orientToHome(probs, "BRA", "MEX")).toEqual({
+      homeWinProb: 0.15,
+      drawProb: 0.25,
+      awayWinProb: 0.6,
+    });
+  });
+  it("is a no-op when our home code is unknown", () => {
+    expect(orientToHome(probs, "BRA", null)).toEqual(probs);
   });
 });
 

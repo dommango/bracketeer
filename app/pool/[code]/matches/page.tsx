@@ -7,6 +7,7 @@ import {
   getChampionshipOdds,
   getTopScorers,
   getGoalscorerOutrights,
+  getUpsetRadar,
   isGroupStageComplete,
 } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
@@ -19,6 +20,7 @@ import { GroupStandings, Bracket } from "../Bracket";
 import { ChampionshipOdds } from "../ChampionshipOdds";
 import { OddsBoard } from "../OddsBoard";
 import { Scorers } from "../Scorers";
+import { UpsetRadar } from "../UpsetRadar";
 
 // Fixtures + live status change at request time.
 export const dynamic = "force-dynamic";
@@ -121,13 +123,14 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [sections, bracket, groupsDone, titleOdds, scorers, favorites] = await Promise.all([
+  const [sections, bracket, groupsDone, titleOdds, scorers, favorites, upsets] = await Promise.all([
     getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
     getPoolBracket(pool.id),
     isGroupStageComplete(pool.tournamentId),
     getChampionshipOdds(pool.tournamentId),
     getTopScorers(pool.tournamentId),
     getGoalscorerOutrights(pool.tournamentId),
+    getUpsetRadar(pool.id, sessionUser?.id ?? null),
   ]);
 
   // Default to groups until the group stage finishes, then default to knockouts.
@@ -195,20 +198,23 @@ export default async function MatchesPage({
         </section>
       ) : active === "scorers" ? (
         <Scorers scorers={scorers} code={code} />
-      ) : titleOdds.length > 0 || favorites.length > 0 ? (
+      ) : upsets.length > 0 || titleOdds.length > 0 || favorites.length > 0 ? (
         <div className="space-y-5">
-          <ChampionshipOdds odds={titleOdds} code={code} />
-          <OddsBoard
-            title="Golden Boot odds"
-            subtitle="Market-implied chance of finishing top scorer."
-            rows={favorites.map((f) => ({
-              key: f.playerName,
-              code: f.teamCode,
-              primary: f.playerName,
-              winProb: f.winProb,
-              href: `/pool/${code}/players/${encodeURIComponent(f.playerName)}`,
-            }))}
-          />
+          <UpsetRadar rows={upsets} />
+          {titleOdds.length > 0 ? <ChampionshipOdds odds={titleOdds} code={code} /> : null}
+          {favorites.length > 0 ? (
+            <OddsBoard
+              title="Golden Boot odds"
+              subtitle="Market-implied chance of finishing top scorer."
+              rows={favorites.map((f) => ({
+                key: f.playerName,
+                code: f.teamCode,
+                primary: f.playerName,
+                winProb: f.winProb,
+                href: `/pool/${code}/players/${encodeURIComponent(f.playerName)}`,
+              }))}
+            />
+          ) : null}
         </div>
       ) : (
         <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">

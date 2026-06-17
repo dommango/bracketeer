@@ -3,8 +3,6 @@ import { CountUp } from "./CountUp";
 import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
 import { ScoreCards } from "./ScoreCards";
-import { PoolAnalytics } from "./PoolAnalytics";
-import { UpsetRadar } from "./UpsetRadar";
 import { GroupStandings } from "./Bracket";
 import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
@@ -386,9 +384,41 @@ export function Home({
         />
       ) : null}
 
+      <HomeChat code={code} messages={recentChat} />
+
       <ScoreCards live={view.liveMatches} last={view.lastMatch} next={view.nextMatch} code={code} />
 
-      <UpsetRadar rows={view.upsets} />
+      <div className="px-1">
+        <Link
+          href={`/pool/${code}/matches?view=groups&fx=day`}
+          className="group inline-flex items-center gap-1.5 text-sm font-semibold text-pitch hover:underline"
+        >
+          See all of today’s matches
+          <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+            →
+          </span>
+        </Link>
+      </div>
+
+      {bracket &&
+      bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (
+        <section>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+              Group standings
+            </h2>
+            <Link
+              href={`/pool/${code}/matches?view=knockouts`}
+              className="text-xs font-semibold text-pitch hover:underline"
+            >
+              Full bracket →
+            </Link>
+          </div>
+          <div className="mt-2.5">
+            <GroupStandings view={bracket} code={code} />
+          </div>
+        </section>
+      ) : null}
 
       <StandingCard
         you={view.you}
@@ -400,8 +430,6 @@ export function Home({
       />
 
       <OtherEntries entries={view.otherEntries} code={code} />
-
-      <HomeChat code={code} messages={recentChat} />
 
       {view.stats ? <StatsStrip stats={view.stats} /> : null}
 
@@ -428,28 +456,6 @@ export function Home({
           <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} showMedals={showMedals} />
         </div>
       </section>
-
-      {view.analytics ? <PoolAnalytics analytics={view.analytics} code={code} /> : null}
-
-      {bracket &&
-      bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (
-        <section>
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-              Group standings
-            </h2>
-            <Link
-              href={`/pool/${code}/matches?view=knockouts`}
-              className="text-xs font-semibold text-pitch hover:underline"
-            >
-              Full bracket →
-            </Link>
-          </div>
-          <div className="mt-2.5">
-            <GroupStandings view={bracket} code={code} />
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }
