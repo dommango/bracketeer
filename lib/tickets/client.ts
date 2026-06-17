@@ -50,6 +50,12 @@ function parseEvent(ev: TmEvent): TicketmasterEvent {
 
 const MAX_PAGES = 5; // 199 × 5 ≈ 1000 events, well above the 104 fixtures
 
+// Ticketmaster catalogs the 2026 World Cup under a dedicated attraction, not under
+// a free-text "FIFA World Cup 26" name — a keyword search misses the fixtures
+// entirely. Scope by attraction id so we get the actual match events. Verify the
+// id against /discovery/v2/attractions?keyword=FIFA+World+Cup if listings dry up.
+const WC2026_ATTRACTION_ID = "4067734";
+
 export async function fetchTicketmasterEvents(
   signal?: AbortSignal,
 ): Promise<TicketmasterEvent[]> {
@@ -58,8 +64,7 @@ export async function fetchTicketmasterEvents(
     const url =
       `${env.TICKETMASTER_API_BASE}/events.json` +
       `?apikey=${env.TICKETMASTER_API_KEY}` +
-      `&keyword=${encodeURIComponent("FIFA World Cup 26")}` +
-      `&classificationName=Sports` +
+      `&attractionId=${WC2026_ATTRACTION_ID}` +
       `&size=199&page=${page}` +
       `&startDateTime=2026-06-01T00:00:00Z&endDateTime=2026-07-31T00:00:00Z`;
     const res = await fetch(url, { cache: "no-store", signal });

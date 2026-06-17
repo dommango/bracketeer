@@ -4,7 +4,7 @@
 import { prisma } from "@/lib/db";
 import { oddsApiEnabled } from "@/lib/env";
 import { fetchOddsEvents } from "@/lib/odds/client";
-import { normalizeTeam, resolveMatchNo, toImpliedProbs } from "@/lib/odds/map";
+import { normalizeTeam, resolveMatchNo, toImpliedProbs, orientToHome } from "@/lib/odds/map";
 import { loadCodedMatches } from "@/lib/odds/coded";
 
 export interface OddsPollSummary {
@@ -45,7 +45,15 @@ export async function pollOdds(): Promise<OddsPollSummary> {
       continue;
     }
     mapped++;
-    const probs = toImpliedProbs(ev.decimalHome, ev.decimalDraw, ev.decimalAway);
+    // The provider's home/away may be flipped vs our fixture (neutral venues), so
+    // reorient the probs to our coded home before storing — the UI reads
+    // homeWinProb as our home team's chance.
+    const codedMatch = coded.find((m) => m.matchNo === matchNo)!;
+    const probs = orientToHome(
+      toImpliedProbs(ev.decimalHome, ev.decimalDraw, ev.decimalAway),
+      home,
+      codedMatch.homeCode,
+    );
     const matchId = idByMatchNo.get(matchNo)!;
     await prisma.matchOdds.upsert({
       where: { matchId },
