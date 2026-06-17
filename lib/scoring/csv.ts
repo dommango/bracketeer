@@ -64,12 +64,16 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-const AWARD_MAP: Record<string, keyof Submission["picks"]["awards"]> = {
+export const AWARD_MAP: Record<string, keyof Submission["picks"]["awards"]> = {
   player_of_the_tournament: "player",
   young_player_of_the_tournament: "young",
   golden_boot: "boot",
   goal_of_the_tournament: "goal",
 };
+
+// The player-award keys, in the order rows are emitted/scored. Derived from
+// AWARD_MAP so the CSV/import path, the DB writer, and any UI share one list.
+export const AWARD_KEYS = Object.keys(AWARD_MAP);
 
 const KNOCKOUT_SECTIONS = new Set([
   "round_of_32",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { saveEntryKnockoutAction } from "./actions";
+import { saveEntryPicksAction } from "./actions";
 
 interface SlotData {
   matchNo: number;
@@ -13,15 +13,22 @@ interface SlotData {
   isMissing: boolean;
 }
 
+interface AwardField {
+  key: string;
+  label: string;
+  value: string;
+}
+
 interface Props {
   entryId: string;
   slots: SlotData[];
+  awards: AwardField[];
 }
 
 const ROUND_ORDER = ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"];
 
-export function KnockoutPickForm({ entryId, slots }: Props) {
-  const boundAction = saveEntryKnockoutAction.bind(null, entryId);
+export function KnockoutPickForm({ entryId, slots, awards }: Props) {
+  const boundAction = saveEntryPicksAction.bind(null, entryId);
   const [state, formAction, pending] = useActionState(
     boundAction,
     null as { ok: boolean; message: string } | null,
@@ -107,6 +114,28 @@ export function KnockoutPickForm({ entryId, slots }: Props) {
           </div>
         </section>
       ))}
+
+      <section>
+        <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-black/50">
+          Player awards
+        </h2>
+        <div className="divide-y divide-black/5 rounded-2xl border border-black/10 bg-white">
+          {awards.map((a) => (
+            <div key={a.key} className="flex items-center gap-3 px-4 py-3">
+              <label htmlFor={`award:${a.key}`} className="min-w-0 flex-1 text-sm text-black/70">
+                {a.label}
+              </label>
+              <input
+                id={`award:${a.key}`}
+                name={`award:${a.key}`}
+                defaultValue={a.value}
+                placeholder="— none —"
+                className="w-44 rounded-lg border border-black/15 px-2 py-1.5 text-sm text-black"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="flex items-center gap-3 pb-6">
         <button

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { recomputePool } from "@/lib/pool/scoring";
 import { TEAMS } from "@/lib/scoring/data";
 import { R32, R16, QF, SF, FINAL } from "@/lib/scoring/data";
+import { AWARD_KEYS } from "@/lib/scoring/csv";
 
 function sectionFor(matchNo: number): string {
   if (matchNo >= 73 && matchNo <= 88) return "round_of_32";
@@ -25,7 +26,7 @@ const ALL_MATCH_NOS = [
   FINAL.id,
 ];
 
-export async function saveEntryKnockoutAction(
+export async function saveEntryPicksAction(
   entryId: string,
   _prev: { ok: boolean; message: string } | null,
   formData: FormData,
@@ -56,6 +57,23 @@ export async function saveEntryKnockoutAction(
         });
       }
     }
+
+    // Replace the four award rows wholesale (delete + recreate), matching the
+    // knockout pattern above and the import path's always-4-rows shape — blanks
+    // included, so a cleared award stays an empty row rather than vanishing.
+    await prisma.$transaction([
+      prisma.pick.deleteMany({ where: { entryId, section: "player_awards" } }),
+      prisma.pick.createMany({
+        data: AWARD_KEYS.map((key) => ({
+          entryId,
+          section: "player_awards",
+          category: "award",
+          key,
+          code: "",
+          teamOrValue: String(formData.get(`award:${key}`) ?? "").trim(),
+        })),
+      }),
+    ]);
 
     await recomputePool(entry.poolId);
     revalidatePath(`/admin/entries/${entryId}`);
