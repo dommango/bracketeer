@@ -38,6 +38,11 @@ import { matchPlayerCode } from "@/lib/odds/player-match";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
+import {
+  projectStadiums,
+  type RemainingMatch,
+  type StadiumProjection,
+} from "@/lib/pool/stadium-projection";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { TEAMS } from "@/lib/scoring/data";
 import type { ImpliedProbs } from "@/lib/odds/map";
@@ -1295,6 +1300,74 @@ export async function getUpsetRadar(poolId: string, userId: string | null): Prom
     }
   }
   return buildUpsetRadar(upsetMatches, staked);
+}
+
+// Neutral-site prior for group matches with no live odds yet (no home advantage):
+// a slightly draw-shy 0.375 / 0.25 / 0.375 split. Used so the projection can run
+// from day one, sharpening as real odds land.
+const NEUTRAL_GROUP_PRIOR = { homeWinProb: 0.375, drawProb: 0.25, awayWinProb: 0.375 };
+
+function usableMatchProbs(o: {
+  homeWinProb: number | null;
+  drawProb: number | null;
+  awayWinProb: number | null;
+}): o is { homeWinProb: number; drawProb: number; awayWinProb: number } {
+  if (o.homeWinProb == null || o.drawProb == null || o.awayWinProb == null) return false;
+  if (o.homeWinProb < 0 || o.drawProb < 0 || o.awayWinProb < 0) return false;
+  const sum = o.homeWinProb + o.drawProb + o.awayWinProb;
+  return sum > 0.99 && sum < 1.01;
+}
+
+// Monte-Carlo projection of which teams are likely to fill each Round-of-32 slot
+// (hence each stadium). FINAL group results are held fixed; every other group
+// match is sampled from its live odds (or the neutral prior). Display-only.
+export async function getStadiumProjections(poolId: string): Promise<StadiumProjection[]> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true },
+  });
+  if (!pool) return [];
+
+  const matches = await prisma.match.findMany({
+    where: { tournamentId: pool.tournamentId, matchNo: { lte: 72 } },
+    select: {
+      matchNo: true,
+      homeSlotRef: true,
+      awaySlotRef: true,
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
+      result: {
+        select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true, status: true },
+      },
+    },
+  });
+
+  const finished: GroupResultRow[] = [];
+  const remaining: RemainingMatch[] = [];
+
+  for (const m of matches) {
+    // For group matches the result's team codes equal the seeded slot refs, and
+    // MatchOdds is stored oriented to that home code (see lib/odds/poll.ts), so
+    // odds.homeWinProb lines up with homeCode below — keep these consistent.
+    const homeCode = m.result?.homeTeamCode ?? m.homeSlotRef;
+    const awayCode = m.result?.awayTeamCode ?? m.awaySlotRef;
+    if (!homeCode || !awayCode) continue;
+
+    const res = m.result;
+    if (res && res.status === "FINAL" && res.homeScore != null && res.awayScore != null) {
+      finished.push({ homeCode, awayCode, homeScore: res.homeScore, awayScore: res.awayScore });
+    } else {
+      const o = m.odds && usableMatchProbs(m.odds) ? m.odds : NEUTRAL_GROUP_PRIOR;
+      remaining.push({
+        homeCode,
+        awayCode,
+        homeWinProb: o.homeWinProb,
+        drawProb: o.drawProb,
+        awayWinProb: o.awayWinProb,
+      });
+    }
+  }
+
+  return projectStadiums({ finished, remaining });
 }
 
 // Group-Stage focused match center: 12 group sections (A–L) followed by knockout

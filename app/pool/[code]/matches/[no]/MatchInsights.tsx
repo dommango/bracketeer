@@ -3,6 +3,21 @@ import { Flag } from "../../Flag";
 
 const SECTION_LABEL = "px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
+const MEETING_DATE = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" });
+
+const meetingDate = (iso: string | null): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : MEETING_DATE.format(d);
+};
+
+// Score color from the current home team's perspective.
+const OUTCOME_COLOR: Record<string, string> = {
+  home: "var(--pitch)",
+  away: "var(--round-r16)",
+  draw: "var(--ink-4)",
+};
+
 const FORM_COLOR: Record<string, string> = {
   W: "var(--positive)",
   D: "var(--ink-4)",
@@ -84,14 +99,35 @@ export function MatchInsights({
         ) : null}
 
         {h2h ? (
-          <p className="text-xs text-ink-3">
-            <span className="font-semibold text-ink-2">Head-to-head</span> (last {h2h.played}):{" "}
-            {home.code} {h2h.homeWins}
-            <span className="text-ink-4"> · </span>
-            {h2h.draws} draw{h2h.draws === 1 ? "" : "s"}
-            <span className="text-ink-4"> · </span>
-            {h2h.awayWins} {away.code}
-          </p>
+          <div className="space-y-1.5">
+            <p className="text-xs text-ink-3">
+              <span className="font-semibold text-ink-2">Head-to-head</span> (last {h2h.played}):{" "}
+              {home.code} {h2h.homeWins}
+              <span className="text-ink-4"> · </span>
+              {h2h.draws} draw{h2h.draws === 1 ? "" : "s"}
+              <span className="text-ink-4"> · </span>
+              {h2h.awayWins} {away.code}
+            </p>
+            {(h2h.meetings ?? []).length > 0 ? (
+              <ul className="space-y-0.5">
+                {(h2h.meetings ?? []).map((m, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between font-mono text-[11px] tabular-nums text-ink-3"
+                  >
+                    <span className="text-ink-4">{meetingDate(m.date)}</span>
+                    <span>
+                      {home.code}{" "}
+                      <span className="font-semibold" style={{ color: OUTCOME_COLOR[m.outcome] }}>
+                        {m.homeGoals}–{m.awayGoals}
+                      </span>{" "}
+                      {away.code}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </section>

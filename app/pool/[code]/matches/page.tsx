@@ -8,6 +8,7 @@ import {
   getTopScorers,
   getGoalscorerOutrights,
   getUpsetRadar,
+  getStadiumProjections,
   isGroupStageComplete,
 } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
@@ -21,6 +22,7 @@ import { ChampionshipOdds } from "../ChampionshipOdds";
 import { OddsBoard } from "../OddsBoard";
 import { Scorers } from "../Scorers";
 import { UpsetRadar } from "../UpsetRadar";
+import { StadiumProjections } from "../StadiumProjections";
 
 // Fixtures + live status change at request time.
 export const dynamic = "force-dynamic";
@@ -123,15 +125,18 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [sections, bracket, groupsDone, titleOdds, scorers, favorites, upsets] = await Promise.all([
-    getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
-    getPoolBracket(pool.id),
-    isGroupStageComplete(pool.tournamentId),
-    getChampionshipOdds(pool.tournamentId),
-    getTopScorers(pool.tournamentId),
-    getGoalscorerOutrights(pool.tournamentId),
-    getUpsetRadar(pool.id, sessionUser?.id ?? null),
-  ]);
+  const [sections, bracket, groupsDone, titleOdds, scorers, favorites, upsets, stadiums] =
+    await Promise.all([
+      getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
+      getPoolBracket(pool.id),
+      isGroupStageComplete(pool.tournamentId),
+      getChampionshipOdds(pool.tournamentId),
+      getTopScorers(pool.tournamentId),
+      getGoalscorerOutrights(pool.tournamentId),
+      getUpsetRadar(pool.id, sessionUser?.id ?? null),
+      getStadiumProjections(pool.id),
+    ]);
+  const stadiumsOpen = stadiums.some((p) => !p.a.decided || !p.b.decided);
 
   // Default to groups until the group stage finishes, then default to knockouts.
   const active: FixturesView = FIXTURE_VIEWS.includes(view as FixturesView)
@@ -198,9 +203,10 @@ export default async function MatchesPage({
         </section>
       ) : active === "scorers" ? (
         <Scorers scorers={scorers} code={code} />
-      ) : upsets.length > 0 || titleOdds.length > 0 || favorites.length > 0 ? (
+      ) : upsets.length > 0 || titleOdds.length > 0 || favorites.length > 0 || stadiumsOpen ? (
         <div className="space-y-5">
           <UpsetRadar rows={upsets} />
+          <StadiumProjections projections={stadiums} code={code} />
           {titleOdds.length > 0 ? <ChampionshipOdds odds={titleOdds} code={code} /> : null}
           {favorites.length > 0 ? (
             <OddsBoard

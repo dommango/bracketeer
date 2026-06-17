@@ -35,7 +35,48 @@ describe("parsePrediction", () => {
       ],
     };
     const out = parsePrediction(resp);
-    expect(out.h2h).toEqual({ played: 3, homeWins: 1, awayWins: 1, draws: 1 });
+    expect(out.h2h).toEqual({
+      played: 3,
+      homeWins: 1,
+      awayWins: 1,
+      draws: 1,
+      meetings: [
+        { date: null, homeGoals: 2, awayGoals: 1, outcome: "home" },
+        { date: null, homeGoals: 0, awayGoals: 0, outcome: "draw" },
+        { date: null, homeGoals: 1, awayGoals: 3, outcome: "away" }, // 3-1 to away, oriented to current home
+      ],
+    });
+  });
+
+  it("orients meetings to the current home and sorts most-recent first", () => {
+    const resp: ApiPredictionResponse = {
+      teams: { home: { id: 6 }, away: { id: 16 } },
+      h2h: [
+        { fixture: { date: "2022-06-01T00:00:00Z" }, teams: { home: { id: 6 }, away: { id: 16 } }, goals: { home: 1, away: 0 } },
+        { fixture: { date: "2024-03-10T00:00:00Z" }, teams: { home: { id: 16 }, away: { id: 6 } }, goals: { home: 2, away: 2 } },
+        { fixture: { date: "2023-09-05T00:00:00Z" }, teams: { home: { id: 16 }, away: { id: 6 } }, goals: { home: 4, away: 1 } },
+      ],
+    };
+    const meetings = parsePrediction(resp).h2h!.meetings;
+    expect(meetings.map((m) => m.date)).toEqual([
+      "2024-03-10T00:00:00Z",
+      "2023-09-05T00:00:00Z",
+      "2022-06-01T00:00:00Z",
+    ]);
+    // The 4-1 home(16) win is the away team's win from the current home's view → 1-4.
+    expect(meetings[1]).toEqual({ date: "2023-09-05T00:00:00Z", homeGoals: 1, awayGoals: 4, outcome: "away" });
+  });
+
+  it("caps the meetings list at five", () => {
+    const resp: ApiPredictionResponse = {
+      teams: { home: { id: 6 }, away: { id: 16 } },
+      h2h: Array.from({ length: 8 }, (_, i) => ({
+        fixture: { date: `20${10 + i}-01-01T00:00:00Z` },
+        teams: { home: { id: 6 }, away: { id: 16 } },
+        goals: { home: 1, away: 0 },
+      })),
+    };
+    expect(parsePrediction(resp).h2h!.meetings).toHaveLength(5);
   });
 
   it("keeps played consistent when a result maps to neither current team", () => {
@@ -48,7 +89,13 @@ describe("parsePrediction", () => {
     };
     const out = parsePrediction(resp);
     // played (1) must equal homeWins + awayWins + draws (1+0+0); the stray result is dropped.
-    expect(out.h2h).toEqual({ played: 1, homeWins: 1, awayWins: 0, draws: 0 });
+    expect(out.h2h).toEqual({
+      played: 1,
+      homeWins: 1,
+      awayWins: 0,
+      draws: 0,
+      meetings: [{ date: null, homeGoals: 2, awayGoals: 1, outcome: "home" }],
+    });
   });
 
   it("clamps out-of-range percents", () => {

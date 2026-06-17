@@ -82,6 +82,11 @@ export interface RawTeamStats {
   fouls: number | null;
   yellowCards: number | null;
   redCards: number | null;
+  offsides: number | null;
+  saves: number | null;
+  passes: number | null;
+  passAccuracy: number | null; // "Passes %"
+  xg: number | null; // expected goals
 }
 
 export interface RawMatchStats {
@@ -120,6 +125,7 @@ function findStat(stats: ApiStatEntry[], type: string): number | null {
 }
 
 function parseTeamStats(stats: ApiStatEntry[]): RawTeamStats {
+  const xgRaw = findStat(stats, "expected_goals");
   return {
     possession: findStat(stats, "Ball Possession"),
     shots: findStat(stats, "Total Shots"),
@@ -128,6 +134,12 @@ function parseTeamStats(stats: ApiStatEntry[]): RawTeamStats {
     fouls: findStat(stats, "Fouls"),
     yellowCards: findStat(stats, "Yellow Cards"),
     redCards: findStat(stats, "Red Cards"),
+    offsides: findStat(stats, "Offsides"),
+    saves: findStat(stats, "Goalkeeper Saves"),
+    passes: findStat(stats, "Total passes"),
+    passAccuracy: findStat(stats, "Passes %"),
+    // xG comes through as a decimal string ("1.34"); keep one decimal for display.
+    xg: xgRaw == null ? null : Math.round(xgRaw * 10) / 10,
   };
 }
 

@@ -111,12 +111,16 @@ describe("buildTimeline", () => {
 });
 
 describe("buildStatBars", () => {
-  const home: TeamStatValues = {
-    possession: 60, shots: 8, shotsOnTarget: 3, corners: 5, fouls: 7, yellowCards: 1, redCards: 0,
-  };
-  const away: TeamStatValues = {
-    possession: 40, shots: 4, shotsOnTarget: 1, corners: 2, fouls: 10, yellowCards: 2, redCards: 0,
-  };
+  // Fill every field to null, override the ones a case cares about. Keeps fixtures
+  // resilient as RawTeamStats gains fields.
+  const mk = (p: Partial<TeamStatValues>): TeamStatValues => ({
+    possession: null, shots: null, shotsOnTarget: null, corners: null, fouls: null,
+    yellowCards: null, redCards: null, offsides: null, saves: null, passes: null,
+    passAccuracy: null, xg: null, ...p,
+  });
+
+  const home = mk({ possession: 60, shots: 8, shotsOnTarget: 3, corners: 5, fouls: 7 });
+  const away = mk({ possession: 40, shots: 4, shotsOnTarget: 1, corners: 2, fouls: 10 });
 
   it("returns one row per populated stat with home share percentage", () => {
     const bars = buildStatBars(home, away);
@@ -128,12 +132,22 @@ describe("buildStatBars", () => {
     expect(bars[1].homePct).toBe(67); // 8 / 12 ≈ 67
   });
 
+  it("renders the richer stats (xG, pass accuracy) with their suffixes", () => {
+    const bars = buildStatBars(
+      mk({ xg: 1.8, passAccuracy: 88, offsides: 2, saves: 4 }),
+      mk({ xg: 0.6, passAccuracy: 80, offsides: 1, saves: 6 }),
+    );
+    const byKey = Object.fromEntries(bars.map((b) => [b.key, b]));
+    expect(byKey.xg).toMatchObject({ label: "Expected goals", home: 1.8, away: 0.6, suffix: "" });
+    expect(byKey.passAccuracy).toMatchObject({ label: "Pass accuracy", suffix: "%" });
+    expect(byKey.saves).toMatchObject({ home: 4, away: 6 });
+    // xG sits right after possession in the row order.
+    expect(bars[0].key).toBe("xg");
+  });
+
   it("drops a row when neither side has the stat", () => {
-    const sparse: TeamStatValues = {
-      possession: 55, shots: null, shotsOnTarget: null, corners: null, fouls: null,
-      yellowCards: null, redCards: null,
-    };
-    const bars = buildStatBars(sparse, { ...sparse, possession: 45 });
+    const sparse = mk({ possession: 55 });
+    const bars = buildStatBars(sparse, mk({ possession: 45 }));
     expect(bars.map((b) => b.key)).toEqual(["possession"]);
   });
 
@@ -142,10 +156,7 @@ describe("buildStatBars", () => {
   });
 
   it("splits 50/50 when a row total is zero", () => {
-    const zero: TeamStatValues = {
-      possession: null, shots: 0, shotsOnTarget: null, corners: null, fouls: null,
-      yellowCards: null, redCards: null,
-    };
+    const zero = mk({ shots: 0 });
     const bars = buildStatBars(zero, zero);
     expect(bars[0].homePct).toBe(50);
   });
