@@ -5,6 +5,7 @@ import { getSessionUser, getPoolAccess, canManagePool } from "@/lib/pool/access"
 import { signOutAction } from "@/lib/auth/actions";
 import { PoolRealtime } from "./PoolRealtime";
 import { BottomNav } from "./BottomNav";
+import { Footer } from "../../Footer";
 
 // Hero reflects request-time session + entry count.
 export const dynamic = "force-dynamic";
@@ -122,6 +123,8 @@ export default async function PoolLayout({
         </header>
 
         <div className="mt-6">{children}</div>
+
+        <Footer />
       </main>
 
       <BottomNav code={code} />
