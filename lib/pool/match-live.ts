@@ -176,10 +176,15 @@ export interface StatBar {
 
 const STAT_ROWS: { key: keyof TeamStatValues; label: string; suffix: string }[] = [
   { key: "possession", label: "Possession", suffix: "%" },
+  { key: "xg", label: "Expected goals", suffix: "" },
   { key: "shots", label: "Shots", suffix: "" },
   { key: "shotsOnTarget", label: "Shots on target", suffix: "" },
+  { key: "passes", label: "Passes", suffix: "" },
+  { key: "passAccuracy", label: "Pass accuracy", suffix: "%" },
   { key: "corners", label: "Corners", suffix: "" },
+  { key: "offsides", label: "Offsides", suffix: "" },
   { key: "fouls", label: "Fouls", suffix: "" },
+  { key: "saves", label: "Saves", suffix: "" },
 ];
 
 // Build the stat-bar rows. A row is dropped when neither side has a value, so an

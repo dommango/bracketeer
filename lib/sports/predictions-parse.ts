@@ -1,12 +1,25 @@
 // Pure parser for API-Football's /predictions response — no env/network, so it's
 // unit-tested directly. The fetch wrapper in client.ts binds it to env + network.
 
+// One past meeting between the two fixture teams, with goals oriented to the
+// CURRENT fixture's home/away (so home/awayGoals always read "this match's home
+// team" regardless of who hosted that day).
+export interface H2HMeeting {
+  date: string | null; // ISO date of the meeting, if the provider gave one
+  homeGoals: number;
+  awayGoals: number;
+  outcome: "home" | "away" | "draw"; // from the current home team's perspective
+}
+
 export interface H2HSummary {
   played: number;
   homeWins: number; // wins for the CURRENT fixture's home team across past meetings
   awayWins: number;
   draws: number;
+  meetings: H2HMeeting[]; // most recent first, capped
 }
+
+const MAX_MEETINGS = 5;
 
 export interface PredictionInsight {
   homePercent: number | null; // model-implied %, 0–100
@@ -29,6 +42,7 @@ export interface ApiPredictionResponse {
     away?: { id?: number | null; last_5?: { form?: string | null } | null };
   };
   h2h?: Array<{
+    fixture?: { date?: string | null };
     teams?: { home?: { id?: number | null }; away?: { id?: number | null } };
     goals?: { home?: number | null; away?: number | null };
   }>;
@@ -54,28 +68,56 @@ function summarizeH2H(
     homeWins = 0,
     awayWins = 0,
     draws = 0;
+  const meetings: H2HMeeting[] = [];
   for (const f of list) {
     const gh = f.goals?.home;
     const ga = f.goals?.away;
     if (gh == null || ga == null) continue; // unplayed/abandoned
+
+    // Orient this meeting's goals to the current fixture's home/away. Skip any
+    // entry that isn't cleanly between the two current teams.
+    const entryHome = f.teams?.home?.id;
+    const entryAway = f.teams?.away?.id;
+    let homeGoals: number | null = null;
+    let awayGoals: number | null = null;
+    if (entryHome === homeId && entryAway === awayId) {
+      homeGoals = gh;
+      awayGoals = ga;
+    } else if (entryHome === awayId && entryAway === homeId) {
+      homeGoals = ga;
+      awayGoals = gh;
+    }
+
     if (gh === ga) {
       draws++;
       played++;
-      continue;
+    } else {
+      // Tally by team id, so played always equals homeWins + awayWins + draws (a
+      // stray third team id — rare in a messy list — is ignored, not skewed in).
+      const winnerId: number | null | undefined = gh > ga ? entryHome : entryAway;
+      if (winnerId === homeId) {
+        homeWins++;
+        played++;
+      } else if (winnerId === awayId) {
+        awayWins++;
+        played++;
+      }
     }
-    // Only count results we can attribute to one of the two current teams, so
-    // played always equals homeWins + awayWins + draws (a stray third team id —
-    // rare in a messy h2h list — is ignored rather than skewing the total).
-    const winnerId = gh > ga ? f.teams?.home?.id : f.teams?.away?.id;
-    if (winnerId === homeId) {
-      homeWins++;
-      played++;
-    } else if (winnerId === awayId) {
-      awayWins++;
-      played++;
+
+    if (homeGoals != null && awayGoals != null) {
+      meetings.push({
+        date: f.fixture?.date ?? null,
+        homeGoals,
+        awayGoals,
+        outcome: homeGoals > awayGoals ? "home" : homeGoals < awayGoals ? "away" : "draw",
+      });
     }
   }
-  return played === 0 ? null : { played, homeWins, awayWins, draws };
+  if (played === 0) return null;
+
+  // Most recent first when dates are present; dateless entries keep provider order.
+  meetings.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  return { played, homeWins, awayWins, draws, meetings: meetings.slice(0, MAX_MEETINGS) };
 }
 
 export function parsePrediction(resp: ApiPredictionResponse): PredictionInsight {
