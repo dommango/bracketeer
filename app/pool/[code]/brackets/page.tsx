@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode, getPoolView } from "@/lib/pool/queries";
+import { getPoolByCode, getPoolView, getPoolAnalytics } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
 import { getUserEntries } from "@/lib/pool/submit-picks";
+import { PoolAnalytics } from "../PoolAnalytics";
 
 // Landing hub for the Brackets section: your picks, everyone's brackets, and the
 // head-to-head compare tool. Request-time because it reflects the signed-in user.
@@ -38,9 +39,10 @@ export default async function BracketsHubPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [poolView, myEntries] = await Promise.all([
+  const [poolView, myEntries, analytics] = await Promise.all([
     getPoolView(code),
     sessionUser ? getUserEntries(pool.id, sessionUser.id) : Promise.resolve([]),
+    getPoolAnalytics(pool.id),
   ]);
   const entryCount = poolView?.leaderboard.length ?? 0;
   const myCount = myEntries.length;
@@ -69,6 +71,8 @@ export default async function BracketsHubPage({
           />
         ) : null}
       </div>
+
+      {analytics ? <PoolAnalytics analytics={analytics} code={code} /> : null}
     </section>
   );
 }

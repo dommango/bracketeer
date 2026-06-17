@@ -33,7 +33,7 @@ import {
 } from "@/lib/pool/match-live";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { buildPickAnalytics, type PickAnalytics } from "@/lib/pool/pick-analytics";
-import { buildUpsetRadar, stakedTeamCodes, type UpsetMatchInput } from "@/lib/odds/upset";
+import { buildUpsetRadar, stakedTeamCodes, type UpsetMatchInput, type UpsetRow } from "@/lib/odds/upset";
 import { matchPlayerCode } from "@/lib/odds/player-match";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
@@ -1172,7 +1172,7 @@ async function getHomeStats(poolId: string, entryId: string): Promise<HomeStats 
 
 // Pool-wide pick consensus for the Home analytics card. Gated to reveal only once
 // picks lock (kickoff), so brackets aren't exposed pre-lock; null when no entries.
-async function getPoolAnalytics(poolId: string): Promise<PickAnalytics | null> {
+export async function getPoolAnalytics(poolId: string): Promise<PickAnalytics | null> {
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
     select: { tournament: { select: { startsAt: true } } },
@@ -1279,6 +1279,22 @@ export async function getHomeView(poolId: string, userId: string | null): Promis
     analytics,
     upsets,
   };
+}
+
+// The upset radar on its own — the same personalised computation the Home view
+// does inline, exposed for the Matches → Odds view (which has no standings in
+// scope). Staked teams come from the viewer's own brackets; anonymous viewers get
+// an untagged radar.
+export async function getUpsetRadar(poolId: string, userId: string | null): Promise<UpsetRow[]> {
+  const upsetMatches = await getUpsetMatches(poolId);
+  const staked = new Set<string>();
+  if (userId) {
+    const mine = new Set(buildStandings(await liveLeaderboard(poolId), userId).map((s) => s.entryId));
+    for (const e of await getEntriesWithPicks(poolId)) {
+      if (mine.has(e.entryId)) for (const code of stakedTeamCodes(e.picks)) staked.add(code);
+    }
+  }
+  return buildUpsetRadar(upsetMatches, staked);
 }
 
 // Group-Stage focused match center: 12 group sections (A–L) followed by knockout
