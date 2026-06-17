@@ -9,6 +9,7 @@ import { emptyPicks } from "@/lib/scoring/types";
 import { PickForm } from "../PickForm";
 import { KnockoutPickForm } from "../KnockoutPickForm";
 import { Countdown } from "../Countdown";
+import { BracketsTabNav } from "../BracketsTabNav";
 
 export const dynamic = "force-dynamic";
 
@@ -28,30 +29,36 @@ export default async function PicksPage({
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
     return (
-      <Gate>
-        <p className="text-sm text-ink-3">Sign in to fill out your bracket.</p>
-        <Link
-          href="/signin"
-          className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-pitch px-5 font-semibold text-white hover:bg-pitch-dark"
-        >
-          Sign in →
-        </Link>
-      </Gate>
+      <section className="space-y-4">
+        <BracketsTabNav code={code} />
+        <Gate>
+          <p className="text-sm text-ink-3">Sign in to fill out your bracket.</p>
+          <Link
+            href="/signin"
+            className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-pitch px-5 font-semibold text-white hover:bg-pitch-dark"
+          >
+            Sign in →
+          </Link>
+        </Gate>
+      </section>
     );
   }
 
   const access = await getPoolAccess(pool.id);
   if (!access) {
     return (
-      <Gate>
-        <p className="text-sm text-ink-3">Join this pool before submitting your picks.</p>
-        <Link
-          href={`/join?code=${pool.joinCode}`}
-          className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-pitch px-5 font-semibold text-white hover:bg-pitch-dark"
-        >
-          Join pool →
-        </Link>
-      </Gate>
+      <section className="space-y-4">
+        <BracketsTabNav code={code} />
+        <Gate>
+          <p className="text-sm text-ink-3">Join this pool before submitting your picks.</p>
+          <Link
+            href={`/join?code=${pool.joinCode}`}
+            className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-pitch px-5 font-semibold text-white hover:bg-pitch-dark"
+          >
+            Join pool →
+          </Link>
+        </Gate>
+      </section>
     );
   }
 
@@ -73,16 +80,21 @@ export default async function PicksPage({
   const entryLocked = entry?.locked ?? false;
 
   const header = (
-    <div className="flex items-center justify-between">
-      <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-        {entry ? "Edit your picks" : "Make your picks"}
-      </h2>
-      <Link
-        href={entries.length > 1 ? `/pool/${code}/picks` : `/pool/${code}`}
-        className="rounded-full px-2 py-1 text-xs font-semibold text-pitch underline-offset-2 hover:underline"
-      >
-        {entries.length > 1 ? "← Your brackets" : "← Pool home"}
-      </Link>
+    <div className="space-y-3">
+      <BracketsTabNav code={code} />
+      <div className="flex items-center justify-between">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+          {entry ? "Edit your picks" : "Make your picks"}
+        </h2>
+        {entries.length > 1 ? (
+          <Link
+            href={`/pool/${code}/picks`}
+            className="rounded-full px-2 py-1 text-xs font-semibold text-pitch underline-offset-2 hover:underline"
+          >
+            ← Your brackets
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -195,17 +207,10 @@ function BracketChooser({
 }) {
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-          Your brackets
-        </h2>
-        <Link
-          href={`/pool/${code}`}
-          className="rounded-full px-2 py-1 text-xs font-semibold text-pitch underline-offset-2 hover:underline"
-        >
-          ← Pool home
-        </Link>
-      </div>
+      <BracketsTabNav code={code} />
+      <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+        Your brackets
+      </h2>
       <p className="px-1 text-sm text-ink-3">You have more than one bracket here. Pick one to edit.</p>
       <ul className="space-y-2">
         {entries.map((e) => (

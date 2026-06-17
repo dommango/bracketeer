@@ -6,6 +6,7 @@ import { listMessages } from "@/lib/pool/chat";
 import type { PickSplit, PickSplitSlice } from "@/lib/pool/pick-split";
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "../../Flag";
+import { TeamLink } from "../../TeamLink";
 import { WhatIf } from "../../WhatIf";
 import { Chat } from "../../Chat";
 import { MatchTimeline, MatchStatsBars, TeamScorers } from "./MatchLive";
@@ -23,20 +24,24 @@ function TeamRow({
   pens,
   isWinner,
   decided,
+  code,
 }: {
   side: MatchDetail["home"];
   pens: number | null;
   isWinner: boolean;
   decided: boolean;
+  code: string;
 }) {
   const dimmed = decided && !isWinner;
   return (
     <div className={`flex items-center gap-3 py-2 ${dimmed ? "text-ink-4" : "text-ink"}`}>
-      <Flag code={side.code} size={28} />
-      <span className={`flex-1 truncate text-lg ${isWinner ? "font-bold" : "font-semibold"}`}>
+      <TeamLink poolCode={code} code={side.code}>
+        <Flag code={side.code} size={28} />
+      </TeamLink>
+      <TeamLink poolCode={code} code={side.code} className={`flex-1 truncate text-lg underline-offset-2 hover:underline ${isWinner ? "font-bold" : "font-semibold"}`}>
         {side.name}
         {side.code ? <span className="ml-2 font-mono text-xs text-ink-3">{side.code}</span> : null}
-      </span>
+      </TeamLink>
       {pens != null ? (
         <span className="font-mono text-xs font-semibold tabular-nums text-ink-3">({pens} pens)</span>
       ) : null}
@@ -221,10 +226,10 @@ export default async function MatchDetailPage({
             </span>
           ) : null}
         </div>
-        <TeamRow side={detail.home} pens={detail.homePens} isWinner={decided && detail.winnerCode === detail.home.code} decided={decided} />
+        <TeamRow side={detail.home} pens={detail.homePens} isWinner={decided && detail.winnerCode === detail.home.code} decided={decided} code={code} />
         <TeamScorers timeline={detail.timeline} side="home" />
         <div className="h-px bg-line-soft" />
-        <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} />
+        <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} code={code} />
         <TeamScorers timeline={detail.timeline} side="away" />
         <div className="mt-3">
           <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} />

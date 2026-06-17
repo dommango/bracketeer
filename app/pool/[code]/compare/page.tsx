@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPoolView } from "@/lib/pool/queries";
 import { getComparison } from "@/lib/pool/comparison";
 import { Flag } from "../Flag";
+import { BracketsTabNav } from "../BracketsTabNav";
 
 export const dynamic = "force-dynamic";
 
@@ -68,16 +69,22 @@ export default async function ComparePage({
 
   const rows = pool.leaderboard.map((r) => ({ entryId: r.entryId, label: r.label }));
 
-  const back = (
-    <Link href={`/pool/${code}`} className="text-sm font-semibold text-pitch hover:underline">
-      ← Back to {pool.name}
-    </Link>
+  const top = (
+    <div className="space-y-3">
+      <BracketsTabNav code={code} />
+      <Link
+        href={`/pool/${code}/brackets`}
+        className="inline-block text-sm font-semibold text-pitch hover:underline"
+      >
+        ← Brackets
+      </Link>
+    </div>
   );
 
   if (!a || !b) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-8">
-        {back}
+        {top}
         <h1 className="mt-4 font-display text-2xl text-ink">Compare brackets</h1>
         <Picker code={code} rows={rows} a={a} />
       </main>
@@ -89,7 +96,7 @@ export default async function ComparePage({
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
-      {back}
+      {top}
 
       <header className="mt-4 grid grid-cols-2 gap-2">
         {[cmp.a, cmp.b].map((s, i) => (

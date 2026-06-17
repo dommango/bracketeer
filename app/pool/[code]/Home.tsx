@@ -429,7 +429,7 @@ export function Home({
         </div>
       </section>
 
-      {view.analytics ? <PoolAnalytics analytics={view.analytics} /> : null}
+      {view.analytics ? <PoolAnalytics analytics={view.analytics} code={code} /> : null}
 
       {bracket &&
       bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (
