@@ -8,6 +8,30 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.7.0",
+    date: "June 2026",
+    title: "Navigation refresh",
+    notes: [
+      "Streamlined three-tab navigation: Home, Brackets, and Matches (Scorers now lives under Matches).",
+      "Tap any team or player to open a dedicated drill-down page.",
+      "Redesigned Home: chat, live scorecards, and group standings up top, with a quick link to the day's fixtures.",
+      "Upset Watch moved to Matches → Odds; pool pick consensus moved to the Brackets hub.",
+      "More accurate odds: corrected home/away win probabilities and consensus pricing across bookmakers.",
+    ],
+  },
+  {
+    version: "0.6.0",
+    date: "June 2026",
+    title: "Match intelligence & odds",
+    notes: [
+      "Match Insights on every fixture: model predictions, recent form, and head-to-head records.",
+      "Betting markets: win probabilities, Over/Under totals, tournament-winner and Golden Boot odds.",
+      "Live Golden Boot leaderboard with inline goalscorers and cards on the scoreboard.",
+      "Pre-match upset radar plus injury and suspension reports.",
+      "Match tickets — prices and buy links — and live scores refreshed every minute.",
+    ],
+  },
+  {
     version: "0.5.0",
     date: "June 2026",
     title: "iOS app foundation",
