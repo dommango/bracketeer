@@ -47,6 +47,30 @@ describe("buildStanding (gap math)", () => {
   });
 });
 
+describe("buildStanding (ties — gap to the next *rank*, not the row above)", () => {
+  // b and c share rank 2 (tied on points); the row physically above c is its
+  // tied peer b, not a higher rank. "Pts to the spot above" must skip the tie.
+  const board = [
+    lb(1, "a", "ua", 50),
+    lb(2, "b", "ub", 40),
+    lb(2, "c", "uc", 40),
+    lb(4, "d", "ud", 30),
+  ];
+
+  it("measures gap-to-next against the nearest strictly-higher rank, not a tied peer", () => {
+    expect(buildStanding(board, "uc")).toMatchObject({
+      rank: 2,
+      gapToLeader: 10, // 50 − 40
+      gapToNext: 10, // up to a (50), not the tied b (would read 0)
+    });
+  });
+
+  it("gives a tied-for-first entry a null gap-to-next (nobody ranks above)", () => {
+    const tiedTop = [lb(1, "a", "ua", 50), lb(1, "b", "ub", 50), lb(3, "c", "uc", 30)];
+    expect(buildStanding(tiedTop, "ub")).toMatchObject({ rank: 1, gapToNext: null });
+  });
+});
+
 describe("buildStandings (multi-entry)", () => {
   // ua owns two brackets (a at #1, d at #4); ub owns one.
   const board = [

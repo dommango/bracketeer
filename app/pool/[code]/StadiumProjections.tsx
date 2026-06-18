@@ -1,5 +1,6 @@
 import { Flag } from "./Flag";
 import { TeamLink } from "./TeamLink";
+import { teamColor } from "@/lib/teams/colors";
 import { DISPLAY_TZ } from "@/lib/tz";
 import type { StadiumProjection, R32SlotProjection } from "@/lib/pool/stadium-projection";
 
@@ -20,15 +21,15 @@ const dateLabel = (iso: string | null): string | null => {
 };
 
 // One R32 slot: its descriptor (e.g. "Runners-up Group A") and the teams most
-// likely to fill it. A decided slot shows just its one team; otherwise the top
-// few candidates with their projected share.
+// likely to fill it, as a descending bar chart of projected share. A decided slot
+// shows just its one team (no bar); `slot.candidates` already arrives sorted desc.
 function SlotRow({ slot, code }: { slot: R32SlotProjection; code: string }) {
   const shown = slot.candidates.slice(0, MAX_SHOWN);
 
   return (
-    <div className="flex items-baseline gap-2 py-1.5">
-      <span className="w-28 shrink-0 text-[11px] text-ink-4">{slot.label}</span>
-      <div className="flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1">
+    <div className="flex gap-2 py-1.5">
+      <span className="w-28 shrink-0 pt-0.5 text-[11px] text-ink-4">{slot.label}</span>
+      <div className="min-w-0 flex-1 space-y-1">
         {shown.length === 0 ? (
           <span className="text-[12px] italic text-ink-4">TBD</span>
         ) : (
@@ -37,13 +38,27 @@ function SlotRow({ slot, code }: { slot: R32SlotProjection; code: string }) {
               key={c.code}
               poolCode={code}
               code={c.code}
-              className="flex items-center gap-1 underline-offset-2 hover:underline"
+              className="flex items-center gap-1.5 underline-offset-2 hover:underline"
             >
-              <Flag code={c.code} size={15} />
-              <span className={`text-[13px] ${slot.decided ? "font-semibold text-ink" : "text-ink-2"}`}>
+              <Flag code={c.code} size={14} />
+              <span
+                className={`w-9 shrink-0 font-mono text-[12px] ${slot.decided ? "font-semibold text-ink" : "text-ink-2"}`}
+              >
                 {c.code}
               </span>
-              {!slot.decided ? <span className="font-mono text-[11px] text-ink-3">{pct(c.prob)}%</span> : null}
+              {slot.decided ? null : (
+                <>
+                  <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-sunk">
+                    <span
+                      className="block h-full rounded-full"
+                      style={{ width: `${Math.max(pct(c.prob), 2)}%`, background: teamColor(c.code) }}
+                    />
+                  </div>
+                  <span className="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-ink-3">
+                    {pct(c.prob)}%
+                  </span>
+                </>
+              )}
             </TeamLink>
           ))
         )}
