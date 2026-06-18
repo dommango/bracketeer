@@ -532,6 +532,7 @@ export async function getNextMatch(
       homeSlotRef: true,
       awaySlotRef: true,
       result: { select: { homeTeamCode: true, awayTeamCode: true } },
+      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
     },
   });
 
@@ -574,6 +575,7 @@ export async function getNextMatch(
     venue: v?.venue ?? null,
     city: v?.city ?? null,
     cityToken: v?.cityToken ?? null,
+    odds: full?.odds ?? null,
   };
 }
 

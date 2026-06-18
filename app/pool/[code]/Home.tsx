@@ -10,6 +10,11 @@ import type { BracketView } from "@/lib/pool/bracket-view";
 import type { ChatView } from "@/lib/pool/chat";
 import type { PoolFormat } from "@/lib/pool/manage";
 import { DISPLAY_TZ } from "@/lib/tz";
+import { R32Countdown } from "./R32Countdown";
+import { kickoffFor } from "@/lib/scoring/schedule";
+
+// Match 73 is the Round-of-32 kickoff — the next milestone after the group stage.
+const R32_KICKOFF = kickoffFor(73);
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
@@ -384,6 +389,12 @@ export function Home({
         />
       ) : null}
 
+      {/* Full-bracket pools count down to the R32 kickoff; the client banner
+          self-hides once it's under way (knockout pools use KnockoutNotice). */}
+      {format !== "KNOCKOUT" && R32_KICKOFF ? (
+        <R32Countdown target={R32_KICKOFF.toISOString()} label="Round of 32 kicks off in" />
+      ) : null}
+
       <HomeChat code={code} messages={recentChat} />
 
       <ScoreCards live={view.liveMatches} last={view.lastMatch} next={view.nextMatch} code={code} />
@@ -399,26 +410,6 @@ export function Home({
           </span>
         </Link>
       </div>
-
-      {bracket &&
-      bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (
-        <section>
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-              Group standings
-            </h2>
-            <Link
-              href={`/pool/${code}/matches?view=knockouts`}
-              className="text-xs font-semibold text-pitch hover:underline"
-            >
-              Full bracket →
-            </Link>
-          </div>
-          <div className="mt-2.5">
-            <GroupStandings view={bracket} code={code} />
-          </div>
-        </section>
-      ) : null}
 
       <StandingCard
         you={view.you}
@@ -453,9 +444,29 @@ export function Home({
           ) : null}
         </div>
         <div className="mt-2.5">
-          <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} showMedals={showMedals} />
+          <Leaderboard rows={leaderboard} youUserId={youUserId} code={code} showMedals={showMedals} compact />
         </div>
       </section>
+
+      {bracket &&
+      bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (
+        <section>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+              Group standings
+            </h2>
+            <Link
+              href={`/pool/${code}/matches?view=knockouts`}
+              className="text-xs font-semibold text-pitch hover:underline"
+            >
+              Full bracket →
+            </Link>
+          </div>
+          <div className="mt-2.5">
+            <GroupStandings view={bracket} code={code} />
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

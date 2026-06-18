@@ -5,6 +5,7 @@ import { Flag } from "./Flag";
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { formatKickoff } from "@/lib/pool/format";
 import { VenueLine } from "./VenueLine";
+import { WinProbBar } from "./WinProbBar";
 
 // code → group letter, for labelling a group match by its actual group (A–L).
 const TEAM_GROUP: Record<string, string> = Object.fromEntries(
@@ -78,8 +79,12 @@ function TeamRow({
       {pens != null ? (
         <span className="font-mono text-[11px] font-semibold tabular-nums text-ink-3">({pens})</span>
       ) : null}
+      {/* Fixed-width, right-aligned score cell so the two teams' scores form a
+          clean vertical column and line up across the final/upcoming cards. */}
       {score !== null ? (
-        <span className="font-mono text-2xl font-bold tabular-nums text-ink">{score}</span>
+        <span className="w-7 shrink-0 text-right font-mono text-2xl font-bold leading-none tabular-nums text-ink">
+          {score}
+        </span>
       ) : null}
     </div>
   );
@@ -117,6 +122,18 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
       ) : null}
       <div className="mt-auto pt-2">
         <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
+        {/* Parity with the Matches-tab cards. Odds are dropped on finals (stale)
+            and labelled while LIVE, where the feed refreshes them in-play. */}
+        {row.status === "LIVE" ? (
+          <>
+            <WinProbBar odds={row.odds} homeCode={row.home.code} awayCode={row.away.code} />
+            {row.odds ? (
+              <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-live">
+                Live odds · refreshed in-play
+              </p>
+            ) : null}
+          </>
+        ) : null}
       </div>
     </Link>
   );
@@ -147,6 +164,8 @@ function NextMatchCard({ match, code }: { match: HomeNextMatch; code: string }) 
       ) : null}
       <div className="mt-auto pt-2">
         <VenueLine venue={match.venue} city={match.city} cityToken={match.cityToken} />
+        {/* Pre-match odds, matching the Matches-tab cards. */}
+        <WinProbBar odds={match.odds} homeCode={match.home} awayCode={match.away} />
       </div>
     </Link>
   );
