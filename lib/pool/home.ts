@@ -36,8 +36,19 @@ export interface Standing {
 function standingAt(leaderboard: LeaderboardLike[], idx: number): Standing {
   const me = leaderboard[idx];
   const leader = leaderboard[0];
-  const above = idx > 0 ? leaderboard[idx - 1] : null;
   const live = (r: LeaderboardLike) => r.total + (r.projected ?? 0);
+
+  // The entry one *rank* above — the nearest entry that ranks strictly higher,
+  // not merely the row above (which may be tied with you and share your rank,
+  // making "0 pts to the spot above" read as nonsense). The board is rank-
+  // ordered, so walking back finds the nearest better-ranked entry.
+  let above: LeaderboardLike | null = null;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (leaderboard[i].rank < me.rank) {
+      above = leaderboard[i];
+      break;
+    }
+  }
 
   return {
     rank: me.rank,

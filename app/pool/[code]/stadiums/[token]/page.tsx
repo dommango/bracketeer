@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPoolByCode, getMatchCenter } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
-import { byDaySections } from "@/lib/pool/fixture-views";
+import { sortChrono } from "@/lib/pool/fixture-views";
 import { getStadium } from "@/lib/pool/stadiums";
 import { MatchCenter } from "../../MatchCenter";
 
@@ -22,11 +22,11 @@ export default async function StadiumPage({
 
   // Reuse the live Match-Center rows so this venue's games render as the same
   // scorecards used elsewhere (scores, status, your pick, odds) instead of a
-  // bare list — grouped by day.
+  // bare list — one chronological list, not grouped by day.
   const sessionUser = await getSessionUser();
   const sections = await getMatchCenter(pool.id, sessionUser?.id ?? null);
   const rows = sections.flatMap((s) => s.matches).filter((m) => m.cityToken === token);
-  const days = byDaySections(rows);
+  const venueSection = [{ roundCode: "GROUP", label: "", matches: sortChrono(rows) }];
 
   return (
     <div className="space-y-5">
@@ -53,7 +53,7 @@ export default async function StadiumPage({
         </p>
       </header>
 
-      <MatchCenter sections={days} code={code} />
+      <MatchCenter sections={venueSection} code={code} />
     </div>
   );
 }

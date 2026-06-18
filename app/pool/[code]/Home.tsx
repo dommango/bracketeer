@@ -10,11 +10,6 @@ import type { BracketView } from "@/lib/pool/bracket-view";
 import type { ChatView } from "@/lib/pool/chat";
 import type { PoolFormat } from "@/lib/pool/manage";
 import { DISPLAY_TZ } from "@/lib/tz";
-import { R32Countdown } from "./R32Countdown";
-import { kickoffFor } from "@/lib/scoring/schedule";
-
-// Match 73 is the Round-of-32 kickoff — the next milestone after the group stage.
-const R32_KICKOFF = kickoffFor(73);
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
@@ -387,12 +382,6 @@ export function Home({
           opensAt={knockoutOpensAt}
           locksAt={knockoutLocksAt ?? null}
         />
-      ) : null}
-
-      {/* Full-bracket pools count down to the R32 kickoff; the client banner
-          self-hides once it's under way (knockout pools use KnockoutNotice). */}
-      {format !== "KNOCKOUT" && R32_KICKOFF ? (
-        <R32Countdown target={R32_KICKOFF.toISOString()} label="Round of 32 kicks off in" />
       ) : null}
 
       <HomeChat code={code} messages={recentChat} />

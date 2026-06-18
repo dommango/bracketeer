@@ -116,6 +116,16 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
   );
 }
 
+function SectionCards({ matches, code, accent }: { matches: MatchCenterRow[]; code: string; accent: string }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {matches.map((row) => (
+        <MatchRow key={row.matchNo} row={row} code={code} accent={accent} />
+      ))}
+    </div>
+  );
+}
+
 export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]; code: string }) {
   if (sections.length === 0) {
     return (
@@ -124,44 +134,77 @@ export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]
       </p>
     );
   }
+
+  // In the by-day view, finished days arrive as leading collapsed sections
+  // (collapsible && !defaultOpen) — chronological, so they're contiguous at the
+  // front. Tuck them ALL under one "Previous days" expandable rather than one
+  // <details> per day; the live/upcoming days then read as plain dated headers.
+  // Other views carry no collapsed leaders, so this is a no-op for them.
+  let pastCount = 0;
+  while (pastCount < sections.length && sections[pastCount].collapsible && !sections[pastCount].defaultOpen) {
+    pastCount++;
+  }
+  const pastDays = sections.slice(0, pastCount);
+  const rest = sections.slice(pastCount);
+  const pastMatchCount = pastDays.reduce((n, s) => n + s.matches.length, 0);
+
   return (
     <div className="space-y-5">
-      {sections.map((section) => {
-        const accent = ROUND_ACCENT[section.roundCode] ?? "var(--line)";
-        const grid = (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {section.matches.map((row) => (
-              <MatchRow key={row.matchNo} row={row} code={code} accent={accent} />
+      {pastDays.length > 0 ? (
+        <details className="group">
+          <summary className="mb-2 flex cursor-pointer list-none items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3 [&::-webkit-details-marker]:hidden">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--pitch)" }} />
+            Previous days
+            <span className="ml-auto flex items-center gap-1 font-medium normal-case tracking-normal text-ink-4">
+              {pastMatchCount} {pastMatchCount === 1 ? "match" : "matches"}
+              <span aria-hidden className="inline-block transition-transform group-open:rotate-90">›</span>
+            </span>
+          </summary>
+          <div className="space-y-4">
+            {pastDays.map((section) => (
+              <div key={section.label}>
+                <h4 className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-4">
+                  {section.label}
+                </h4>
+                <SectionCards
+                  matches={section.matches}
+                  code={code}
+                  accent={ROUND_ACCENT[section.roundCode] ?? "var(--line)"}
+                />
+              </div>
             ))}
           </div>
-        );
+        </details>
+      ) : null}
 
-        // Collapsible sections (the by-day view) fold finished days away by
-        // default via a native <details> — past slates collapse, the live/
-        // upcoming day stays open. No client JS needed.
+      {rest.map((section) => {
+        const accent = ROUND_ACCENT[section.roundCode] ?? "var(--line)";
+
+        // By-day current/upcoming slates: a plain dated header (the only
+        // collapsing is the Previous-days group above).
         if (section.collapsible) {
           return (
-            <details key={section.label} open={section.defaultOpen} className="group">
-              <summary className="mb-2 flex cursor-pointer list-none items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3 [&::-webkit-details-marker]:hidden">
+            <div key={section.label}>
+              <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
                 {section.label}
-                <span className="ml-auto flex items-center gap-1 font-medium normal-case tracking-normal text-ink-4">
-                  {section.matches.length} {section.matches.length === 1 ? "match" : "matches"}
-                  <span aria-hidden className="inline-block transition-transform group-open:rotate-90">›</span>
-                </span>
-              </summary>
-              {grid}
-            </details>
+              </h3>
+              <SectionCards matches={section.matches} code={code} accent={accent} />
+            </div>
           );
         }
 
         return (
-          <div key={section.label} id={section.anchor} className={section.anchor ? "scroll-mt-20" : undefined}>
-            <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
-              {section.label}
-            </h3>
-            {grid}
+          <div key={section.anchor ?? section.label} id={section.anchor} className={section.anchor ? "scroll-mt-20" : undefined}>
+            {/* An empty label (e.g. the stadium view's single ungrouped list)
+                renders just the cards, with no section heading. */}
+            {section.label ? (
+              <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
+                {section.label}
+              </h3>
+            ) : null}
+            <SectionCards matches={section.matches} code={code} accent={accent} />
           </div>
         );
       })}
