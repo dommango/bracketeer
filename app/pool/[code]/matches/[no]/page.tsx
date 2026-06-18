@@ -232,7 +232,7 @@ export default async function MatchDetailPage({
         <TeamRow side={detail.away} pens={detail.awayPens} isWinner={decided && detail.winnerCode === detail.away.code} decided={decided} code={code} />
         <TeamScorers timeline={detail.timeline} side="away" />
         <div className="mt-3">
-          <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} />
+          <VenueLine venue={detail.venue} city={detail.city} cityToken={detail.cityToken} code={code} />
           <TicketLine tickets={detail.tickets} />
         </div>
         <WinProbBar odds={detail.odds} homeCode={detail.home.code} awayCode={detail.away.code} />
@@ -278,10 +278,14 @@ export default async function MatchDetailPage({
         )
       ) : null}
 
-      <div>
-        <h3 className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Pool chat</h3>
-        <Chat poolId={pool.id} currentUserId={sessionUser?.id ?? ""} initialMessages={initialMessages} />
-      </div>
+      {/* The pool chat only belongs on a match page while the game is live — the
+          in-the-moment reactions. Off-match, it lives on the dedicated chat tab. */}
+      {detail.status === "LIVE" ? (
+        <div>
+          <h3 className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Pool chat</h3>
+          <Chat poolId={pool.id} currentUserId={sessionUser?.id ?? ""} initialMessages={initialMessages} />
+        </div>
+      ) : null}
     </section>
   );
 }
