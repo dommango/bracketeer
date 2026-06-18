@@ -167,13 +167,17 @@ function MatchesGlyph() {
 }
 
 function BracketGlyph() {
-  // Knockout bracket — two left-hand pairs feeding a single final on the right.
+  // Single-elimination bracket: four seeds on the left fold into two semis, then
+  // the final spine, ending at the champion node on the right.
   return (
     <svg {...svgProps}>
-      <path d="M3 5h3M3 11h3M6 5v6h3M6 11v0" />
-      <path d="M3 13h3M3 19h3M6 13v6h3M6 19v0" />
-      <path d="M9 8v8h3M12 12h4" />
-      <path d="M18 10.5h3M18 13.5h3" />
+      {/* top pair → upper semi */}
+      <path d="M3 4h3M3 10h3M6 4v6M6 7h3" />
+      {/* bottom pair → lower semi */}
+      <path d="M3 14h3M3 20h3M6 14v6M6 17h3" />
+      {/* final spine: the two semis meet and run out to the champion node */}
+      <path d="M9 7v10M9 12h5" />
+      <circle cx="17.5" cy="12" r="2" />
     </svg>
   );
 }

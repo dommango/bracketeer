@@ -59,7 +59,7 @@ export default async function BracketsHubPage({
         />
         <HubCard
           href={`/pool/${code}/leaderboard`}
-          title="Contestants"
+          title="Leaderboard"
           desc="Standings and everyone's brackets in this pool."
           meta={entryCount > 0 ? `${entryCount}` : undefined}
         />

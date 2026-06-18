@@ -1,5 +1,5 @@
 import { Flag } from "./Flag";
-import { teamColor } from "@/lib/teams/colors";
+import { teamColor, DRAW_FILL } from "@/lib/teams/colors";
 import { DISPLAY_TZ } from "@/lib/tz";
 import type { UpsetRow } from "@/lib/odds/upset";
 
@@ -34,7 +34,7 @@ function RadarRow({ row }: { row: UpsetRow }) {
             : { background: "var(--gold-tint)", color: "var(--gold-dark)" }
         }
       >
-        {row.kind === "tossup" ? "Toss-up" : "Upset alert"}
+        {row.kind === "tossup" ? "Toss-up" : "Upset Watch"}
       </span>
 
       <div className="min-w-0 flex-1">
@@ -60,9 +60,11 @@ function RadarRow({ row }: { row: UpsetRow }) {
         ) : null}
       </div>
 
-      {/* Two-segment share bar: favorite vs underdog, team-colored. */}
+      {/* Three-segment share bar: favorite · draw · underdog — draw textured-gray
+          in the middle, matching the win-probability bars elsewhere. */}
       <div className="hidden h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-surface-sunk sm:flex">
         <span style={{ width: `${pct(row.favorite.winProb)}%`, background: teamColor(row.favorite.code) }} />
+        <span style={{ width: `${pct(row.drawProb)}%`, background: DRAW_FILL }} />
         <span style={{ width: `${pct(row.underdog.winProb)}%`, background: teamColor(row.underdog.code) }} />
       </div>
     </div>

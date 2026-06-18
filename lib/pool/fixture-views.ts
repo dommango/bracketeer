@@ -36,10 +36,14 @@ export function byDaySections(rows: MatchCenterRow[]): MatchCenterSection[] {
     const label = m.scheduledAt ? formatMatchDate(m.scheduledAt) : "Date TBD";
     buckets.set(label, [...(buckets.get(label) ?? []), m]);
   }
+  // Fold finished days away: a day collapses once all its matches are FINAL, so
+  // "previous days" tuck shut while the live/upcoming slate stays open.
   return [...buckets.entries()].map(([label, matches]) => ({
     roundCode: "GROUP",
     label,
     matches,
+    collapsible: true,
+    defaultOpen: matches.some((m) => m.status !== "FINAL"),
   }));
 }
 

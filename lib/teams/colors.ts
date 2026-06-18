@@ -11,6 +11,13 @@ export interface TeamColors {
 // Neutral grey for the draw segment and any unknown/unresolved team.
 export const NEUTRAL = "#9aa3a0";
 
+// Textured neutral for the draw share of an odds bar: a subtle diagonal hatch
+// over NEUTRAL so "neither team" reads distinctly from the flat team tints
+// (feedback: make the draw a textured gray). A CSS gradient — usable as a
+// `background`, not as a text color, so keep NEUTRAL for any draw label.
+export const DRAW_FILL =
+  `repeating-linear-gradient(45deg, ${NEUTRAL} 0, ${NEUTRAL} 3px, #b4bbb8 3px, #b4bbb8 6px)`;
+
 export const TEAM_COLORS: Record<string, TeamColors> = {
   MEX: { primary: "#006847", secondary: "#ce1126" },
   RSA: { primary: "#007a4d", secondary: "#ffb612" },

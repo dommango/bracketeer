@@ -99,7 +99,19 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
       <div className="mt-1.5">
         <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />
       </div>
-      <WinProbBar odds={row.odds} homeCode={row.home.code} awayCode={row.away.code} />
+      {/* Pre-match odds are meaningless once a game is final, so drop them. While
+          LIVE the feed refreshes them in-play — call that out so they're not read
+          as stale pre-match numbers. */}
+      {row.status !== "FINAL" ? (
+        <>
+          <WinProbBar odds={row.odds} homeCode={row.home.code} awayCode={row.away.code} />
+          {row.status === "LIVE" && row.odds ? (
+            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-live">
+              Live odds · refreshed in-play
+            </p>
+          ) : null}
+        </>
+      ) : null}
     </Link>
   );
 }
@@ -116,17 +128,40 @@ export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]
     <div className="space-y-5">
       {sections.map((section) => {
         const accent = ROUND_ACCENT[section.roundCode] ?? "var(--line)";
+        const grid = (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {section.matches.map((row) => (
+              <MatchRow key={row.matchNo} row={row} code={code} accent={accent} />
+            ))}
+          </div>
+        );
+
+        // Collapsible sections (the by-day view) fold finished days away by
+        // default via a native <details> — past slates collapse, the live/
+        // upcoming day stays open. No client JS needed.
+        if (section.collapsible) {
+          return (
+            <details key={section.label} open={section.defaultOpen} className="group">
+              <summary className="mb-2 flex cursor-pointer list-none items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3 [&::-webkit-details-marker]:hidden">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
+                {section.label}
+                <span className="ml-auto flex items-center gap-1 font-medium normal-case tracking-normal text-ink-4">
+                  {section.matches.length} {section.matches.length === 1 ? "match" : "matches"}
+                  <span aria-hidden className="inline-block transition-transform group-open:rotate-90">›</span>
+                </span>
+              </summary>
+              {grid}
+            </details>
+          );
+        }
+
         return (
           <div key={section.label} id={section.anchor} className={section.anchor ? "scroll-mt-20" : undefined}>
             <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
               {section.label}
             </h3>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {section.matches.map((row) => (
-                <MatchRow key={row.matchNo} row={row} code={code} accent={accent} />
-              ))}
-            </div>
+            {grid}
           </div>
         );
       })}
