@@ -7,6 +7,7 @@ import type { Accuracy, BoldestCall } from "@/lib/pool/profile";
 import type { MatchCenterRow } from "@/lib/pool/match-center";
 import type { PickAnalytics } from "@/lib/pool/pick-analytics";
 import type { UpsetRow } from "@/lib/odds/upset";
+import type { ImpliedProbs } from "@/lib/odds/map";
 
 // A leaderboard row reduced to what the standing card needs. `projected` is the
 // live (provisional group + knockout) delta; gaps and the displayed total use the
@@ -126,6 +127,7 @@ export interface HomeNextMatch {
   venue: string | null;
   city: string | null;
   cityToken: string | null;
+  odds: ImpliedProbs | null; // pre-match win/draw/win, for the home scorecard parity bar
 }
 
 // Your headline numbers for the dashboard, drawn from your primary entry's

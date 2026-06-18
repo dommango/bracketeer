@@ -49,6 +49,7 @@ export function Leaderboard({
   youUserId,
   code,
   showMedals = false,
+  compact = false,
 }: {
   rows: LeaderboardRow[];
   youUserId?: string | null;
@@ -56,6 +57,8 @@ export function Leaderboard({
   code?: string;
   // Medals only make sense once standings settle — shown after the group stage.
   showMedals?: boolean;
+  // Tighter rows with the per-category point badges hidden — for the Home preview.
+  compact?: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -78,7 +81,7 @@ export function Leaderboard({
           </p>
         </div>
       ) : null}
-      <ol className="space-y-2">
+      <ol className={compact ? "space-y-1.5" : "space-y-2"}>
       {rows.map((row) => {
         const b = (row.breakdown ?? {}) as Record<string, number>;
         const isYou = Boolean(youUserId && row.userId === youUserId);
@@ -121,16 +124,18 @@ export function Leaderboard({
                 <span className="text-xs text-ink-3"> pts</span>
               </span>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5 pl-[76px]">
-              {CATEGORY_LABELS.filter(([k]) => (b[k] ?? 0) > 0).map(([k, label]) => (
-                <span
-                  key={k}
-                  className="rounded-full bg-pitch-tint px-2 py-0.5 text-[11px] font-semibold tabular-nums text-pitch-dark"
-                >
-                  {label} {b[k]}
-                </span>
-              ))}
-            </div>
+            {compact ? null : (
+              <div className="mt-2 flex flex-wrap gap-1.5 pl-[76px]">
+                {CATEGORY_LABELS.filter(([k]) => (b[k] ?? 0) > 0).map(([k, label]) => (
+                  <span
+                    key={k}
+                    className="rounded-full bg-pitch-tint px-2 py-0.5 text-[11px] font-semibold tabular-nums text-pitch-dark"
+                  >
+                    {label} {b[k]}
+                  </span>
+                ))}
+              </div>
+            )}
           </>
         );
         return (
@@ -145,12 +150,14 @@ export function Leaderboard({
             {code ? (
               <Link
                 href={`/pool/${code}/u/${row.entryId}`}
-                className="block rounded-2xl p-4 transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
+                className={`block rounded-2xl transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch ${
+                  compact ? "p-3" : "p-4"
+                }`}
               >
                 {content}
               </Link>
             ) : (
-              <div className="p-4">{content}</div>
+              <div className={compact ? "p-3" : "p-4"}>{content}</div>
             )}
           </li>
         );
