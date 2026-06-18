@@ -77,6 +77,8 @@ export interface MatchCenterSection {
   label: string;
   matches: MatchCenterRow[];
   anchor?: string; // optional scroll-target id (e.g. "group-A")
+  collapsible?: boolean; // render as a foldable <details> (the by-day view)
+  defaultOpen?: boolean; // when collapsible, whether it starts expanded
 }
 
 // A match is FINAL when the Result says so, or (no Result yet) when the answer

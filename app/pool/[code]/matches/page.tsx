@@ -90,7 +90,7 @@ function GroupingToggle({ code, active }: { code: string; active: FixtureGroupin
     const on = active === fx;
     return (
       <Link
-        href={`/pool/${code}/matches?view=groups&fx=${fx}`}
+        href={`/pool/${code}/matches?view=groups&fx=${fx}#group-fixtures`}
         aria-current={on ? "page" : undefined}
         className={`flex-1 rounded-full px-3 py-1.5 text-center text-[13px] font-semibold transition-colors ${
           on ? "bg-surface text-ink shadow-[var(--shadow-xs)]" : "text-ink-3 hover:text-ink"
@@ -167,7 +167,7 @@ export default async function MatchesPage({
             </section>
           ) : null}
 
-          <section>
+          <section id="group-fixtures" className="scroll-mt-4">
             <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
               Group fixtures
             </h2>

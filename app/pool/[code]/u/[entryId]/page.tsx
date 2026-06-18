@@ -29,7 +29,7 @@ export default async function ProfilePage({
           href={`/pool/${code}/leaderboard`}
           className="rounded-full px-2 py-1 text-xs font-semibold text-pitch underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
         >
-          ← Contestants
+          ← Leaderboard
         </Link>
       </div>
       <Profile profile={profile} />

@@ -1,5 +1,5 @@
 import type { ImpliedProbs } from "@/lib/odds/map";
-import { resolvePair, NEUTRAL } from "@/lib/teams/colors";
+import { resolvePair, NEUTRAL, DRAW_FILL } from "@/lib/teams/colors";
 
 const pct = (x: number) => Math.round(x * 100);
 
@@ -23,18 +23,21 @@ export function WinProbBar({
   const { home, away } = hasCodes
     ? resolvePair(homeCode, awayCode)
     : { home: "var(--pitch)", away: "var(--round-r16)" };
-  const draw = hasCodes ? NEUTRAL : "var(--ink-4)";
+  // Draw share is a textured gray fill; the % label keeps the flat NEUTRAL color
+  // (a gradient can't tint text). Order is home · draw · away — draw in the middle.
+  const drawFill = hasCodes ? DRAW_FILL : "var(--ink-4)";
+  const drawText = hasCodes ? NEUTRAL : "var(--ink-4)";
 
   return (
     <div className="mt-1.5">
       <div className="flex h-1.5 overflow-hidden rounded-full">
         <span style={{ width: `${h}%`, background: home }} />
-        <span style={{ width: `${d}%`, background: draw }} />
+        <span style={{ width: `${d}%`, background: drawFill }} />
         <span style={{ width: `${a}%`, background: away }} />
       </div>
       <div className="mt-0.5 flex justify-between text-[10px] font-mono">
         <span style={{ color: home }}>{h}%</span>
-        <span style={{ color: draw }}>D {d}%</span>
+        <span style={{ color: drawText }}>D {d}%</span>
         <span style={{ color: away }}>{a}%</span>
       </div>
     </div>

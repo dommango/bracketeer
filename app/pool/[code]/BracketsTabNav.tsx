@@ -38,7 +38,7 @@ export function BracketsTabNav({ code }: { code: string }) {
   return (
     <div className="flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
       {tab("picks", `${base}/picks`, "My Bracket")}
-      {tab("contestants", `${base}/leaderboard`, "Contestants")}
+      {tab("contestants", `${base}/leaderboard`, "Leaderboard")}
       {tab("compare", `${base}/compare`, "Compare")}
     </div>
   );
