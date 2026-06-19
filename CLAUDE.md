@@ -101,6 +101,14 @@ in that tool and people's standings must not change. Everything below serves tha
   `googleEnabled`, `emailEnabled`, `sportsApiEnabled`, `oddsApiEnabled`, `giphyEnabled`,
   `stripeEnabled`, `pushEnabled`. Every feature that needs secrets checks its flag and no-ops
   cleanly when unset, so the app builds and runs keyless. **New integrations follow this pattern.**
+  - **External API plans (so a poll returning no data isn't misread as a quota cap):**
+    **API-Football** (live scores, `SPORTS_API_KEY`, `league=1&season=2026`) runs on a **paid,
+    effectively-unlimited plan** — `fetchFixtures` pulls the whole season every call, so an empty
+    feed means an **invalid/wrong key** (api-sports.io rejects with `"Missing application key"` and
+    no rate-limit headers), not exhaustion; it needs a *direct* api-sports.io application key (the
+    `x-apisports-key` header), not a RapidAPI key. **The Odds API** (`ODDS_API_KEY`) is the
+    opposite — **free tier, 500 credits/mo** — so its poller is deliberately throttled
+    (`lib/odds/schedule.ts`).
 
 - **External integrations are implemented SDK-free** (deliberate — keeps `npm install` light and
   the build green without keys). Stripe billing (`lib/billing/`) and APNs push (`lib/push/`) both
