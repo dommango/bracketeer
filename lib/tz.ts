@@ -17,6 +17,37 @@ function offsetMinutes(at: Date, timeZone: string): number {
   return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
 }
 
+// Matches are grouped into "matchdays" in Eastern time, but the day rolls over in
+// the pre-dawn hours rather than at midnight: a kickoff in the small hours counts
+// toward the *previous* day's slate (no WC2026 kickoff falls between midnight and
+// noon ET, so this only reclassifies the small-hours "now" and any hypothetical
+// post-midnight match). MATCHDAY_ROLLOVER_HOURS is how far past Eastern midnight a
+// matchday extends.
+export const MATCHDAY_ROLLOVER_HOURS = 5;
+
+// The Eastern matchday an instant belongs to, as a YYYY-MM-DD key. Shifting the
+// instant back by the rollover before taking the Eastern calendar date folds
+// post-midnight kickoffs into the prior day (see MATCHDAY_ROLLOVER_HOURS). The key
+// compares lexicographically, which equals chronological order.
+export function matchdayKey(at: Date, timeZone: string = DISPLAY_TZ): string {
+  const shifted = new Date(at.getTime() - MATCHDAY_ROLLOVER_HOURS * 3_600_000);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(shifted);
+}
+
+// How many Eastern matchdays `at` is ahead of `from`: 0 = same matchday, 1 =
+// tomorrow's slate, negative = earlier. Used to decide whether Home's next-match
+// card is showing today's game or a later day (and to label it "Tomorrow").
+export function matchdaysAhead(at: Date, from: Date, timeZone: string = DISPLAY_TZ): number {
+  const a = Date.parse(`${matchdayKey(from, timeZone)}T00:00:00Z`);
+  const b = Date.parse(`${matchdayKey(at, timeZone)}T00:00:00Z`);
+  return Math.round((b - a) / 86_400_000);
+}
+
 // The UTC instant of the start of the Eastern-time day containing `now`
 // (i.e. the most recent Eastern midnight). DST-correct.
 export function startOfDayInZone(now: Date = new Date(), timeZone: string = DISPLAY_TZ): Date {

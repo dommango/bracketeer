@@ -139,6 +139,7 @@ export interface HomeNextMatch {
   city: string | null;
   cityToken: string | null;
   odds: ImpliedProbs | null; // pre-match win/draw/win, for the home scorecard parity bar
+  daysAhead: number; // Eastern matchdays from now: 0 = today, 1 = tomorrow (drives the "Tomorrow" tag)
 }
 
 // Your headline numbers for the dashboard, drawn from your primary entry's

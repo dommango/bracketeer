@@ -3,7 +3,7 @@ import type { MatchCenterRow } from "@/lib/pool/match-center";
 import type { HomeNextMatch } from "@/lib/pool/home";
 import { Flag } from "./Flag";
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
-import { formatKickoff } from "@/lib/pool/format";
+import { formatKickoff, formatMatchDate } from "@/lib/pool/format";
 import { VenueLine } from "./VenueLine";
 import { WinProbBar } from "./WinProbBar";
 
@@ -141,6 +141,17 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
 
 function NextMatchCard({ match, code }: { match: HomeNextMatch; code: string }) {
   const accent = ROUND_ACCENT[match.roundCode] ?? "var(--line)";
+  // Once today's slate is done this card surfaces a later day — tag it so it
+  // doesn't read as imminent. "Tomorrow" for the next matchday, the date itself
+  // for a further-off game (e.g. a knockout rest-day gap).
+  const dayTag =
+    match.daysAhead <= 0
+      ? null
+      : match.daysAhead === 1
+        ? "Tomorrow"
+        : match.scheduledAt
+          ? formatMatchDate(match.scheduledAt)
+          : null;
   return (
     <Link href={`/pool/${code}/matches/${match.matchNo}`} className={CARD_CLASS} style={{ borderLeft: `4px solid ${accent}` }}>
       <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -148,8 +159,15 @@ function NextMatchCard({ match, code }: { match: HomeNextMatch; code: string }) 
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
           {roundLabelFor(match.roundCode, match.home, match.away)}
         </span>
-        <span className="font-mono text-xs text-ink-3">
-          {match.scheduledAt ? formatKickoff(match.scheduledAt) : "TBD"}
+        <span className="flex items-center gap-1.5">
+          {dayTag ? (
+            <span className="rounded-full bg-pitch-tint px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-pitch-dark">
+              {dayTag}
+            </span>
+          ) : null}
+          <span className="font-mono text-xs text-ink-3">
+            {match.scheduledAt ? formatKickoff(match.scheduledAt) : "TBD"}
+          </span>
         </span>
       </div>
       <TeamRow code={match.home} name={teamName(match.home)} score={null} bold={false} />
