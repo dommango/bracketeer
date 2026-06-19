@@ -8,6 +8,19 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.8.0",
+    date: "June 18, 2026",
+    title: "Stadiums & projections",
+    notes: [
+      "Road to the Round of 32: for each host stadium, see the teams most likely to play there, drawn as probability bars from live standings and odds.",
+      "Stadium pages now show live scorecards with tappable venue links and live match chat, listed in kickoff order.",
+      "Richer live matches: in-play stats and head-to-head history on every fixture.",
+      "Tidier Matches view — finished days fold into a single 'Previous days' section, and the Round of 32 countdown now greets you at sign-in.",
+      "Cleaner win-probability bars: the draw sits in the middle, they hide once a match is final, and they're clearly labeled while live.",
+      "Fixes: standings no longer read '0 points to the spot above' when you're tied, plus a footer with release notes on every tab.",
+    ],
+  },
+  {
     version: "0.7.0",
     date: "June 17, 2026",
     title: "Navigation refresh",
