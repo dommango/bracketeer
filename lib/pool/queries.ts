@@ -50,7 +50,7 @@ import type { H2HSummary } from "@/lib/sports/predictions-parse";
 import type { LineupPlayer } from "@/lib/sports/lineups-parse";
 import type { InjuryItem } from "@/lib/sports/injuries-parse";
 import { venueFor } from "@/lib/scoring/schedule";
-import { startOfDayInZone } from "@/lib/tz";
+import { startOfDayInZone, matchdaysAhead } from "@/lib/tz";
 import type { Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
 import {
@@ -565,6 +565,10 @@ export async function getNextMatch(
   const away =
     full?.result?.awayTeamCode ?? (isGroup ? full?.awaySlotRef : resolved[picked.matchNo]?.away) ?? null;
   const v = venueFor(picked.matchNo);
+  // How far ahead the next match sits, in Eastern matchdays — 0 when it's still
+  // today's slate, 1+ once today is exhausted. Drives the card's "Tomorrow" tag so
+  // a next-day game doesn't read as imminent. Unknown kickoff (pre-draw) → 0.
+  const daysAhead = picked.scheduledAt ? Math.max(0, matchdaysAhead(picked.scheduledAt, new Date())) : 0;
   return {
     matchNo: picked.matchNo,
     roundCode: picked.roundCode,
@@ -576,6 +580,7 @@ export async function getNextMatch(
     city: v?.city ?? null,
     cityToken: v?.cityToken ?? null,
     odds: full?.odds ?? null,
+    daysAhead,
   };
 }
 
