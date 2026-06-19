@@ -6,15 +6,7 @@ import { oddsApiEnabled } from "@/lib/env";
 import { fetchOddsEvents } from "@/lib/odds/client";
 import { normalizeTeam, resolveMatchNo, toImpliedProbs, orientToHome } from "@/lib/odds/map";
 import { loadCodedMatches } from "@/lib/odds/coded";
-import {
-  oddsTier,
-  maxAgeForTier,
-  oddsFetchDue,
-  type OddsTier,
-  LIVE_WINDOW_BEFORE_MS,
-  LIVE_WINDOW_AFTER_MS,
-  PREMATCH_LOOKAHEAD_MS,
-} from "@/lib/odds/schedule";
+import { snapshotDue, snapshotKickoffRange, type OddsSnapshot } from "@/lib/odds/schedule";
 
 export interface OddsPollSummary {
   fetched: number;
@@ -22,55 +14,33 @@ export interface OddsPollSummary {
   upserted: number;
   unmatched: string[];
   skipped?: boolean; // gate decided this poll shouldn't spend an Odds API credit
-  tier?: OddsTier; // why: which cadence tier the schedule resolved to
+  snapshot?: OddsSnapshot; // why: which snapshot (pre/half) this fetch is taking
 }
 
-// Decide whether this poll should spend a credit. Mirrors pollScores' shouldPollNow
-// but adds a staleness gate: cron calls poll-odds every minute, and this lets the
-// call through only when the stored odds are stale for the current tier — frequent
-// while a match is live, slow pre-match, never when idle. The whole-slate fetch is
-// 1 credit, so gating *frequency* here is the entire credit-budget lever.
-async function oddsRefreshDue(tournamentId: string): Promise<{ due: boolean; tier: OddsTier }> {
+// Decide whether this poll should spend a credit. Cron calls poll-odds every
+// minute; this lets a call through only when some match is at a snapshot moment
+// whose odds haven't been captured yet (see lib/odds/schedule.ts) — bounding h2h
+// spend to ~2 credits per distinct kickoff to stay inside the 500/mo free quota.
+// The whole-slate fetch refreshes every match at once, so the first match to hit a
+// shared kickoff covers the rest, and `snapshotDue` then reports them not due.
+async function oddsRefreshDue(
+  tournamentId: string,
+): Promise<{ due: boolean; snapshot: OddsSnapshot | null }> {
   const now = Date.now();
-
-  const liveNow =
-    (await prisma.match.findFirst({
-      where: {
-        tournamentId,
-        scheduledAt: {
-          gt: new Date(now - LIVE_WINDOW_AFTER_MS),
-          lt: new Date(now + LIVE_WINDOW_BEFORE_MS),
-        },
-      },
-      select: { id: true },
-    })) != null;
-
-  let imminent = false;
-  if (!liveNow) {
-    imminent =
-      (await prisma.match.findFirst({
-        where: {
-          tournamentId,
-          scored: false,
-          scheduledAt: {
-            gt: new Date(now + LIVE_WINDOW_BEFORE_MS),
-            lt: new Date(now + PREMATCH_LOOKAHEAD_MS),
-          },
-        },
-        select: { id: true },
-      })) != null;
-  }
-
-  const tier = oddsTier(liveNow, imminent);
-  const maxAge = maxAgeForTier(tier);
-  if (maxAge == null) return { due: false, tier };
-
-  const freshest = await prisma.matchOdds.findFirst({
-    where: { match: { tournamentId } },
-    orderBy: { fetchedAt: "desc" },
-    select: { fetchedAt: true },
+  const candidates = await prisma.match.findMany({
+    where: { tournamentId, scheduledAt: snapshotKickoffRange(now) },
+    select: { scheduledAt: true, odds: { select: { fetchedAt: true } } },
   });
-  return { due: oddsFetchDue(freshest?.fetchedAt ?? null, maxAge, now), tier };
+
+  for (const m of candidates) {
+    const snap = snapshotDue(
+      now,
+      m.scheduledAt!.getTime(),
+      m.odds?.fetchedAt?.getTime() ?? null,
+    );
+    if (snap) return { due: true, snapshot: snap };
+  }
+  return { due: false, snapshot: null };
 }
 
 export async function pollOdds(): Promise<OddsPollSummary> {
@@ -84,7 +54,7 @@ export async function pollOdds(): Promise<OddsPollSummary> {
 
   const plan = await oddsRefreshDue(tournament.id);
   if (!plan.due) {
-    return { fetched: 0, mapped: 0, upserted: 0, unmatched: [], skipped: true, tier: plan.tier };
+    return { fetched: 0, mapped: 0, upserted: 0, unmatched: [], skipped: true };
   }
 
   const coded = await loadCodedMatches(tournament.id, tournament.officialResults);
@@ -127,5 +97,5 @@ export async function pollOdds(): Promise<OddsPollSummary> {
     upserted++;
   }
 
-  return { fetched: events.length, mapped, upserted, unmatched, tier: plan.tier };
+  return { fetched: events.length, mapped, upserted, unmatched, snapshot: plan.snapshot ?? undefined };
 }

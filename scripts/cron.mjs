@@ -49,15 +49,15 @@ async function tick() {
   await hit("/api/cron/poll-scores");
 
   // h2h odds: called every minute, but the route self-throttles on the match
-  // schedule (lib/odds/schedule.ts) — a credit is spent only when stored odds are
-  // stale for the current tier (≤10 min live, ≤3 h pre-match, never when idle).
-  // This is cheap when idle (a couple of indexed queries, no Odds API call), like
-  // poll-scores, and keeps spend inside The Odds API's 500/mo free quota.
+  // schedule (lib/odds/schedule.ts) — a credit is spent only at a match's snapshot
+  // moments (just before kickoff + around halftime), at most ~2 per distinct
+  // kickoff. Cheap when idle (one indexed query, no Odds API call), like
+  // poll-scores, and bounds spend inside The Odds API's 500/mo free quota.
   await hit("/api/cron/poll-odds");
 
-  // Futures (tournament winner, golden boot, totals) barely move — every 12h is
-  // plenty and keeps these per-call-billed markets off the hot path.
-  if (due("odds-extras", 720)) await hit("/api/cron/poll-odds-extras");
+  // Futures (tournament winner, golden boot, totals) barely move — once a day is
+  // plenty and keeps these per-call-billed markets well inside the quota.
+  if (due("odds-extras", 1440)) await hit("/api/cron/poll-odds-extras");
   if (due("lineups", 15)) await hit("/api/cron/poll-lineups");
   if (due("predictions", 60)) await hit("/api/cron/poll-predictions");
   if (due("injuries", 60)) await hit("/api/cron/poll-injuries");

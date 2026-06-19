@@ -1,62 +1,66 @@
 import { describe, it, expect } from "vitest";
 import {
-  oddsTier,
-  maxAgeForTier,
-  oddsFetchDue,
-  LIVE_MAX_AGE_MS,
-  PREMATCH_MAX_AGE_MS,
+  snapshotDue,
+  snapshotKickoffRange,
+  PRE_WINDOW_START_MS,
+  HALF_WINDOW_START_MS,
+  HALF_WINDOW_END_MS,
 } from "./schedule";
 
-describe("oddsTier", () => {
-  it("is live whenever a match is in play, even if another is imminent", () => {
-    expect(oddsTier(true, true)).toBe("live");
-    expect(oddsTier(true, false)).toBe("live");
+const KO = new Date("2026-06-18T19:00:00Z").getTime();
+const at = (offsetMs: number) => KO + offsetMs;
+const MIN = 60_000;
+
+describe("snapshotDue", () => {
+  it("takes no snapshot well before the pre-match window opens", () => {
+    expect(snapshotDue(at(-90 * MIN), KO, null)).toBeNull();
   });
 
-  it("is prematch when nothing is live but a match kicks off soon", () => {
-    expect(oddsTier(false, true)).toBe("prematch");
+  it("takes the pre snapshot once the 30-min window opens and odds are unset", () => {
+    expect(snapshotDue(at(PRE_WINDOW_START_MS), KO, null)).toBe("pre");
+    expect(snapshotDue(at(-10 * MIN), KO, null)).toBe("pre");
   });
 
-  it("is idle when nothing is live or imminent", () => {
-    expect(oddsTier(false, false)).toBe("idle");
+  it("fires the pre snapshot only once: a row stamped inside the window is not re-due", () => {
+    const justFetched = at(-29 * MIN); // captured 1 min into the window
+    expect(snapshotDue(at(-10 * MIN), KO, justFetched)).toBeNull();
+  });
+
+  it("still fires pre when the stored odds predate the window (stale slate from hours ago)", () => {
+    const old = at(-6 * 60 * MIN);
+    expect(snapshotDue(at(-10 * MIN), KO, old)).toBe("pre");
+  });
+
+  it("takes no snapshot in the first-half gap between the two windows", () => {
+    // Kickoff through ~45 min: pre already taken, half not yet open.
+    expect(snapshotDue(at(20 * MIN), KO, at(-25 * MIN))).toBeNull();
+  });
+
+  it("takes the half snapshot once the halftime window opens, given a pre-window row", () => {
+    const preRow = at(-25 * MIN); // the pre snapshot, older than halfStart
+    expect(snapshotDue(at(HALF_WINDOW_START_MS), KO, preRow)).toBe("half");
+    expect(snapshotDue(at(55 * MIN), KO, preRow)).toBe("half");
+  });
+
+  it("fires the half snapshot only once: a row stamped inside the halftime window is not re-due", () => {
+    const halfFetched = at(46 * MIN);
+    expect(snapshotDue(at(55 * MIN), KO, halfFetched)).toBeNull();
+  });
+
+  it("takes no snapshot after the halftime window closes (odds are meaningless near FT)", () => {
+    expect(snapshotDue(at(HALF_WINDOW_END_MS + MIN), KO, at(-25 * MIN))).toBeNull();
+    expect(snapshotDue(at(120 * MIN), KO, at(-25 * MIN))).toBeNull();
   });
 });
 
-describe("maxAgeForTier", () => {
-  it("maps each tier to its refresh budget; idle never refreshes", () => {
-    expect(maxAgeForTier("live")).toBe(LIVE_MAX_AGE_MS);
-    expect(maxAgeForTier("prematch")).toBe(PREMATCH_MAX_AGE_MS);
-    expect(maxAgeForTier("idle")).toBeNull();
-  });
-});
-
-describe("oddsFetchDue", () => {
-  const now = new Date("2026-06-18T20:00:00Z").getTime();
-  const ago = (ms: number) => new Date(now - ms);
-
-  it("never fetches when idle (no max age), regardless of staleness", () => {
-    expect(oddsFetchDue(null, null, now)).toBe(false);
-    expect(oddsFetchDue(ago(24 * 60 * 60_000), null, now)).toBe(false);
-  });
-
-  it("bootstraps a fetch when no odds have been stored yet", () => {
-    expect(oddsFetchDue(null, LIVE_MAX_AGE_MS, now)).toBe(true);
-  });
-
-  it("skips while the freshest row is still within the tier's max age", () => {
-    expect(oddsFetchDue(ago(LIVE_MAX_AGE_MS - 60_000), LIVE_MAX_AGE_MS, now)).toBe(false);
-  });
-
-  it("fetches once the freshest row ages past the tier's max age", () => {
-    expect(oddsFetchDue(ago(LIVE_MAX_AGE_MS), LIVE_MAX_AGE_MS, now)).toBe(true);
-    expect(oddsFetchDue(ago(LIVE_MAX_AGE_MS + 60_000), LIVE_MAX_AGE_MS, now)).toBe(true);
-  });
-
-  it("treats the same row as stale for live but fresh for pre-match (slower budget)", () => {
-    // A 30-min-old row is stale for the 10-min live tier but fresh for the 3-h
-    // pre-match tier — same data, different cadence.
-    const thirtyMin = ago(30 * 60_000);
-    expect(oddsFetchDue(thirtyMin, LIVE_MAX_AGE_MS, now)).toBe(true);
-    expect(oddsFetchDue(thirtyMin, PREMATCH_MAX_AGE_MS, now)).toBe(false);
+describe("snapshotKickoffRange", () => {
+  it("brackets kickoffs whose pre- or half-window could be open right now", () => {
+    const now = at(0);
+    const { gt, lt } = snapshotKickoffRange(now);
+    // A match kicking off up to 30 min from now (pre-window open) is included…
+    expect(lt.getTime()).toBe(now - PRE_WINDOW_START_MS);
+    // …and one that kicked off up to 75 min ago (halftime window open) too.
+    expect(gt.getTime()).toBe(now - HALF_WINDOW_END_MS);
+    expect(gt.getTime()).toBeLessThan(lt.getTime());
   });
 });
