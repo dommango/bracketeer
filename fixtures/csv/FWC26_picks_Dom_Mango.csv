@@ -1,6 +1,6 @@
 ﻿section,category,key,code,team_or_value,match_date
 contestant,info,name,,Dom Mango,
-contestant,info,email,,dommango@gmail.com,
+contestant,info,email,,dom@example.com,
 contestant,info,tiebreaker_goals_in_final,,3,
 group_stage,Group A,1st,MEX,Mexico,
 group_stage,Group A,2nd,RSA,South Africa,

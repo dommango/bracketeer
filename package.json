@@ -1,7 +1,8 @@
 {
   "name": "hessfest",
   "version": "0.9.0",
-  "private": true,
+  "private": false,
+  "license": "MIT",
   "engines": {
     "node": "22.x"
   },
