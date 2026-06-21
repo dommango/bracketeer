@@ -4,6 +4,7 @@ import {
   getHomeView,
   getPoolView,
   getPoolBracket,
+  getGroupOverlay,
   getKnockoutState,
 } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
@@ -28,10 +29,11 @@ export default async function PoolHomePage({
   const access = await getPoolAccess(pool.id);
   const sessionUser = access?.user ?? (await getSessionUser());
 
-  const [view, poolView, bracket, recentChat] = await Promise.all([
+  const [view, poolView, bracket, groupOverlay, recentChat] = await Promise.all([
     getHomeView(pool.id, sessionUser?.id ?? null),
     getPoolView(code),
     getPoolBracket(pool.id),
+    getGroupOverlay(pool.id, sessionUser?.id ?? null),
     // Chat is members-only — fetch the latest few only for users with access.
     access ? listMessages(pool.id, 3, sessionUser?.id ?? null) : Promise.resolve([]),
   ]);
@@ -62,6 +64,7 @@ export default async function PoolHomePage({
       entryCount={fullBoard.length}
       hasMore={hasMore}
       bracket={bracket}
+      groupOverlay={groupOverlay}
       showMedals={poolView?.groupStageComplete ?? false}
       recentChat={recentChat}
       format={pool.format}

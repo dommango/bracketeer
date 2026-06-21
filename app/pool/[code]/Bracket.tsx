@@ -4,6 +4,7 @@ import type { GroupTableRow } from "@/lib/pool/group-table";
 import { R16, QF, SF, FINAL } from "@/lib/scoring/data";
 import { formatMatchDate, formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
+import { GROUP_CITY, GroupLetterMark, FormChips } from "./group-bits";
 
 // Pre-order DFS from the Final (a-branch before b-branch) gives every knockout
 // match a top-to-bottom position so its two feeders sit directly beside it —
@@ -37,22 +38,6 @@ const ROUND_ACCENT: Record<string, string> = {
   "Semi-finals": "var(--round-sf)",
   "Third-place play-off": "var(--gold-dark)",
   Final: "var(--round-final)",
-};
-
-// A–L → host-city slug (color + matching subtle pattern motif).
-const GROUP_CITY: Record<string, string> = {
-  A: "mexico-city",
-  B: "vancouver",
-  C: "atlanta",
-  D: "houston",
-  E: "philadelphia",
-  F: "los-angeles",
-  G: "guadalajara",
-  H: "kansas-city",
-  I: "monterrey",
-  J: "san-francisco",
-  K: "boston",
-  L: "new-york-nj",
 };
 
 function Side({
@@ -229,44 +214,6 @@ export function Bracket({ view }: { view: BracketView }) {
         <BracketTree rounds={view.rounds} bronze={bronze} />
       </div>
     </>
-  );
-}
-
-// The group letter as a plain solid square in the group's city color.
-function GroupLetterMark({ letter, city }: { letter: string; city: string }) {
-  return (
-    <span
-      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm font-display text-[13px] text-white"
-      style={{ background: `var(--city-${city})`, textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
-    >
-      {letter}
-    </span>
-  );
-}
-
-// Up to three W/D/L result chips derived from the win/draw/loss counts (the table
-// row carries aggregate counts, not per-match order), padded with empty cells.
-function FormChips({ w, d, l }: { w: number; d: number; l: number }) {
-  const seq = [
-    ...Array(w).fill("W"),
-    ...Array(d).fill("D"),
-    ...Array(l).fill("L"),
-  ].slice(0, 3);
-  while (seq.length < 3) seq.push("");
-  const color = (r: string) =>
-    r === "W" ? "#22c55e" : r === "D" ? "#9ca3af" : r === "L" ? "#ef4444" : "transparent";
-  return (
-    <span className="inline-flex gap-0.5">
-      {seq.map((r, i) => (
-        <span
-          key={i}
-          className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-[3px] text-[8px] font-bold text-white"
-          style={{ background: color(r), border: r ? "none" : "1px solid var(--line)" }}
-        >
-          {r}
-        </span>
-      ))}
-    </span>
   );
 }
 

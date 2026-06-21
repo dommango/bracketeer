@@ -4,9 +4,11 @@ import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
 import { ScoreCards } from "./ScoreCards";
 import { GroupStandings } from "./Bracket";
+import { GroupOverlay } from "./GroupOverlay";
 import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 import type { BracketView } from "@/lib/pool/bracket-view";
+import type { BracketOverlay } from "@/lib/pool/queries";
 import type { ChatView } from "@/lib/pool/chat";
 import type { PoolFormat } from "@/lib/pool/manage";
 import { DISPLAY_TZ } from "@/lib/tz";
@@ -342,6 +344,7 @@ export function Home({
   entryCount,
   hasMore,
   bracket,
+  groupOverlay,
   showMedals,
   recentChat,
   format,
@@ -362,6 +365,9 @@ export function Home({
   hasMore: boolean;
   // Live group standings + knockout bracket (null only if the pool has no tournament).
   bracket: BracketView | null;
+  // The viewer's brackets with group picks attributed onto the live standings.
+  // Null when no overlay applies (signed out, knockout pool, or no bracket owned).
+  groupOverlay?: BracketOverlay[] | null;
   // Show leaderboard medals (only after the group stage completes).
   showMedals: boolean;
   // The most recent chat messages (empty for non-members).
@@ -452,7 +458,11 @@ export function Home({
             </Link>
           </div>
           <div className="mt-2.5">
-            <GroupStandings view={bracket} code={code} />
+            {groupOverlay && groupOverlay.length > 0 ? (
+              <GroupOverlay view={bracket} brackets={groupOverlay} code={code} />
+            ) : (
+              <GroupStandings view={bracket} code={code} />
+            )}
           </div>
         </section>
       ) : null}
