@@ -12,11 +12,22 @@ import { emptyPicks, type Picks } from "@/lib/scoring/types";
 import { submitPicksAction } from "./picks/actions";
 import { AWARDS, Bar, KO_STAGES, KnockoutMatch, LABEL } from "./pick-ui";
 
+// The save contract shared by the pool and solo flows: a payload of the edited
+// bracket, returning ok/error. The pool flow binds it to submitPicksAction with
+// the pool code; the solo flow passes its own master-pool save action.
+export type SaveBracket = (payload: {
+  entryId?: string;
+  label: string;
+  tiebreak: string;
+  picks: Picks;
+}) => Promise<{ ok: boolean; error?: string }>;
+
 // Knockout-only bracket builder: the 32 qualifiers are fixed by the official R32
 // seed, so the picker only chooses a winner for each match (R32 → Final), plus
 // awards + tiebreak. No group / third-place sections (that's the full-bracket
-// PickForm). Saves through the same submitPicksAction; the group halves of the
-// payload stay empty and score zero.
+// PickForm). Saves through submitPicksAction by default (pool flow); the solo
+// flow passes saveAction instead. The group halves of the payload stay empty and
+// score zero.
 export function KnockoutPickForm({
   code,
   entryId,
@@ -25,14 +36,16 @@ export function KnockoutPickForm({
   label,
   locked,
   seed,
+  saveAction,
 }: {
-  code: string;
+  code?: string;
   entryId?: string;
   initialPicks: Picks;
   initialTiebreak: string;
   label: string;
   locked: boolean;
   seed: ResolvedR32;
+  saveAction?: SaveBracket;
 }) {
   const [picks, setPicks] = useState<Picks>(() =>
     reconcileKnockoutPicks(initialPicks ?? emptyPicks(), seed),
@@ -60,7 +73,9 @@ export function KnockoutPickForm({
     setError(null);
     setSaved(null);
     startTransition(async () => {
-      const res = await submitPicksAction({ code, entryId, label, tiebreak, picks });
+      const res = saveAction
+        ? await saveAction({ entryId, label, tiebreak, picks })
+        : await submitPicksAction({ code: code ?? "", entryId, label, tiebreak, picks });
       if (res.ok) setSaved("Picks saved");
       else setError(res.error ?? "Could not save picks.");
     });

@@ -399,6 +399,11 @@ model Pool {
   joinCode     String     @unique
   format       PoolFormat @default(FULL_BRACKET)
   tier         PoolTier   @default(FREE)
+  // The single global "master" pool per tournament+format that aggregates solo
+  // brackets. Owned by the system user, not membership-joinable; solo entries
+  // live here and surface on the public master leaderboard once opted in. False
+  // for every ordinary friend-group pool (unaffected).
+  isMaster     Boolean    @default(false)
   // Stripe linkage for the pool's premium subscription (null until upgraded).
   stripeCustomerId     String?
   stripeSubscriptionId String?
@@ -468,6 +473,11 @@ model Entry {
   locked      Boolean      @default(false)
   importedFrom ImportSource @default(CSV)
   tiebreak    String?
+  // Opt-in flag for a solo bracket in the master pool: true means the owner has
+  // entered it into the public master tournament and it appears on that
+  // leaderboard. Default false (private — scored and visible only to the owner).
+  // Irrelevant/harmless for entries in ordinary pools.
+  enteredMaster Boolean    @default(false)
   createdAt   DateTime     @default(now())
 
   pool      Pool            @relation(fields: [poolId], references: [id], onDelete: Cascade)

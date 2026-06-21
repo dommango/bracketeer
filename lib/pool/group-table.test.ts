@@ -83,6 +83,7 @@ const tableRow = (over: Partial<GroupTableRow> & { code: string; rank: number })
   gd: 0,
   pts: 0,
   tied: false,
+  form: "",
   ...over,
 });
 
@@ -135,5 +136,35 @@ describe("provisionalStandings", () => {
     // 7 clear qualifiers; the 8th slot is contested by two equal teams -> both dropped.
     expect(s.thirdAdvance).toHaveLength(7);
     expect(s.thirdAdvance).toEqual(["T0", "T1", "T2", "T3", "T4", "T5", "T6"]);
+  });
+});
+
+describe("group-table form", () => {
+  const mn = (
+    homeCode: string,
+    awayCode: string,
+    homeScore: number,
+    awayScore: number,
+    matchNo: number,
+  ): GroupResultRow => ({ homeCode, awayCode, homeScore, awayScore, matchNo });
+
+  it("renders each team's W/D/L in match order, not grouped by result", () => {
+    // MEX: matchNo 1 loss, 2 win, 3 draw — chronological "LWD" (grouped logic gave "WDL").
+    // Rows deliberately out of order to prove sorting is by matchNo.
+    const t = computeGroupTables([
+      mn("MEX", "KOR", 2, 0, 2), // MEX W (2nd)
+      mn("MEX", "CZE", 1, 1, 3), // MEX D (3rd)
+      mn("RSA", "MEX", 1, 0, 1), // MEX L (1st, away)
+    ]).A;
+    expect(rankOf(t, "MEX").form).toBe("LWD");
+  });
+
+  it("covers only played matches and falls back to input order without matchNo", () => {
+    const t = computeGroupTables([
+      m("MEX", "RSA", 0, 2), // MEX L, RSA W
+      m("KOR", "MEX", 3, 1), // MEX L, KOR W
+    ]).A;
+    expect(rankOf(t, "MEX").form).toBe("LL");
+    expect(rankOf(t, "RSA").form).toBe("W");
   });
 });

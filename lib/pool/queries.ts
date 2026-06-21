@@ -44,6 +44,7 @@ import {
   type StadiumProjection,
 } from "@/lib/pool/stadium-projection";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
+import { groupOverlayBreakdown, type GroupOverlayBreakdown } from "@/lib/pool/group-overlay";
 import { TEAMS } from "@/lib/scoring/data";
 import type { ImpliedProbs } from "@/lib/odds/map";
 import type { H2HSummary } from "@/lib/sports/predictions-parse";
@@ -93,10 +94,18 @@ export async function hasTournamentStarted(
 // Memoized per request so the pool layout and its child route page share one
 // lookup instead of querying twice on every navigation.
 export const getPoolByCode = cache(async (code: string) => {
-  return prisma.pool.findUnique({
+  const pool = await prisma.pool.findUnique({
     where: { joinCode: code.toUpperCase() },
     include: { tournament: true },
   });
+  // The master pool aggregates solo brackets — some private (not opted into the
+  // public board). The /pool/[code]/* routes are public-by-join-code and not
+  // membership-gated, so resolving the master pool here would expose every
+  // private entry's picks/scores via its code. It's never browsed as a pool
+  // (the solo flow + /master read it by tournament id), so hide it: callers
+  // notFound(), closing that path. Ordinary pools are unaffected.
+  if (pool?.isMaster) return null;
+  return pool;
 });
 
 // Per-request memoized leaderboard read. The landing aggregates the leaderboard
@@ -456,10 +465,75 @@ export async function getPoolBracket(poolId: string): Promise<BracketView | null
       awayCode: r.awayTeamCode,
       homeScore: r.homeScore,
       awayScore: r.awayScore,
+      matchNo: r.match.matchNo,
     });
   }
 
   return buildBracketView(asResults(pool.tournament.officialResults), scores, groupRows);
+}
+
+export interface BracketOverlay {
+  entryId: string;
+  label: string;
+  thirdAdvance: string[]; // the bracket's 3rd-place advancer picks (for the thirds table)
+  breakdown: GroupOverlayBreakdown;
+}
+
+// Each of the viewer's brackets with its group picks attributed onto the live
+// standings, for the home-page group overlay. Returns null when no overlay
+// applies: signed out, a KNOCKOUT pool (no group picks), or the user owns no
+// bracket here. Reuses the exact LIVE/FINAL group-row filter as getPoolBracket so
+// the cards and the overlay can never diverge.
+export async function getGroupOverlay(
+  poolId: string,
+  userId: string | null | undefined,
+): Promise<BracketOverlay[] | null> {
+  if (!userId) return null;
+
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: {
+      format: true,
+      tournament: { select: { id: true, officialResults: true, scoringConfig: true } },
+    },
+  });
+  if (!pool || pool.format === "KNOCKOUT") return null;
+
+  const entries = await prisma.entry.findMany({
+    where: { poolId, userId },
+    orderBy: { createdAt: "asc" },
+    include: { picks: true },
+  });
+  if (entries.length === 0) return null;
+
+  const resultRows = await prisma.result.findMany({
+    where: { status: { in: ["LIVE", "FINAL"] }, match: { tournamentId: pool.tournament.id, matchNo: { lte: 72 } } },
+    select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+  });
+  const groupRows: GroupResultRow[] = [];
+  for (const r of resultRows) {
+    if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
+    groupRows.push({
+      homeCode: r.homeTeamCode,
+      awayCode: r.awayTeamCode,
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+    });
+  }
+
+  const official = asResults(pool.tournament.officialResults);
+  const overlay = overlayProvisional(official, provisionalStandings(computeGroupTables(groupRows)));
+  const cfg = asScoringConfig(pool.tournament.scoringConfig);
+
+  return entries.map((e) => {
+    const picks = pickRowsToSubmission(e.picks).picks;
+    return {
+      entryId: e.id,
+      label: e.label,
+      thirdAdvance: picks.thirdAdvance ?? [],
+      breakdown: groupOverlayBreakdown(picks, official, overlay, cfg),
+    };
+  });
 }
 
 // Movers over a window: for each entry, the delta between its standing at `since`

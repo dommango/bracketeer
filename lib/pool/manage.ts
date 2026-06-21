@@ -98,9 +98,14 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
 
   const pool = await prisma.pool.findUnique({
     where: { joinCode: code },
-    select: { id: true, joinCode: true, tier: true },
+    select: { id: true, joinCode: true, tier: true, isMaster: true },
   });
   if (!pool) throw new Error("No pool found for that join code.");
+  // The master pool isn't a joinable league — it aggregates solo brackets, some
+  // private. Joining it would expose those, so route people to the solo flow.
+  if (pool.isMaster) {
+    throw new Error("That's the global tournament — create your own bracket to take part.");
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: input.userId },
