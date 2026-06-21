@@ -5,20 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 HessFest is a tournament bracket-pool app. It shipped as a **World Cup 2026 MVP** for a friend
 group (kickoff 2026-06-11) and is mid-pivot into **Bracketeer**, a multi-tenant platform where
 anyone can create and run a pool — HessFest is now one pool/instance. The pivot runs in phases
-(platform framing → knockout module → SaaS billing/invites → iOS/PWA/push → launch); see
-`handoff.md` for build status and the roadmap plan referenced there. Phase work is **additive
-and non-breaking** by rule: existing pools and oracle scoring parity must never change.
+(platform framing → knockout module → SaaS billing/invites → iOS/PWA/push → launch). Phase work
+is **additive and non-breaking** by rule: existing pools and oracle scoring parity must never
+change.
 
 ## Commands
 
-`.env` is **blocked by the global protect-files hook** — it cannot be written by tooling. For
-local dev, either create `.env` yourself (copy `.env.example`) or pass vars inline. The dev
-database is a `bracketeer` DB inside the already-running **sousiq pgvector container**
-(`localhost:5432`, user `food_cost_user`, pw `food_cost_dev`).
+For local dev, copy `.env.example` to `.env`, or pass vars inline. The dev database is a local
+Postgres `bracketeer` DB (e.g. a Docker `postgres` container on `localhost:5432`).
 
 ```bash
 # Inline env prefix used throughout (DB + the two required secrets):
-ENV='DATABASE_URL=postgresql://food_cost_user:food_cost_dev@localhost:5432/bracketeer AUTH_SECRET=dev-only-secret-at-least-32-characters-long CRON_SECRET=dev-cron-secret APP_BASE_URL=http://localhost:3000'
+ENV='DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bracketeer AUTH_SECRET=dev-only-secret-at-least-32-characters-long CRON_SECRET=dev-cron-secret APP_BASE_URL=http://localhost:3000'
 
 env $ENV npm run dev            # dev server (http://localhost:3000)
 env $ENV npm run build          # production build (compiles/validates every route)
@@ -45,9 +43,9 @@ verify UI via `npm run build` (eager route compilation) and the backend via the 
 ## Architecture
 
 The whole app is organized around one non-negotiable invariant: **scoring must stay
-byte-for-byte identical to the original `WorldCup2026Bracket.html`** (at
-`/mnt/c/Users/domma/Downloads/WorldCup2026Bracket.html`), because contestants' picks were made
-in that tool and people's standings must not change. Everything below serves that.
+byte-for-byte identical to the original `WorldCup2026Bracket.html`** (the standalone in-browser
+tool contestants used to make their picks), because those picks were made in that tool and
+people's standings must not change. Everything below serves that.
 
 - **`lib/scoring/` — ported engine (treat as load-bearing).** `data.ts` (TEAMS/GROUPS/R32…/FINAL),
   `resolve.ts` (R32 slot resolution), `score.ts` (`scorePicks`), `csv.ts` (parser + serializer).
@@ -130,9 +128,8 @@ in that tool and people's standings must not change. Everything below serves tha
   for pool-scoped access, `getTournamentAdmin` (+ `isAdminEmail` in `lib/env.ts`) for answer-key
   writes. Admin tools fail **closed** outside local dev when `ADMIN_EMAILS` is unset.
 
-- **Infra conventions are copied from the sibling `carecover` project**
-  (`/home/dom/projects/carecover`): Prisma 7 + `@prisma/adapter-pg` (`lib/db.ts`), the Zod env
-  pattern above, and a Railway web-service + cron-service deploy with a `CRON_SECRET`-guarded
+- **Infra conventions** (standard for this stack): Prisma 7 + `@prisma/adapter-pg` (`lib/db.ts`),
+  the Zod env pattern above, and a Railway web-service + cron-service deploy with a `CRON_SECRET`-guarded
   `/api/cron/*` route (`scripts/cron.mjs`, `railway*.json` — to be added). The iOS app is a
   **Capacitor** wrap of the hosted web app; the web bundle stays decoupled by talking to the
   native runtime only through the injected `window.Capacitor` global (`lib/native/bridge.ts`),

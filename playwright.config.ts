@@ -8,9 +8,9 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const DEV_ENV = {
   DATABASE_URL:
     process.env.DATABASE_URL ??
-    "postgresql://food_cost_user:food_cost_dev@localhost:5432/bracketeer",
-  AUTH_SECRET: process.env.AUTH_SECRET ?? "dev-only-secret-at-least-32-characters-long",
-  CRON_SECRET: process.env.CRON_SECRET ?? "dev-cron-secret",
+    "postgresql://postgres:postgres@localhost:5432/bracketeer",
+  AUTH_SECRET: process.env.AUTH_SECRET ?? "test-secret-at-least-32-characters-long",
+  CRON_SECRET: process.env.CRON_SECRET ?? "test-cron-secret",
   APP_BASE_URL: BASE_URL,
 };
 

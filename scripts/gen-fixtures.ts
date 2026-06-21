@@ -82,7 +82,7 @@ interface Person {
 }
 
 const people: Person[] = [
-  { name: "Dom Mango", email: "dommango@gmail.com", chalk: 0.85, tiebreak: "3", seed: 1 },
+  { name: "Dom Mango", email: "dom@example.com", chalk: 0.85, tiebreak: "3", seed: 1 },
   { name: "Renée O'Brien", email: "renee.obrien@example.com", chalk: 0.7, tiebreak: "2", seed: 2 },
   { name: "José Martínez", email: "jose.m@example.com", chalk: 0.6, tiebreak: "4", seed: 3 },
   { name: "Priya Patel", email: "priya@example.com", chalk: 0.5, tiebreak: "5", seed: 4 },
