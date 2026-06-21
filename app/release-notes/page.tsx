@@ -8,6 +8,18 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.9.0",
+    date: "June 21, 2026",
+    title: "Solo brackets & group overlay",
+    notes: [
+      "Play solo: build your own knockout bracket without starting a pool, and opt it into a global master tournament to compete with everyone who enters.",
+      "Home group standings now overlay your bracket — a 'You' column shows your predicted finishing order beside the live table.",
+      "See exactly where your live points come from: each pick shows what it's earning (+3 correct position, +1 right team / wrong position), summed into a per-group total.",
+      "Third-place standings now show full team names, mark your best-3rd advancer picks, and draw the top-8 qualification cut-off line.",
+      "Form chips now show each team's results in real match order, not grouped by result.",
+    ],
+  },
+  {
     version: "0.8.0",
     date: "June 18, 2026",
     title: "Stadiums & projections",
