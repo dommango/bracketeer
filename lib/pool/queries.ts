@@ -93,10 +93,18 @@ export async function hasTournamentStarted(
 // Memoized per request so the pool layout and its child route page share one
 // lookup instead of querying twice on every navigation.
 export const getPoolByCode = cache(async (code: string) => {
-  return prisma.pool.findUnique({
+  const pool = await prisma.pool.findUnique({
     where: { joinCode: code.toUpperCase() },
     include: { tournament: true },
   });
+  // The master pool aggregates solo brackets — some private (not opted into the
+  // public board). The /pool/[code]/* routes are public-by-join-code and not
+  // membership-gated, so resolving the master pool here would expose every
+  // private entry's picks/scores via its code. It's never browsed as a pool
+  // (the solo flow + /master read it by tournament id), so hide it: callers
+  // notFound(), closing that path. Ordinary pools are unaffected.
+  if (pool?.isMaster) return null;
+  return pool;
 });
 
 // Per-request memoized leaderboard read. The landing aggregates the leaderboard

@@ -61,6 +61,17 @@ function SignedOut({ fullGameAvailable }: { fullGameAvailable: boolean }) {
       </div>
 
       <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
+        <h2 className="font-display text-lg text-ink">Just want to play solo?</h2>
+        <p className="mt-1.5 text-[13px] text-ink-3">
+          Build your own knockout bracket — no pool to set up — and enter it into the master
+          tournament against everyone else.
+        </p>
+        <Link href="/bracket" className={`mt-4 ${SECONDARY_BTN}`}>
+          Create your own bracket →
+        </Link>
+      </div>
+
+      <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
         <h2 className="font-display text-lg text-ink">Already playing?</h2>
         <p className="mt-1.5 text-[13px] text-ink-3">
           Sign in to claim your bracket, follow the live leaderboard, and join the group chat.
@@ -142,8 +153,12 @@ function SignedInHub({
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Link href="/join" className={pools.length > 0 ? SECONDARY_BTN : PRIMARY_BTN}>
+      <Link href="/bracket" className={`mt-4 ${pools.length > 0 ? SECONDARY_BTN : PRIMARY_BTN}`}>
+        Build your own bracket →
+      </Link>
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Link href="/join" className={SECONDARY_BTN}>
           Join a pool
         </Link>
         <Link href="/pool/create" className={SECONDARY_BTN}>
