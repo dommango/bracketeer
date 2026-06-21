@@ -30,14 +30,10 @@ export function GroupLetterMark({ letter, city }: { letter: string; city: string
   );
 }
 
-// Up to three W/D/L result chips derived from the win/draw/loss counts (the table
-// row carries aggregate counts, not per-match order), padded with empty cells.
-export function FormChips({ w, d, l }: { w: number; d: number; l: number }) {
-  const seq = [
-    ...Array(w).fill("W"),
-    ...Array(d).fill("D"),
-    ...Array(l).fill("L"),
-  ].slice(0, 3);
+// W/D/L result chips in the team's actual match order, most-recent last (e.g.
+// "WDL"). Padded with empty cells to a min of 3 so the column stays aligned.
+export function FormChips({ form }: { form: string }) {
+  const seq: string[] = form.toUpperCase().split("").filter((r) => r === "W" || r === "D" || r === "L");
   while (seq.length < 3) seq.push("");
   const color = (r: string) =>
     r === "W" ? "#22c55e" : r === "D" ? "#9ca3af" : r === "L" ? "#ef4444" : "transparent";

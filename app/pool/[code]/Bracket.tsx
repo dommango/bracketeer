@@ -287,7 +287,7 @@ export function GroupStandings({ view, code }: { view: BracketView; code: string
                             </span>
                           </td>
                           <td className="py-0.5 text-left">
-                            <FormChips w={r.w} d={r.d} l={r.l} />
+                            <FormChips form={r.form} />
                           </td>
                           <td className="py-0.5 text-right tabular-nums">{r.gf}</td>
                           <td className="py-0.5 text-right tabular-nums">{r.ga}</td>

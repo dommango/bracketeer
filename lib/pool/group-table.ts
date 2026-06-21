@@ -13,6 +13,7 @@ export interface GroupResultRow {
   awayCode: TeamCode;
   homeScore: number;
   awayScore: number;
+  matchNo?: number; // for chronological form ordering; falls back to input order
 }
 
 export interface GroupTableRow {
@@ -27,6 +28,7 @@ export interface GroupTableRow {
   pts: number;
   rank: number;
   tied: boolean;
+  form: string; // actual W/D/L sequence in match order, most-recent last (e.g. "WDL")
 }
 
 interface Stat {
@@ -133,6 +135,21 @@ function order(
   return [subset]; // inseparable → one tied cluster
 }
 
+// A team's actual results in match order (most-recent last), as a W/D/L string.
+// Ordered by matchNo when present, else by the order rows were supplied.
+function teamForm(code: TeamCode, matches: GroupResultRow[]): string {
+  return matches
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => m.homeCode === code || m.awayCode === code)
+    .sort((a, b) => (a.m.matchNo ?? a.i) - (b.m.matchNo ?? b.i))
+    .map(({ m }) => {
+      const gf = m.homeCode === code ? m.homeScore : m.awayScore;
+      const ga = m.homeCode === code ? m.awayScore : m.homeScore;
+      return gf > ga ? "W" : gf < ga ? "L" : "D";
+    })
+    .join("");
+}
+
 function buildTable(g: GroupLetter, matches: GroupResultRow[]): GroupTableRow[] {
   const codes = GROUPS[g];
   const stats = tally(codes, matches);
@@ -156,6 +173,7 @@ function buildTable(g: GroupLetter, matches: GroupResultRow[]): GroupTableRow[] 
         pts: points(s),
         rank,
         tied,
+        form: teamForm(code, matches),
       });
     }
     rank += cluster.length;

@@ -465,6 +465,7 @@ export async function getPoolBracket(poolId: string): Promise<BracketView | null
       awayCode: r.awayTeamCode,
       homeScore: r.homeScore,
       awayScore: r.awayScore,
+      matchNo: r.match.matchNo,
     });
   }
 
