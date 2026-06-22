@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { hasTournamentStarted } from "@/lib/pool/queries";
 import type { PoolFormat } from "@/lib/pool/manage";
+import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import { CreatePoolForm } from "./CreatePoolForm";
 import { Hero } from "../../Hero";
 
@@ -17,9 +18,15 @@ export default async function CreatePoolPage({
   // Once the tournament has started the full-tournament game is closed, so the
   // page leads with the Knockout Challenge regardless of the requested format.
   const fullGameAvailable = !(await hasTournamentStarted());
+  const md3Available = isMd3GameOpen();
   const defaultFormat: PoolFormat =
-    game === "knockout" || !fullGameAvailable ? "KNOCKOUT" : "FULL_BRACKET";
+    game === "md3" && md3Available
+      ? "MATCH_DAY_3_PICKEM"
+      : game === "knockout" || !fullGameAvailable
+        ? "KNOCKOUT"
+        : "FULL_BRACKET";
   const knockout = defaultFormat === "KNOCKOUT";
+  const md3 = defaultFormat === "MATCH_DAY_3_PICKEM";
 
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-16 pt-12">
@@ -39,12 +46,18 @@ export default async function CreatePoolPage({
           New pool
         </p>
         <h1 className="mt-1.5 font-display text-[26px] leading-tight text-ink">
-          {knockout ? "Start a Knockout Challenge" : "Start a World Cup 2026 pool"}
+          {md3
+            ? "Start a Match Day 3 Pickem"
+            : knockout
+              ? "Start a Knockout Challenge"
+              : "Start a World Cup 2026 pool"}
         </h1>
         <p className="mt-2 text-[13px] text-ink-3">
-          {knockout
-            ? "Predict the knockout bracket against your friends. You'll get a join code to share — picks open when the last 32 are set."
-            : "You'll get a join code to share. Friends sign in, join, and fill out their bracket right here."}
+          {md3
+            ? "Predict the score of every final group-stage match. You'll get a join code to share — each pick locks at its kickoff."
+            : knockout
+              ? "Predict the knockout bracket against your friends. You'll get a join code to share — picks open when the last 32 are set."
+              : "You'll get a join code to share. Friends sign in, join, and fill out their bracket right here."}
         </p>
 
         {user ? (
@@ -52,6 +65,7 @@ export default async function CreatePoolPage({
             defaultDisplayName={user.name ?? ""}
             defaultFormat={defaultFormat}
             fullGameAvailable={fullGameAvailable}
+            md3Available={md3Available}
           />
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-line bg-surface-sunk p-5 text-center">

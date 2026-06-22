@@ -184,6 +184,7 @@ export interface PoolHeader {
   tournamentName: string;
   tournamentStatus: string;
   entryCount: number;
+  format: string;
 }
 
 // Lightweight header data for the shared pool layout — avoids recomputing the
@@ -202,6 +203,7 @@ export async function getPoolHeader(code: string): Promise<PoolHeader | null> {
     tournamentName: pool.tournament.name,
     tournamentStatus,
     entryCount,
+    format: pool.format,
   };
 }
 

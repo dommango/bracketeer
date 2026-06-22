@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/db";
 import { DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { arePicksLocked } from "@/lib/pool/lock";
+import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import { generateJoinCode, normalizeJoinCode } from "@/lib/pool/join-code";
 import { claimEntriesForUser } from "@/lib/auth/claim";
 import { recomputePool } from "@/lib/pool/scoring";
@@ -21,7 +22,7 @@ async function allocateJoinCode(): Promise<string> {
   throw new Error("Could not allocate a unique join code, please retry.");
 }
 
-export type PoolFormat = "FULL_BRACKET" | "KNOCKOUT";
+export type PoolFormat = "FULL_BRACKET" | "KNOCKOUT" | "MATCH_DAY_3_PICKEM";
 
 export interface CreatePoolInput {
   userId: string;
@@ -58,6 +59,13 @@ export async function createPool(input: CreatePoolInput): Promise<CreatedPool> {
     throw new Error(
       "The group stage has kicked off — full tournament games are closed. Create a Knockout Challenge instead.",
     );
+  }
+
+  // Match Day 3 Pickem is only worth creating while at least one MD3 fixture is
+  // still open (every pick locks at its kickoff). The create UI hides it once
+  // closed; this is the server-side backstop.
+  if (format === "MATCH_DAY_3_PICKEM" && !isMd3GameOpen()) {
+    throw new Error("Match Day 3 has finished — that game is closed.");
   }
 
   const joinCode = await allocateJoinCode();
@@ -181,7 +189,12 @@ export async function attachEntryToPool(input: AttachEntryInput): Promise<Attach
     throw new Error("That pool is for a different tournament.");
   }
   if (entry.format !== pool.format) {
-    const want = pool.format === "KNOCKOUT" ? "knockout" : "full-tournament";
+    const want =
+      pool.format === "KNOCKOUT"
+        ? "knockout"
+        : pool.format === "MATCH_DAY_3_PICKEM"
+          ? "Match Day 3 Pickem"
+          : "full-tournament";
     throw new Error(`This is a ${want} pool — your bracket doesn't match its game.`);
   }
 

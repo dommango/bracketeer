@@ -10,6 +10,7 @@ import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
 import { assignRanks } from "@/lib/pool/rank";
+import { scoreMd3Pool } from "@/lib/pool/md3-scoring";
 
 type Db = Prisma.TransactionClient;
 
@@ -43,15 +44,22 @@ export async function recomputePool(poolId: string) {
         where: { id: poolId },
         include: { tournament: true },
       });
-      const answer = asResults(pool.tournament.officialResults);
-      const cfg = asScoringConfig(pool.tournament.scoringConfig);
 
-      const entries = await tx.entry.findMany({
-        where: { poolId },
-        include: { picks: true },
-      });
+      // Match Day 3 Pickem scores against live per-match Result rows, not the
+      // answer key — its own engine. Every other format uses the parity oracle.
+      if (pool.format === "MATCH_DAY_3_PICKEM") {
+        await scoreMd3Pool(tx, poolId, pool.tournamentId);
+      } else {
+        const answer = asResults(pool.tournament.officialResults);
+        const cfg = asScoringConfig(pool.tournament.scoringConfig);
 
-      await scoreEntryBreakdowns(tx, entries, answer, cfg);
+        const entries = await tx.entry.findMany({
+          where: { poolId },
+          include: { picks: true },
+        });
+
+        await scoreEntryBreakdowns(tx, entries, answer, cfg);
+      }
 
       const leaderboard = await getLeaderboard(poolId, tx);
       await captureSnapshots(poolId, leaderboard, tx);
