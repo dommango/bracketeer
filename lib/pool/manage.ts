@@ -7,6 +7,8 @@ import { DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { arePicksLocked } from "@/lib/pool/lock";
 import { generateJoinCode, normalizeJoinCode } from "@/lib/pool/join-code";
 import { claimEntriesForUser } from "@/lib/auth/claim";
+import { recomputePool } from "@/lib/pool/scoring";
+import { notifyPool } from "@/lib/realtime/notify";
 import { canAddMember, POOL_FULL_MESSAGE } from "@/lib/billing/entitlements";
 
 // A unique join code, retrying on the (rare) collision against the unique index.
@@ -136,4 +138,91 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
   const claimed = await claimEntriesForUser(input.userId, user?.email);
 
   return { poolId: pool.id, joinCode: pool.joinCode, claimed };
+}
+
+export interface AttachEntryInput {
+  userId: string;
+  entryId: string;
+  joinCode: string;
+  displayName?: string;
+}
+
+export interface AttachedEntry {
+  poolId: string;
+  joinCode: string;
+  poolName: string;
+}
+
+// Move one of the user's STANDALONE brackets into an existing pool, matched by
+// join code (user story: "make a bracket, then match it to a pool"). The bracket
+// keeps its picks and score; it just gains a pool. Guards: the bracket must be
+// the user's and not already in a pool; the pool's game + tournament must match
+// the bracket's (a knockout bracket only joins a knockout pool of the same
+// tournament, so its picks stay valid against that pool's seed); and the pool's
+// member cap is enforced just like joinPool. Enrolls the user as a Membership
+// and recomputes the pool so the bracket lands on its leaderboard immediately.
+export async function attachEntryToPool(input: AttachEntryInput): Promise<AttachedEntry> {
+  const code = normalizeJoinCode(input.joinCode);
+  if (!code) throw new Error("That doesn't look like a valid join code.");
+
+  const pool = await prisma.pool.findUnique({
+    where: { joinCode: code },
+    select: { id: true, name: true, joinCode: true, tier: true, format: true, tournamentId: true },
+  });
+  if (!pool) throw new Error("No pool found for that join code.");
+
+  const entry = await prisma.entry.findFirst({
+    where: { id: input.entryId, userId: input.userId },
+    select: { id: true, poolId: true, format: true, tournamentId: true },
+  });
+  if (!entry) throw new Error("That bracket can't be found or isn't yours.");
+  if (entry.poolId) throw new Error("That bracket is already in a pool.");
+  if (entry.tournamentId !== pool.tournamentId) {
+    throw new Error("That pool is for a different tournament.");
+  }
+  if (entry.format !== pool.format) {
+    const want = pool.format === "KNOCKOUT" ? "knockout" : "full-tournament";
+    throw new Error(`This is a ${want} pool — your bracket doesn't match its game.`);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { email: true, name: true },
+  });
+  const displayName = (input.displayName ?? "").trim() || user?.name?.trim() || "Player";
+
+  // Enforce the member cap only for a genuinely new member (same non-atomic
+  // count→insert assumption joinPool documents — acceptable for the MVP).
+  const existingMembership = await prisma.membership.findUnique({
+    where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
+    select: { id: true },
+  });
+  if (!existingMembership) {
+    const memberCount = await prisma.membership.count({ where: { poolId: pool.id } });
+    if (!canAddMember(pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.entry.update({ where: { id: entry.id }, data: { poolId: pool.id } });
+      await tx.membership.upsert({
+        where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
+        update: {},
+        create: { poolId: pool.id, userId: input.userId, role: "MEMBER", displayName },
+      });
+    });
+  } catch (err) {
+    // The (poolId, claimEmail, label) unique can trip if the user already has a
+    // same-named bracket in that pool.
+    if ((err as { code?: string }).code === "P2002") {
+      throw new Error("You already have a bracket with that name in this pool.");
+    }
+    throw err;
+  }
+
+  // Land the bracket on the pool leaderboard right away (best-effort notify).
+  await recomputePool(pool.id);
+  await notifyPool(pool.id, "leaderboard");
+
+  return { poolId: pool.id, joinCode: pool.joinCode, poolName: pool.name };
 }

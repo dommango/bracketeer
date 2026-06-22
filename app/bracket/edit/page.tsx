@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getKnockoutState, getTournamentIdBySlug } from "@/lib/pool/queries";
-import { getSoloBracket } from "@/lib/challenge/solo";
+import { getStandaloneEntry } from "@/lib/pool/submit-picks";
 import { isKnockoutLocked } from "@/lib/pool/knockout";
 import { emptyPicks } from "@/lib/scoring/types";
 import { KnockoutPickForm } from "@/app/pool/[code]/KnockoutPickForm";
@@ -10,9 +10,16 @@ import { saveSoloBracketAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function SoloBracketEditPage() {
+export default async function SoloBracketEditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ entryId?: string | string[] }>;
+}) {
   const user = await getSessionUser();
   if (!user) return <SignInGate />;
+
+  const { entryId: entryIdParam } = await searchParams;
+  const entryId = Array.isArray(entryIdParam) ? entryIdParam[0] : entryIdParam;
 
   const tournamentId = await getTournamentIdBySlug();
   const { open, opensAt, locksAt, seed } = await getKnockoutState(tournamentId);
@@ -20,7 +27,7 @@ export default async function SoloBracketEditPage() {
   const header = (
     <div className="flex items-center justify-between">
       <h1 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-        Your knockout bracket
+        {entryId ? "Your knockout bracket" : "New knockout bracket"}
       </h1>
       <Link
         href="/bracket"
@@ -49,7 +56,11 @@ export default async function SoloBracketEditPage() {
     );
   }
 
-  const bracket = await getSoloBracket(user.id);
+  // With an entryId we edit that standalone bracket; without one this is a fresh
+  // bracket (the first save creates it).
+  const bracket = entryId
+    ? await getStandaloneEntry(tournamentId, user.id, "KNOCKOUT", entryId)
+    : null;
   const locked = isKnockoutLocked(locksAt, bracket?.locked ?? false);
 
   return (

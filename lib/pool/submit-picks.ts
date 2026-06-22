@@ -24,6 +24,10 @@ export interface SubmitPicksInput {
   // explicitly rather than by findFirst. Omit only to create a first bracket or
   // edit a lone existing one.
   entryId?: string | null;
+  // Force a brand-new bracket even when the user already owns one in this scope —
+  // for "new bracket" in the multi-bracket flow. Ignored when entryId is set
+  // (that always edits the named bracket).
+  forceCreate?: boolean;
   label: string;
   picks: Picks;
   email?: string | null;
@@ -103,6 +107,9 @@ async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult>
         throw new Error("That bracket can't be found or isn't yours to edit.");
       }
       existing = { ...target, adopt: false };
+    } else if (input.forceCreate) {
+      // A deliberate "new bracket": never adopt or edit an existing one.
+      existing = null;
     } else {
       const owned = await tx.entry.findMany({
         where: ownerScope,

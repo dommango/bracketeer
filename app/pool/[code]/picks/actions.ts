@@ -43,6 +43,9 @@ export interface SubmitPicksResult {
   error?: string;
   replaced?: boolean;
   complete?: boolean;
+  // The saved bracket's id, so a freshly-created bracket keeps editing the same
+  // row rather than inserting another on the next save.
+  entryId?: string;
 }
 
 export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult> {
@@ -104,7 +107,7 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
     await recomputePool(pool.id);
     await notifyPool(pool.id, "leaderboard");
     revalidatePath(`/pool/${code}`);
-    return { ok: true, replaced: res.replaced };
+    return { ok: true, replaced: res.replaced, entryId: res.entryId };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }

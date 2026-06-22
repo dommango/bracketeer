@@ -20,7 +20,7 @@ export type SaveBracket = (payload: {
   label: string;
   tiebreak: string;
   picks: Picks;
-}) => Promise<{ ok: boolean; error?: string }>;
+}) => Promise<{ ok: boolean; error?: string; entryId?: string }>;
 
 // Knockout-only bracket builder: the 32 qualifiers are fixed by the official R32
 // seed, so the picker only chooses a winner for each match (R32 → Final), plus
@@ -54,6 +54,10 @@ export function KnockoutPickForm({
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Track the bracket id across saves. When creating a new bracket the page
+  // mounts with no id; the first save returns one, and we keep editing that row
+  // instead of inserting another on the next save.
+  const [currentEntryId, setCurrentEntryId] = useState(entryId);
 
   const ko = useMemo(() => resolveKnockout(picks, seed), [picks, seed]);
   const progress = useMemo(() => knockoutOnlyProgress(picks), [picks]);
@@ -74,10 +78,12 @@ export function KnockoutPickForm({
     setSaved(null);
     startTransition(async () => {
       const res = saveAction
-        ? await saveAction({ entryId, label, tiebreak, picks })
-        : await submitPicksAction({ code: code ?? "", entryId, label, tiebreak, picks });
-      if (res.ok) setSaved("Picks saved");
-      else setError(res.error ?? "Could not save picks.");
+        ? await saveAction({ entryId: currentEntryId, label, tiebreak, picks })
+        : await submitPicksAction({ code: code ?? "", entryId: currentEntryId, label, tiebreak, picks });
+      if (res.ok) {
+        setSaved("Picks saved");
+        if (res.entryId) setCurrentEntryId(res.entryId);
+      } else setError(res.error ?? "Could not save picks.");
     });
   };
 
