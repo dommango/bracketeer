@@ -11,11 +11,12 @@
 
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
+import Facebook from "next-auth/providers/facebook";
 import Nodemailer from "next-auth/providers/nodemailer";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { createTransport } from "nodemailer";
 import { prisma } from "@/lib/db";
-import { env, googleEnabled, emailEnabled } from "@/lib/env";
+import { env, googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { claimEntriesForUser } from "@/lib/auth/claim";
 
 const providers: NextAuthConfig["providers"] = [];
@@ -26,6 +27,17 @@ if (googleEnabled) {
       clientId: env.AUTH_GOOGLE_ID,
       clientSecret: env.AUTH_GOOGLE_SECRET,
       // Friend-group MVP: let the same email link Google + magic-link accounts.
+      allowDangerousEmailAccountLinking: true,
+    }),
+  );
+}
+
+if (facebookEnabled) {
+  providers.push(
+    Facebook({
+      clientId: env.AUTH_FACEBOOK_ID,
+      clientSecret: env.AUTH_FACEBOOK_SECRET,
+      // Friend-group MVP: let the same email link Facebook + magic-link accounts.
       allowDangerousEmailAccountLinking: true,
     }),
   );
@@ -51,9 +63,9 @@ providers.push(
       const result = await transport.sendMail({
         to: identifier,
         from: provider.from,
-        subject: "Sign in to HessFest",
-        text: `Sign in to HessFest:\n${url}\n`,
-        html: `<p>Sign in to <b>HessFest</b>:</p><p><a href="${url}">${url}</a></p>`,
+        subject: "Sign in to Bracketeer",
+        text: `Sign in to Bracketeer:\n${url}\n`,
+        html: `<p>Sign in to <b>Bracketeer</b>:</p><p><a href="${url}">${url}</a></p>`,
       });
       const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
       if (failed.length) throw new Error(`Magic-link email could not be sent to ${failed.join(", ")}`);
