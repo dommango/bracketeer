@@ -6,7 +6,7 @@
 
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import { asResults, recomputePool } from "@/lib/pool/scoring";
+import { asResults, recomputePool, recomputeStandalone } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
 import { sendPushToPool } from "@/lib/push/send";
 import type { ApnsPayload } from "@/lib/push/apns";
@@ -411,6 +411,16 @@ export async function recomputeTournamentPools(
   if (failures > 0 && failures === pools.length) {
     throw new Error(`recompute failed for all ${failures} pool(s)`);
   }
+
+  // Standalone brackets (poolId == null) — solo + Challenge entries — score
+  // against the same answer key but live outside any pool, so rescore them too.
+  // Best-effort and isolated: a failure here must not undo the pool recomputes.
+  try {
+    await recomputeStandalone(tournamentId);
+  } catch (err) {
+    console.error(`recomputeStandalone failed for tournament ${tournamentId}:`, err);
+  }
+
   return pools.length - failures;
 }
 

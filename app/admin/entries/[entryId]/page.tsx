@@ -89,7 +89,7 @@ export default async function EntryPicksPage({
 
       <div className="mt-4 rounded-2xl bg-pitch p-5 text-white">
         <p className="text-xs font-semibold uppercase tracking-wide text-white/60">
-          {entry.pool.name} ({entry.pool.joinCode})
+          {entry.pool ? `${entry.pool.name} (${entry.pool.joinCode})` : "Standalone bracket"}
         </p>
         <h1 className="mt-1 text-xl font-bold">{entry.label}</h1>
         {entry.claimEmail && (

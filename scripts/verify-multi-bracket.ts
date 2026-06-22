@@ -223,8 +223,19 @@ async function main() {
 
   // 9) A same-(email, label) row owned by a DIFFERENT user is a genuine clash
   //    and is refused (defensive — claim binds by email, so this is rare state).
+  const { tournamentId: poolTournamentId } = await prisma.pool.findUniqueOrThrow({
+    where: { id: pool.id },
+    select: { tournamentId: true },
+  });
   await prisma.entry.create({
-    data: { poolId: pool.id, claimEmail: CLAIM_EMAIL, label: "Foreign Clash", userId: claimant.id, importedFrom: "CSV" },
+    data: {
+      poolId: pool.id,
+      tournamentId: poolTournamentId,
+      claimEmail: CLAIM_EMAIL,
+      label: "Foreign Clash",
+      userId: claimant.id,
+      importedFrom: "CSV",
+    },
   });
   let clashThrew = false;
   try {

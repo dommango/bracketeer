@@ -1,9 +1,11 @@
-// Backend smoke test for the solo-bracket + master-tournament flow. Verifies:
-//   master pool is created once (idempotent) ->
+// Backend smoke test for the standalone-bracket + Bracketeer Knockout Challenge
+// flow. Verifies:
 //   saveSoloBracket is gated when the knockout field isn't set ->
-//   two players build solo brackets (no pool membership) ->
-//   getMasterLeaderboard shows ONLY opted-in brackets, ranked ->
-//   toggling enteredMaster adds/removes a bracket from the public board.
+//   two players build standalone brackets (poolId null, no pool membership) ->
+//   getChallengeLeaderboard shows ONLY opted-in brackets, ranked ->
+//   toggling enteredChallenge adds/removes a bracket from the public board ->
+//   the Challenge is knockout-only (a full-bracket entry can't enter) ->
+//   recomputeStandalone rescores standalone entries when results land.
 //
 // Mutates the wc2026 answer key + Match-73 schedule, then restores them.
 // Run with: DATABASE_URL=... AUTH_SECRET=... npx tsx scripts/solo-smoke.ts
@@ -13,9 +15,9 @@ import { GROUPS } from "@/lib/scoring/data";
 import { emptyPicks, type Picks, type Results } from "@/lib/scoring/types";
 import { resolveR32Slots } from "@/lib/scoring/resolve";
 import { resolveKnockout } from "@/lib/pool/pick-form";
-import { getOrCreateMasterPool } from "@/lib/master/pool";
-import { saveSoloBracket, setEnteredMaster, getSoloBracket } from "@/lib/master/solo";
-import { getMasterLeaderboard } from "@/lib/master/leaderboard";
+import { saveSoloBracket, setEnteredChallenge, getSoloBracket } from "@/lib/challenge/solo";
+import { getChallengeLeaderboard } from "@/lib/challenge/leaderboard";
+import { recomputeStandalone } from "@/lib/pool/scoring";
 
 const groups = Object.keys(GROUPS);
 
@@ -58,13 +60,10 @@ async function main() {
   });
   const prevM73 = m73?.scheduledAt ?? null;
 
-  try {
-    // 1. Master pool is created once and reused.
-    const p1 = await getOrCreateMasterPool(tournament.id);
-    const p2 = await getOrCreateMasterPool(tournament.id);
-    assert(p1 === p2, "getOrCreateMasterPool is idempotent");
+  const cleanupUserIds: string[] = [];
 
-    // 2. Closed field -> save is rejected.
+  try {
+    // 1. Closed field -> save is rejected.
     await prisma.tournament.update({
       where: { id: tournament.id },
       data: { officialResults: { ...emptyPicks(), finalGoals: null } as unknown as object },
@@ -74,6 +73,13 @@ async function main() {
       update: {},
       create: { email: "solo1@example.com", name: "Solo One" },
     });
+    const u2 = await prisma.user.upsert({
+      where: { email: "solo2@example.com" },
+      update: {},
+      create: { email: "solo2@example.com", name: "Solo Two" },
+    });
+    cleanupUserIds.push(u1.id, u2.id);
+
     let rejected = false;
     try {
       await saveSoloBracket({ userId: u1.id, label: "Solo One", tiebreak: "3", picks: emptyPicks() });
@@ -82,7 +88,7 @@ async function main() {
     }
     assert(rejected, "saveSoloBracket rejects picks before the field is set");
 
-    // 3. Open the field + push the R32 kickoff into the future, then build two brackets.
+    // 2. Open the field + push the R32 kickoff into the future, then build two brackets.
     await prisma.tournament.update({
       where: { id: tournament.id },
       data: { officialResults: answer as unknown as object },
@@ -98,55 +104,81 @@ async function main() {
     );
     const picks = fillKnockout(seed);
 
-    const u2 = await prisma.user.upsert({
-      where: { email: "solo2@example.com" },
-      update: {},
-      create: { email: "solo2@example.com", name: "Solo Two" },
-    });
-
     await saveSoloBracket({ userId: u1.id, label: "Solo One", tiebreak: "3", picks });
     await saveSoloBracket({ userId: u2.id, label: "Solo Two", tiebreak: "2", picks });
 
     const b1 = await getSoloBracket(u1.id);
-    assert(b1 !== null && !b1.enteredMaster, "solo bracket is private by default");
+    assert(b1 !== null && !b1.enteredChallenge, "standalone bracket is private by default");
 
-    // No membership rows were created for solo players.
-    const poolId = await getOrCreateMasterPool(tournament.id);
+    // 3. Standalone brackets live outside any pool — no poolId, no membership.
+    const e1 = await prisma.entry.findUniqueOrThrow({
+      where: { id: b1!.entryId },
+      select: { poolId: true, tournamentId: true, format: true },
+    });
+    assert(e1.poolId === null, "standalone bracket has no pool");
+    assert(e1.tournamentId === tournament.id, "standalone bracket carries its tournamentId");
+    assert(e1.format === "KNOCKOUT", "standalone solo bracket is KNOCKOUT");
     const memberCount = await prisma.membership.count({
-      where: { poolId, userId: { in: [u1.id, u2.id] } },
+      where: { userId: { in: [u1.id, u2.id] } },
     });
     assert(memberCount === 0, "solo players are not pool members");
 
-    // 4. Master leaderboard hides private brackets.
-    assert((await getMasterLeaderboard()).length === 0, "leaderboard empty when none opted in");
+    // 4. Challenge leaderboard hides brackets that haven't entered.
+    assert((await getChallengeLeaderboard()).length === 0, "leaderboard empty when none entered");
 
-    await setEnteredMaster(u1.id, true);
-    let board = await getMasterLeaderboard();
-    assert(board.length === 1 && board[0].userId === u1.id, "opting in adds exactly one bracket");
+    await setEnteredChallenge(u1.id, b1!.entryId, true);
+    let board = await getChallengeLeaderboard();
+    assert(board.length === 1 && board[0].userId === u1.id, "entering adds exactly one bracket");
 
-    await setEnteredMaster(u2.id, true);
-    board = await getMasterLeaderboard();
-    assert(board.length === 2, "second opt-in adds the second bracket");
+    const b2 = await getSoloBracket(u2.id);
+    await setEnteredChallenge(u2.id, b2!.entryId, true);
+    board = await getChallengeLeaderboard();
+    assert(board.length === 2, "second entry adds the second bracket");
     assert(
       board.every((r, i) => r.rank === (i === 0 ? 1 : board[0].total === r.total ? 1 : i + 1)),
       "leaderboard is ranked",
     );
 
     // 5. Opting back out removes it.
-    await setEnteredMaster(u1.id, false);
-    board = await getMasterLeaderboard();
+    await setEnteredChallenge(u1.id, b1!.entryId, false);
+    board = await getChallengeLeaderboard();
     assert(
       board.length === 1 && board[0].userId === u2.id,
       "opting out removes the bracket from the board",
     );
 
-    console.log("\nALL SOLO SMOKE CHECKS PASSED");
+    // 6. The Challenge is knockout-only: a standalone FULL_BRACKET entry is gated.
+    const groupEntry = await prisma.entry.create({
+      data: {
+        tournamentId: tournament.id,
+        poolId: null,
+        format: "FULL_BRACKET",
+        userId: u1.id,
+        label: "Group Bracket",
+        importedFrom: "UI",
+      },
+    });
+    const gated = await setEnteredChallenge(u1.id, groupEntry.id, true);
+    assert(gated === false, "a full-bracket entry can't enter the knockout Challenge");
 
-    // Cleanup: remove the two test entries + users.
-    await prisma.entry.deleteMany({ where: { poolId, userId: { in: [u1.id, u2.id] } } });
-    await prisma.user.deleteMany({ where: { id: { in: [u1.id, u2.id] } } });
+    // 7. recomputeStandalone rescores standalone entries when results land. The
+    //    answer key has the group stage filled; add a knockout winner matching the
+    //    a-side picks so the entered bracket scores some points.
+    const winner73 = seed[73]!.a!;
+    await prisma.tournament.update({
+      where: { id: tournament.id },
+      data: { officialResults: { ...answer, knockout: { 73: winner73 } } as unknown as object },
+    });
+    const n = await recomputeStandalone(tournament.id);
+    assert(n >= 2, "recomputeStandalone scored every standalone entry");
+    const scored = await prisma.scoreBreakdown.findUniqueOrThrow({ where: { entryId: b2!.entryId } });
+    assert(scored.totalPoints > 0, "standalone entry scored against the landed knockout result");
+
+    console.log("\nALL SOLO SMOKE CHECKS PASSED");
   } finally {
-    // Restore the answer key + schedule we mutated.
+    // Cleanup: remove test entries + users, restore the answer key + schedule.
+    await prisma.entry.deleteMany({ where: { userId: { in: cleanupUserIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: cleanupUserIds } } });
     await prisma.tournament.update({
       where: { id: tournament.id },
       data: { officialResults: (prevResults ?? null) as unknown as object },

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getKnockoutState, getTournamentIdBySlug } from "@/lib/pool/queries";
-import { getSoloBracket } from "@/lib/master/solo";
+import { getSoloBracket } from "@/lib/challenge/solo";
 import { isKnockoutLocked } from "@/lib/pool/knockout";
 import { emptyPicks } from "@/lib/scoring/types";
 import { KnockoutPickForm } from "@/app/pool/[code]/KnockoutPickForm";

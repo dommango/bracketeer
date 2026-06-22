@@ -51,15 +51,7 @@ export async function recomputePool(poolId: string) {
         include: { picks: true },
       });
 
-      for (const entry of entries) {
-        const sub = pickRowsToSubmission(entry.picks);
-        const { total, breakdown } = scorePicks(sub.picks, answer, cfg);
-        await tx.scoreBreakdown.upsert({
-          where: { entryId: entry.id },
-          update: { totalPoints: total, byCategory: breakdown, computedAt: new Date() },
-          create: { entryId: entry.id, totalPoints: total, byCategory: breakdown },
-        });
-      }
+      await scoreEntryBreakdowns(tx, entries, answer, cfg);
 
       const leaderboard = await getLeaderboard(poolId, tx);
       await captureSnapshots(poolId, leaderboard, tx);
@@ -67,6 +59,65 @@ export async function recomputePool(poolId: string) {
     },
     { timeout: 30_000 },
   );
+}
+
+// Score a batch of entries (with their picks loaded) against an answer key and
+// upsert each ScoreBreakdown. Pool-independent — shared by recomputePool, the
+// per-entry recompute, and the standalone recompute. Writes the cache only; it
+// never touches snapshots (those are a pool concern).
+type ScorableEntry = { id: string; picks: Parameters<typeof pickRowsToSubmission>[0] };
+
+async function scoreEntryBreakdowns(
+  tx: Db,
+  entries: ScorableEntry[],
+  answer: Results,
+  cfg: ScoringConfig,
+): Promise<void> {
+  for (const entry of entries) {
+    const sub = pickRowsToSubmission(entry.picks);
+    const { total, breakdown } = scorePicks(sub.picks, answer, cfg);
+    await tx.scoreBreakdown.upsert({
+      where: { entryId: entry.id },
+      update: { totalPoints: total, byCategory: breakdown, computedAt: new Date() },
+      create: { entryId: entry.id, totalPoints: total, byCategory: breakdown },
+    });
+  }
+}
+
+// Recompute one entry against its own tournament's answer key. For standalone
+// brackets (solo save, Challenge toggle) where there's no pool to recompute and
+// no snapshot to capture. Scores against the entry's tournament directly, so it
+// works whether the entry is in a pool or stands alone.
+export async function recomputeEntry(entryId: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const entry = await tx.entry.findUniqueOrThrow({
+      where: { id: entryId },
+      include: { picks: true, tournament: { select: { officialResults: true, scoringConfig: true } } },
+    });
+    const answer = asResults(entry.tournament.officialResults);
+    const cfg = asScoringConfig(entry.tournament.scoringConfig);
+    await scoreEntryBreakdowns(tx, [entry], answer, cfg);
+  });
+}
+
+// Recompute every standalone entry (poolId == null) in a tournament against its
+// answer key. Run when results land so Challenge/solo brackets rescore alongside
+// the pools. No snapshots — standalone brackets carry no mover history.
+export async function recomputeStandalone(tournamentId: string): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const t = await tx.tournament.findUniqueOrThrow({
+      where: { id: tournamentId },
+      select: { officialResults: true, scoringConfig: true },
+    });
+    const answer = asResults(t.officialResults);
+    const cfg = asScoringConfig(t.scoringConfig);
+    const entries = await tx.entry.findMany({
+      where: { tournamentId, poolId: null },
+      include: { picks: true },
+    });
+    await scoreEntryBreakdowns(tx, entries, answer, cfg);
+    return entries.length;
+  });
 }
 
 // Persist a point/rank snapshot per entry whose standing changed since its last

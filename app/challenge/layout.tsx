@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export default function MasterLayout({ children }: { children: React.ReactNode }) {
+export default function ChallengeLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-12 pt-10">
       <Link

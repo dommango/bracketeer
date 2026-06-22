@@ -63,8 +63,8 @@ function SignedOut({ fullGameAvailable }: { fullGameAvailable: boolean }) {
       <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
         <h2 className="font-display text-lg text-ink">Just want to play solo?</h2>
         <p className="mt-1.5 text-[13px] text-ink-3">
-          Build your own knockout bracket — no pool to set up — and enter it into the master
-          tournament against everyone else.
+          Build your own knockout bracket — no pool to set up — and enter it into the Bracketeer
+          Knockout Challenge against everyone else.
         </p>
         <Link href="/bracket" className={`mt-4 ${SECONDARY_BTN}`}>
           Create your own bracket →

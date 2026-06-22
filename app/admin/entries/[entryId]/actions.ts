@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getTournamentAdmin } from "@/lib/pool/access";
 import { prisma } from "@/lib/db";
-import { recomputePool } from "@/lib/pool/scoring";
+import { recomputePool, recomputeEntry } from "@/lib/pool/scoring";
 import { TEAMS } from "@/lib/scoring/data";
 import { R32, R16, QF, SF, FINAL } from "@/lib/scoring/data";
 import { AWARD_KEYS } from "@/lib/scoring/csv";
@@ -75,7 +75,13 @@ export async function saveEntryPicksAction(
       }),
     ]);
 
-    await recomputePool(entry.poolId);
+    // A standalone bracket (poolId null) has no pool to recompute — rescore it
+    // on its own; a pooled bracket rescores the whole pool as before.
+    if (entry.poolId) {
+      await recomputePool(entry.poolId);
+    } else {
+      await recomputeEntry(entry.id);
+    }
     revalidatePath(`/admin/entries/${entryId}`);
     revalidatePath("/admin/entries");
     return { ok: true, message: "Saved" };

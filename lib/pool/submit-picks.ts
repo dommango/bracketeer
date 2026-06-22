@@ -5,16 +5,24 @@
 // and CSV-imported brackets are byte-identical in storage and scoring.
 
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { submissionToPickRows, pickRowsToSubmission, type PickRow } from "@/lib/pool/picks";
 import type { Picks, Submission } from "@/lib/scoring/types";
 import { emptyPicks } from "@/lib/scoring/types";
+import type { PoolFormat } from "@/generated/prisma/enums";
 
 export interface SubmitPicksInput {
-  poolId: string;
+  // The pool this bracket belongs to, or null for a standalone bracket (built
+  // without a pool — e.g. the solo / Challenge flow). When null, tournamentId
+  // and format are required and pin the bracket directly.
+  poolId: string | null;
+  tournamentId?: string;
+  format?: PoolFormat;
   userId: string;
-  // The bracket to edit. A user may own several brackets in a pool (CSV imports
-  // claimed on sign-in), so the target is identified explicitly rather than by
-  // findFirst. Omit only to create a first bracket or edit a lone existing one.
+  // The bracket to edit. A user may own several brackets (CSV imports claimed on
+  // sign-in, or multiple standalone brackets), so the target is identified
+  // explicitly rather than by findFirst. Omit only to create a first bracket or
+  // edit a lone existing one.
   entryId?: string | null;
   label: string;
   picks: Picks;
@@ -53,14 +61,42 @@ async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult>
   const pickRows: PickRow[] = submissionToPickRows(sub);
 
   return prisma.$transaction(async (tx) => {
+    // A bracket carries its own tournament + format. A pooled bracket inherits
+    // both from its pool; a standalone bracket (poolId null) is pinned by the
+    // tournamentId/format passed in.
+    let tournamentId: string;
+    let format: PoolFormat;
+    if (input.poolId) {
+      const pool = await tx.pool.findUniqueOrThrow({
+        where: { id: input.poolId },
+        select: { tournamentId: true, format: true },
+      });
+      tournamentId = pool.tournamentId;
+      format = pool.format;
+    } else {
+      if (!input.tournamentId || !input.format) {
+        throw new Error("A standalone bracket needs a tournament and format.");
+      }
+      tournamentId = input.tournamentId;
+      format = input.format;
+    }
+
+    // The owner scope identifies which brackets are "this user's, in this place".
+    // Pooled: (poolId, userId). Standalone: (poolId null, tournamentId, format,
+    // userId) — so a user's standalone brackets in other tournaments/formats and
+    // their pooled brackets never collide here.
+    const ownerScope = input.poolId
+      ? { poolId: input.poolId, userId: input.userId }
+      : { poolId: null, tournamentId, format, userId: input.userId };
+
     // Resolve the bracket to write WITHOUT guessing. With an explicit entryId we
-    // edit exactly that entry (after verifying it belongs to this user+pool); a
+    // edit exactly that entry (after verifying it's the user's, in scope); a
     // foreign or unknown id is rejected. Without one we create the user's first
     // bracket, edit their lone bracket, or refuse when ownership is ambiguous.
     let existing: { id: string; locked: boolean; adopt: boolean } | null;
     if (input.entryId) {
       const target = await tx.entry.findFirst({
-        where: { id: input.entryId, poolId: input.poolId, userId: input.userId },
+        where: { id: input.entryId, ...ownerScope },
         select: { id: true, locked: true },
       });
       if (!target) {
@@ -69,7 +105,7 @@ async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult>
       existing = { ...target, adopt: false };
     } else {
       const owned = await tx.entry.findMany({
-        where: { poolId: input.poolId, userId: input.userId },
+        where: ownerScope,
         select: { id: true, locked: true },
       });
       if (owned.length > 1) {
@@ -80,8 +116,9 @@ async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult>
       // No bracket of their own yet: an unclaimed import under this same email +
       // label is effectively theirs (claim binds by email), so adopt it rather
       // than collide with the (poolId, claimEmail, label) unique on create. A row
-      // owned by someone else is a real name clash and is refused.
-      if (!existing && claimEmail) {
+      // owned by someone else is a real name clash and is refused. Only pooled
+      // brackets carry CSV-imported siblings, so this path is pool-only.
+      if (!existing && claimEmail && input.poolId) {
         const clash = await tx.entry.findFirst({
           where: { poolId: input.poolId, claimEmail, label },
           select: { id: true, locked: true, userId: true },
@@ -119,6 +156,8 @@ async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult>
     const entry = await tx.entry.create({
       data: {
         poolId: input.poolId,
+        tournamentId,
+        format,
         userId: input.userId,
         label,
         claimEmail,
@@ -164,16 +203,11 @@ export async function getUserEntries(poolId: string, userId: string): Promise<Us
   }));
 }
 
-// One of the user's brackets, decoded back into a Picks object for prefilling
-// the form. Pass entryId to target a specific bracket (verified as theirs);
-// omit it for the single-bracket case. Null when no matching entry exists.
-export async function getUserEntry(
-  poolId: string,
-  userId: string,
-  entryId?: string | null,
-): Promise<UserEntry | null> {
+// Decode the first entry matching a scope into a Picks object for prefilling the
+// form. Shared by the pooled and standalone readers below. Null when none match.
+async function decodeEntry(where: Prisma.EntryWhereInput): Promise<UserEntry | null> {
   const entry = await prisma.entry.findFirst({
-    where: entryId ? { id: entryId, poolId, userId } : { poolId, userId },
+    where,
     select: {
       id: true,
       label: true,
@@ -194,4 +228,26 @@ export async function getUserEntry(
     tiebreak: entry.tiebreak ?? "",
     picks,
   };
+}
+
+// One of the user's pooled brackets. Pass entryId to target a specific bracket
+// (verified as theirs); omit it for the single-bracket case.
+export function getUserEntry(
+  poolId: string,
+  userId: string,
+  entryId?: string | null,
+): Promise<UserEntry | null> {
+  return decodeEntry(entryId ? { id: entryId, poolId, userId } : { poolId, userId });
+}
+
+// One of the user's standalone brackets (poolId null) for a tournament+format —
+// the solo / Challenge flow. Pass entryId to target a specific bracket.
+export function getStandaloneEntry(
+  tournamentId: string,
+  userId: string,
+  format: PoolFormat,
+  entryId?: string | null,
+): Promise<UserEntry | null> {
+  const scope = { poolId: null, tournamentId, format, userId };
+  return decodeEntry(entryId ? { id: entryId, ...scope } : scope);
 }

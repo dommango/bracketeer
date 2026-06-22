@@ -1,14 +1,14 @@
-// The public master tournament leaderboard: every solo bracket whose owner has
-// opted in (Entry.enteredMaster), ranked together. Reads ONLY opted-in entries —
-// private brackets are never materialized in this path, so their picks/scores
-// can't leak onto the public board — then overlays the same display-only live
-// knockout projection the pool leaderboard uses and re-ranks 1..N.
+// The public Bracketeer Knockout Challenge leaderboard: every knockout bracket
+// whose owner has opted in (Entry.enteredChallenge), ranked together — across
+// pooled and standalone brackets alike. Reads ONLY opted-in entries — brackets
+// that haven't entered are never materialized here, so their picks/scores can't
+// leak onto the public board — then overlays the same display-only live knockout
+// projection the pool leaderboard uses and re-ranks 1..N.
 
 import { prisma } from "@/lib/db";
-import { getOrCreateMasterPool } from "@/lib/master/pool";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { asScoringConfig, type LeaderboardRow } from "@/lib/pool/scoring";
-import { rankEnteredRows } from "@/lib/master/rank-entered";
+import { rankEnteredRows } from "@/lib/challenge/rank-entered";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 
 // Knockout pick rows carry the match id in their CSV-mirrored category ("M73").
@@ -20,14 +20,13 @@ const KNOCKOUT_PICK_SECTIONS = [
   "final",
 ];
 
-export async function getMasterLeaderboard(
+export async function getChallengeLeaderboard(
   tournamentSlug: string = DEFAULT_TOURNAMENT_SLUG,
 ): Promise<LeaderboardRow[]> {
   const tournamentId = await getTournamentIdBySlug(tournamentSlug);
-  const poolId = await getOrCreateMasterPool(tournamentId);
 
   const entries = await prisma.entry.findMany({
-    where: { poolId, enteredMaster: true },
+    where: { tournamentId, format: "KNOCKOUT", enteredChallenge: true },
     select: {
       id: true,
       label: true,
@@ -62,7 +61,7 @@ export async function getMasterLeaderboard(
 // Add display-only projected live points to the entered rows from any live
 // knockout match, scoped to these entries' picks only. Mirrors the pool's
 // withProjectedPoints knockout branch; group provisional points don't apply
-// (the master pool is knockout-only, so entries hold no group picks).
+// (the Challenge is knockout-only, so entries hold no group picks).
 async function overlayLiveProjection(
   tournamentId: string,
   rows: LeaderboardRow[],

@@ -25,9 +25,11 @@ export async function claimEntriesForUser(
       data: { userId },
     });
 
+    // Enroll the user in each pool an entry belongs to. Standalone brackets
+    // (poolId null) have no pool to join, so they're claimed without a Membership.
     const seen = new Set<string>();
     for (const entry of entries) {
-      if (seen.has(entry.poolId)) continue;
+      if (!entry.poolId || seen.has(entry.poolId)) continue;
       seen.add(entry.poolId);
       await tx.membership.upsert({
         where: { poolId_userId: { poolId: entry.poolId, userId } },
