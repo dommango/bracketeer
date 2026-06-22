@@ -81,10 +81,18 @@ export async function syncFeedbackToNotion(
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Surface the reason without breaking the submission: 404 = the integration
+      // isn't connected to the DB, 401 = bad token, 400 = schema/property mismatch.
+      const body = await res.text().catch(() => "");
+      console.warn(`[feedback-sync] Notion ${res.status}: ${body.slice(0, 500)}`);
+      return null;
+    }
     const json = (await res.json()) as { url?: string };
     return json.url ?? null;
-  } catch {
+  } catch (err) {
+    // Network error or the 2.5s timeout aborting the request.
+    console.warn(`[feedback-sync] Notion request failed: ${String(err)}`);
     return null;
   }
 }
