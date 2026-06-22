@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
-import { getMasterLeaderboard } from "@/lib/master/leaderboard";
+import { getChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 
 export const dynamic = "force-dynamic";
 
-export default async function MasterLeaderboardPage() {
-  const [rows, user] = await Promise.all([getMasterLeaderboard(), getSessionUser()]);
+export default async function ChallengeLeaderboardPage() {
+  const [rows, user] = await Promise.all([getChallengeLeaderboard(), getSessionUser()]);
 
   return (
     <section className="space-y-5">
       <header className="space-y-1">
-        <h1 className="font-display text-2xl text-ink">Master knockout tournament</h1>
+        <h1 className="font-display text-2xl text-ink">Bracketeer Knockout Challenge</h1>
         <p className="text-sm text-ink-3">
-          Every solo bracket entered into the global tournament, ranked together.
+          Every bracket entered into the global knockout challenge, ranked together.
         </p>
       </header>
 

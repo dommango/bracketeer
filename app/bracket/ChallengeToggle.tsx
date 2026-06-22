@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toggleMasterAction } from "./actions";
+import { toggleChallengeAction } from "./actions";
 
-// Opt a solo bracket into / out of the public master tournament. Optimistic
-// label; reverts and surfaces the error if the server rejects.
-export function MasterToggle({ entered }: { entered: boolean }) {
+// Opt a solo bracket into / out of the public Bracketeer Knockout Challenge.
+// Optimistic label; reverts and surfaces the error if the server rejects.
+export function ChallengeToggle({ entryId, entered }: { entryId: string; entered: boolean }) {
   const [on, setOn] = useState(entered);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -15,7 +15,7 @@ export function MasterToggle({ entered }: { entered: boolean }) {
     setError(null);
     setOn(next);
     startTransition(async () => {
-      const res = await toggleMasterAction(next);
+      const res = await toggleChallengeAction(entryId, next);
       if (!res.ok) {
         setOn(!next);
         setError(res.error ?? "Could not update.");
@@ -27,11 +27,11 @@ export function MasterToggle({ entered }: { entered: boolean }) {
     <div className="rounded-2xl border border-line bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">Master knockout tournament</p>
+          <p className="text-sm font-semibold text-ink">Bracketeer Knockout Challenge</p>
           <p className="mt-0.5 text-xs text-ink-3">
             {on
               ? "Your bracket is on the global leaderboard."
-              : "Enter to compete against every other solo bracket."}
+              : "Enter to compete against every other bracket."}
           </p>
         </div>
         <button

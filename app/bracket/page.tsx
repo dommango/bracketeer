@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getKnockoutState, getTournamentIdBySlug } from "@/lib/pool/queries";
-import { getSoloBracket } from "@/lib/master/solo";
+import { getSoloBracket } from "@/lib/challenge/solo";
 import { isKnockoutLocked, knockoutOnlyPicks } from "@/lib/pool/knockout";
 import { knockoutOnlyProgress } from "@/lib/pool/pick-form";
 import { Countdown } from "@/app/pool/[code]/Countdown";
-import { MasterToggle } from "./MasterToggle";
+import { ChallengeToggle } from "./ChallengeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -81,15 +81,15 @@ export default async function SoloBracketPage() {
             </Link>
           </Card>
 
-          <MasterToggle entered={bracket.enteredMaster} />
+          <ChallengeToggle entryId={bracket.entryId} entered={bracket.enteredChallenge} />
         </div>
       )}
 
       <Link
-        href="/master"
+        href="/challenge"
         className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
       >
-        <span className="text-sm font-semibold text-ink">Master tournament leaderboard</span>
+        <span className="text-sm font-semibold text-ink">Knockout Challenge leaderboard</span>
         <span className="font-display text-pitch-dark">→</span>
       </Link>
     </section>

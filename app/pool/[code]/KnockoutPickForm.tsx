@@ -14,7 +14,7 @@ import { AWARDS, Bar, KO_STAGES, KnockoutMatch, LABEL } from "./pick-ui";
 
 // The save contract shared by the pool and solo flows: a payload of the edited
 // bracket, returning ok/error. The pool flow binds it to submitPicksAction with
-// the pool code; the solo flow passes its own master-pool save action.
+// the pool code; the solo flow passes its own standalone-bracket save action.
 export type SaveBracket = (payload: {
   entryId?: string;
   label: string;

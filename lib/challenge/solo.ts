@@ -1,16 +1,15 @@
 // Solo bracket service: a signed-in player builds their own knockout bracket
-// without creating or joining a friend-group pool. The bracket is a single
-// Entry living in the master pool (lib/master/pool.ts); it is scored and visible
-// only to its owner until they opt in (enteredMaster), which surfaces it on the
-// public master leaderboard. Reuses the same pick storage, validation, locking,
-// and scoring as the pool flow — solo and pool brackets are byte-identical.
+// without creating or joining a friend-group pool. The bracket is a standalone
+// Entry (poolId null) carrying its own tournamentId + KNOCKOUT format; it is
+// scored and visible only to its owner until they opt in (enteredChallenge),
+// which surfaces it on the public Bracketeer Knockout Challenge leaderboard.
+// Reuses the same pick storage, validation, locking, and scoring as the pool
+// flow — solo and pool brackets are byte-identical.
 
 import { prisma } from "@/lib/db";
-import { getOrCreateMasterPool } from "@/lib/master/pool";
 import { getKnockoutState } from "@/lib/pool/queries";
-import { upsertUiEntry, getUserEntry } from "@/lib/pool/submit-picks";
-import { recomputePool } from "@/lib/pool/scoring";
-import { notifyPool } from "@/lib/realtime/notify";
+import { upsertUiEntry, getStandaloneEntry } from "@/lib/pool/submit-picks";
+import { recomputeEntry } from "@/lib/pool/scoring";
 import { knockoutOnlyPicks, isKnockoutLocked } from "@/lib/pool/knockout";
 import { validatePicks, inconsistentKnockoutPicks } from "@/lib/pool/pick-form";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
@@ -22,27 +21,26 @@ export interface SoloBracket {
   tiebreak: string;
   picks: Picks;
   locked: boolean;
-  // Whether this bracket has been entered into the public master tournament.
-  enteredMaster: boolean;
+  // Whether this bracket has been entered into the public Knockout Challenge.
+  enteredChallenge: boolean;
   // Cached official score (0 until results land). Display-only.
   total: number;
 }
 
 // The signed-in user's solo bracket for a tournament, or null if they haven't
-// built one yet. Looks only in the master pool, where every solo entry lives.
+// built one yet. A solo bracket is a standalone KNOCKOUT entry (poolId null).
 export async function getSoloBracket(
   userId: string,
   tournamentSlug: string = DEFAULT_TOURNAMENT_SLUG,
 ): Promise<SoloBracket | null> {
   const tournamentId = await getTournamentIdBySlug(tournamentSlug);
-  const poolId = await getOrCreateMasterPool(tournamentId);
 
-  const decoded = await getUserEntry(poolId, userId);
+  const decoded = await getStandaloneEntry(tournamentId, userId, "KNOCKOUT");
   if (!decoded) return null;
 
   const meta = await prisma.entry.findUnique({
     where: { id: decoded.entryId },
-    select: { enteredMaster: true, breakdown: { select: { totalPoints: true } } },
+    select: { enteredChallenge: true, breakdown: { select: { totalPoints: true } } },
   });
 
   return {
@@ -51,7 +49,7 @@ export async function getSoloBracket(
     tiebreak: decoded.tiebreak,
     picks: decoded.picks,
     locked: decoded.locked,
-    enteredMaster: meta?.enteredMaster ?? false,
+    enteredChallenge: meta?.enteredChallenge ?? false,
     total: meta?.breakdown?.totalPoints ?? 0,
   };
 }
@@ -71,9 +69,9 @@ export interface SaveSoloResult {
 
 // Create or update the user's solo knockout bracket. Mirrors the knockout branch
 // of submitPicksAction: gate on the field being set and not yet locked, strip to
-// knockout + awards, reject winners not in the official seed, then persist and
-// recompute. The membership check the pool flow does is intentionally absent —
-// solo brackets need no pool membership.
+// knockout + awards, reject winners not in the official seed, then persist as a
+// standalone entry and recompute it. No pool membership — solo brackets stand
+// alone (poolId null).
 export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloResult> {
   const tournamentId = await getTournamentIdBySlug(input.tournamentSlug ?? DEFAULT_TOURNAMENT_SLUG);
   const { open, locksAt, seed } = await getKnockoutState(tournamentId);
@@ -98,11 +96,12 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
     select: { email: true },
   });
 
-  const poolId = await getOrCreateMasterPool(tournamentId);
-  const existing = await getUserEntry(poolId, input.userId);
+  const existing = await getStandaloneEntry(tournamentId, input.userId, "KNOCKOUT");
 
   const res = await upsertUiEntry({
-    poolId,
+    poolId: null,
+    tournamentId,
+    format: "KNOCKOUT",
     userId: input.userId,
     entryId: existing?.entryId,
     label: input.label,
@@ -111,34 +110,29 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
     tiebreak: input.tiebreak,
   });
 
-  await recomputePool(poolId);
-  await notifyPool(poolId, "leaderboard");
+  await recomputeEntry(res.entryId);
   return res;
 }
 
-// Opt the user's solo bracket into (or out of) the public master tournament.
-// Recomputes so the master leaderboard + snapshots reflect the change, and
-// notifies the master pool's live streams. No-op (returns false) if the user has
-// no solo bracket yet.
-export async function setEnteredMaster(
+// Opt a solo bracket into (or out of) the public Knockout Challenge. Knockout-
+// only — group brackets can't enter. Recomputes the entry so its cached score is
+// fresh on the Challenge board. No-op (returns false) if the bracket isn't the
+// user's or isn't a knockout bracket.
+export async function setEnteredChallenge(
   userId: string,
+  entryId: string,
   entered: boolean,
-  tournamentSlug: string = DEFAULT_TOURNAMENT_SLUG,
 ): Promise<boolean> {
-  const tournamentId = await getTournamentIdBySlug(tournamentSlug);
-  const poolId = await getOrCreateMasterPool(tournamentId);
-
   const entry = await prisma.entry.findFirst({
-    where: { poolId, userId },
+    where: { id: entryId, userId, format: "KNOCKOUT" },
     select: { id: true },
   });
   if (!entry) return false;
 
   await prisma.entry.update({
     where: { id: entry.id },
-    data: { enteredMaster: entered },
+    data: { enteredChallenge: entered },
   });
-  await recomputePool(poolId);
-  await notifyPool(poolId, "leaderboard");
+  await recomputeEntry(entry.id);
   return true;
 }

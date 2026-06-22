@@ -72,6 +72,12 @@ async function writeSubmission(poolId: string, sub: Submission): Promise<ImportR
   const pickRows = submissionToPickRows(sub);
 
   return prisma.$transaction(async (tx) => {
+    // A bracket carries its own tournament + format, inherited from its pool.
+    const pool = await tx.pool.findUniqueOrThrow({
+      where: { id: poolId },
+      select: { tournamentId: true, format: true },
+    });
+
     // Identify the bracket by (pool, claimEmail, label) so a user's other
     // same-email brackets aren't overwritten. claimEmail may be null (email-less
     // CSV) — Prisma renders that as `claimEmail IS NULL`, matching on label.
@@ -92,7 +98,15 @@ async function writeSubmission(poolId: string, sub: Submission): Promise<ImportR
     }
 
     const entry = await tx.entry.create({
-      data: { poolId, label, claimEmail, tiebreak, importedFrom: "CSV" },
+      data: {
+        poolId,
+        tournamentId: pool.tournamentId,
+        format: pool.format,
+        label,
+        claimEmail,
+        tiebreak,
+        importedFrom: "CSV",
+      },
     });
     await tx.pick.createMany({
       data: pickRows.map((r) => ({ ...r, entryId: entry.id })),

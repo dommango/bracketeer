@@ -1,5 +1,5 @@
-// Pure ranking for the master leaderboard, split out from leaderboard.ts (which
-// touches prisma) so it's unit-testable without a DB.
+// Pure ranking for the Challenge leaderboard, split out from leaderboard.ts
+// (which touches prisma) so it's unit-testable without a DB.
 
 import { assignRanks } from "@/lib/pool/rank";
 import type { LeaderboardRow } from "@/lib/pool/scoring";

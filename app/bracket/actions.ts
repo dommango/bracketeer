@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/pool/access";
-import { saveSoloBracket, setEnteredMaster } from "@/lib/master/solo";
+import { saveSoloBracket, setEnteredChallenge } from "@/lib/challenge/solo";
 import { rateLimit } from "@/lib/rate-limit";
 import type { Picks } from "@/lib/scoring/types";
 
@@ -41,7 +41,7 @@ export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResul
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Sign in to save your bracket." };
 
-  // Each save rewrites the entry + recomputes the master pool, so cap how often.
+  // Each save rewrites the entry + rescores it, so cap how often.
   if (!rateLimit(`solo:${user.id}`, 20, 60_000).ok) {
     return { ok: false, error: "You're saving too often — wait a moment and try again." };
   }
@@ -54,14 +54,17 @@ export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResul
       picks: parsed.data.picks as Picks,
     });
     revalidatePath("/bracket");
-    revalidatePath("/master");
+    revalidatePath("/challenge");
     return { ok: true, replaced: res.replaced };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
 }
 
-export async function toggleMasterAction(entered: boolean): Promise<SoloSaveResult> {
+export async function toggleChallengeAction(
+  entryId: string,
+  entered: boolean,
+): Promise<SoloSaveResult> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Sign in first." };
 
@@ -70,10 +73,10 @@ export async function toggleMasterAction(entered: boolean): Promise<SoloSaveResu
   }
 
   try {
-    const ok = await setEnteredMaster(user.id, entered);
-    if (!ok) return { ok: false, error: "Build your bracket before entering the tournament." };
+    const ok = await setEnteredChallenge(user.id, entryId, entered);
+    if (!ok) return { ok: false, error: "Build your knockout bracket before entering the Challenge." };
     revalidatePath("/bracket");
-    revalidatePath("/master");
+    revalidatePath("/challenge");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
