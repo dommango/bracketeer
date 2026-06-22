@@ -11,6 +11,7 @@ import type { BracketView } from "@/lib/pool/bracket-view";
 import type { BracketOverlay } from "@/lib/pool/queries";
 import type { ChatView } from "@/lib/pool/chat";
 import type { PoolFormat } from "@/lib/pool/manage";
+import { prizeTeaser } from "@/lib/pool/games";
 import { DISPLAY_TZ } from "@/lib/tz";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
@@ -292,6 +293,9 @@ function KnockoutNotice({
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-pitch-dark">
         Knockout Challenge
       </p>
+      {prizeTeaser("KNOCKOUT") ? (
+        <p className="mt-1 text-[12px] font-semibold text-gold-dark">🏆 {prizeTeaser("KNOCKOUT")}</p>
+      ) : null}
       {open ? (
         <>
           <p className="mt-1.5 text-sm text-ink-2">

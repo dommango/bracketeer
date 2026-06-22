@@ -23,6 +23,8 @@ export interface Md3Entry {
   entryId: string;
   label: string;
   scores: Md3Scores;
+  // Whether this entry is opted into the public MD3 challenge.
+  enteredChallenge: boolean;
 }
 
 function category(matchNo: number): string {
@@ -38,7 +40,7 @@ function clampGoals(value: number): number | null {
 
 // Decode a flat set of MD3 Pick rows into { matchNo: { home, away } }. Only
 // fixtures with BOTH a home and away goal row count as a complete pick.
-function decodeRows(
+export function decodeMd3Rows(
   rows: { category: string; key: string; teamOrValue: string }[],
 ): Md3Scores {
   const partial = new Map<number, { home?: number; away?: number }>();
@@ -68,11 +70,17 @@ export async function getMd3Entry(poolId: string, userId: string): Promise<Md3En
     select: {
       id: true,
       label: true,
+      enteredChallenge: true,
       picks: { select: { category: true, key: true, teamOrValue: true } },
     },
   });
   if (!entry) return null;
-  return { entryId: entry.id, label: entry.label, scores: decodeRows(entry.picks) };
+  return {
+    entryId: entry.id,
+    label: entry.label,
+    scores: decodeMd3Rows(entry.picks),
+    enteredChallenge: entry.enteredChallenge,
+  };
 }
 
 export interface UpsertMd3Input {
@@ -130,7 +138,7 @@ export async function upsertMd3Picks(
       select: { id: true, picks: { select: { category: true, key: true, teamOrValue: true } } },
     });
 
-    const current: Md3Scores = existing ? decodeRows(existing.picks) : {};
+    const current: Md3Scores = existing ? decodeMd3Rows(existing.picks) : {};
 
     // Merge: for each MD3 fixture, a locked one is frozen to its current value; an
     // open one takes the submitted value when present, else keeps current.

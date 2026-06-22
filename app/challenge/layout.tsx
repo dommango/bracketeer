@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChallengeTabs } from "./ChallengeTabs";
 
 export default function ChallengeLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       >
         ← Home
       </Link>
+      <ChallengeTabs />
       {children}
     </main>
   );

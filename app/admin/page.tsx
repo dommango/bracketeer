@@ -86,6 +86,12 @@ export default async function AdminPage() {
         >
           Entry picks →
         </Link>
+        <Link
+          href="/admin/prizes"
+          className="rounded-full border border-black/15 bg-white px-4 py-2 text-sm font-medium hover:bg-black/5"
+        >
+          Challenge prizes →
+        </Link>
       </nav>
 
       {/* GROUP STANDINGS */}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Leaderboard } from "./Leaderboard";
+import { prizeTeaser } from "@/lib/pool/games";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 import type { Md3View } from "@/lib/pool/md3-view";
 
@@ -33,6 +34,11 @@ export function Md3Dashboard({
           Exact score 5 pts · right result &amp; goal difference 3 · right result 1. Each pick locks
           at kickoff.
         </p>
+        {prizeTeaser("MATCH_DAY_3_PICKEM") ? (
+          <p className="mt-1.5 text-[12px] font-semibold text-gold-dark">
+            🏆 {prizeTeaser("MATCH_DAY_3_PICKEM")} Enter the public challenge from your picks page.
+          </p>
+        ) : null}
 
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
           <Stat label="Predicted" value={`${view.pickedCount}/24`} />

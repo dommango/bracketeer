@@ -8,67 +8,53 @@ const INPUT =
   "h-11 w-full rounded-md border border-line bg-surface px-[18px] text-[15px] text-ink outline-none focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]";
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
-// The game types, in display order. MATCH_DAY_3_PICKEM is the quick group-stage
-// game (open only while MD3 fixtures remain); KNOCKOUT is the featured standalone
-// challenge; FULL_BRACKET (shown as "Full Tournament Game") is the classic
-// whole-tournament pool — only creatable before the group stage kicks off.
-const GAME_TYPES: { value: PoolFormat; title: string; blurb: string }[] = [
-  {
-    value: "MATCH_DAY_3_PICKEM",
-    title: "Match Day 3 Pickem",
-    blurb: "Predict the score of every final group-stage match. Each pick locks at its kickoff.",
-  },
-  {
-    value: "KNOCKOUT",
-    title: "Knockout Challenge",
-    blurb: "Predict the bracket once the last 32 are set. Picks lock at the Round-of-32 kickoff.",
-  },
-  {
-    value: "FULL_BRACKET",
-    title: "Full Tournament Game",
-    blurb: "The classic pool — group stage through the final. Import or fill out the whole bracket.",
-  },
-];
+// A single game card, fully resolved on the server (copy + current state + whether
+// it's creatable right now) so the client just renders — no time math, no risk of
+// the card disagreeing with the page's availability gating.
+export interface GameCardVM {
+  value: PoolFormat;
+  title: string;
+  blurb: string;
+  // Short state line, e.g. "Open now · first pick locks 24 Jun".
+  stateLine: string;
+  // Prize teaser for challenge games, or null.
+  prizeTeaser: string | null;
+  // True when this format can't be created right now (shown disabled).
+  disabled: boolean;
+}
 
 export function CreatePoolForm({
   defaultDisplayName,
-  defaultFormat = "FULL_BRACKET",
-  fullGameAvailable = true,
-  md3Available = true,
+  defaultFormat,
+  cards,
 }: {
   defaultDisplayName: string;
-  defaultFormat?: PoolFormat;
-  // False once the tournament has kicked off — the full-tournament game is then
-  // shown disabled and the form falls back to the Knockout Challenge.
-  fullGameAvailable?: boolean;
-  // False once the last Match-Day-3 fixture has kicked off — that game is then
-  // shown disabled.
-  md3Available?: boolean;
+  defaultFormat: PoolFormat;
+  // Ordered, server-resolved game cards (featured first).
+  cards: GameCardVM[];
 }) {
   const [state, action, pending] = useActionState<CreatePoolState, FormData>(
     createPoolAction,
     {},
   );
-  const isUnavailable = (f: PoolFormat) =>
-    (f === "FULL_BRACKET" && !fullGameAvailable) ||
-    (f === "MATCH_DAY_3_PICKEM" && !md3Available);
-  const [format, setFormat] = useState<PoolFormat>(
-    isUnavailable(defaultFormat) ? "KNOCKOUT" : defaultFormat,
-  );
+  const firstCreatable = cards.find((c) => !c.disabled)?.value ?? defaultFormat;
+  const initial = cards.find((c) => c.value === defaultFormat && !c.disabled)
+    ? defaultFormat
+    : firstCreatable;
+  const [format, setFormat] = useState<PoolFormat>(initial);
 
   return (
     <form action={action} className="mt-5 space-y-4">
       <fieldset className="space-y-1.5">
         <legend className={LABEL}>Game type</legend>
         <div className="mt-1.5 space-y-2">
-          {GAME_TYPES.map((g) => {
-            const disabled = isUnavailable(g.value);
-            const selected = format === g.value && !disabled;
+          {cards.map((c) => {
+            const selected = format === c.value && !c.disabled;
             return (
               <label
-                key={g.value}
+                key={c.value}
                 className={`flex items-start gap-3 rounded-2xl border p-3.5 transition-colors ${
-                  disabled
+                  c.disabled
                     ? "cursor-not-allowed border-line bg-surface-sunk opacity-60"
                     : selected
                       ? "cursor-pointer border-pitch bg-pitch/5 shadow-[0_0_0_3px_rgba(11,107,58,0.12)]"
@@ -78,20 +64,25 @@ export function CreatePoolForm({
                 <input
                   type="radio"
                   name="format"
-                  value={g.value}
+                  value={c.value}
                   checked={selected}
-                  disabled={disabled}
-                  onChange={() => setFormat(g.value)}
+                  disabled={c.disabled}
+                  onChange={() => setFormat(c.value)}
                   className="mt-1 h-4 w-4 shrink-0 accent-pitch"
                 />
                 <span className="min-w-0">
-                  <span className="block font-semibold text-ink">{g.title}</span>
-                  <span className="mt-0.5 block text-[13px] text-ink-3">{g.blurb}</span>
-                  {disabled ? (
-                    <span className="mt-1 block text-[12px] font-semibold text-ink-3">
-                      {g.value === "MATCH_DAY_3_PICKEM"
-                        ? "Closed — Match Day 3 has finished."
-                        : "Closed — the group stage has kicked off."}
+                  <span className="block font-semibold text-ink">{c.title}</span>
+                  <span className="mt-0.5 block text-[13px] text-ink-3">{c.blurb}</span>
+                  <span
+                    className={`mt-1.5 block text-[12px] font-semibold ${
+                      c.disabled ? "text-ink-3" : "text-pitch-dark"
+                    }`}
+                  >
+                    {c.stateLine}
+                  </span>
+                  {!c.disabled && c.prizeTeaser ? (
+                    <span className="mt-1 block text-[12px] font-semibold text-gold-dark">
+                      🏆 {c.prizeTeaser}
                     </span>
                   ) : null}
                 </span>

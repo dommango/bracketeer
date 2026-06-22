@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
 import { getTournamentAdmin } from "@/lib/pool/access";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
 import {
@@ -92,4 +93,20 @@ export async function saveKnockoutAction(
   } catch (err) {
     return { ok: false, message: (err as Error).message };
   }
+}
+
+// Mark a recorded prize as sent (records who/when). Toggles a PENDING/REVIEW award
+// to SENT; the gift card itself is fulfilled out-of-band. Admin-gated.
+export async function markPrizeSentAction(formData: FormData): Promise<void> {
+  const admin = await getTournamentAdmin();
+  if (!admin) redirect("/signin?error=forbidden");
+
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+
+  await prisma.prizeAward.update({
+    where: { id },
+    data: { status: "SENT", sentAt: new Date(), sentBy: admin.email },
+  });
+  revalidatePath("/admin/prizes");
 }
