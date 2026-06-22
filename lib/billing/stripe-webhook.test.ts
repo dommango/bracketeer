@@ -125,4 +125,35 @@ describe("interpretStripeEvent", () => {
       }),
     ).toBeNull();
   });
+
+  it("does not grant premium when mode is absent (must be subscription affirmatively)", () => {
+    expect(
+      interpretStripeEvent({
+        type: "checkout.session.completed",
+        data: { object: { client_reference_id: "p1" } },
+      }),
+    ).toBeNull();
+  });
+
+  it("does not grant premium on a completed-but-unpaid checkout", () => {
+    expect(
+      interpretStripeEvent({
+        type: "checkout.session.completed",
+        data: {
+          object: { mode: "subscription", client_reference_id: "p1", payment_status: "unpaid" },
+        },
+      }),
+    ).toBeNull();
+  });
+
+  it("grants premium when payment_status is paid or no_payment_required", () => {
+    for (const payment_status of ["paid", "no_payment_required"]) {
+      expect(
+        interpretStripeEvent({
+          type: "checkout.session.completed",
+          data: { object: { mode: "subscription", client_reference_id: "p1", payment_status } },
+        })?.tier,
+      ).toBe("PREMIUM");
+    }
+  });
 });

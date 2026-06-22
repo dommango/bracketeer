@@ -96,12 +96,25 @@ async function scoreEntryBreakdowns(
 // brackets (solo save, Challenge toggle) where there's no pool to recompute and
 // no snapshot to capture. Scores against the entry's tournament directly, so it
 // works whether the entry is in a pool or stands alone.
+//
+// Match Day 3 entries are the exception: they score against live Result rows via
+// scoreMd3Pool (the parity oracle would read their pick rows as an empty bracket
+// and write 0). MD3 is pool-only, so this rescores that whole MD3 pool's
+// breakdowns — still without snapshots or the pool advisory lock (idempotent
+// upserts, so a concurrent recomputePool can't corrupt it).
 export async function recomputeEntry(entryId: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const entry = await tx.entry.findUniqueOrThrow({
       where: { id: entryId },
       include: { picks: true, tournament: { select: { officialResults: true, scoringConfig: true } } },
     });
+    // Match Day 3 entries score against live Result rows via their own engine; the
+    // parity oracle would decode their match_day_3 pick rows as an empty bracket
+    // (0 pts). MD3 is always a pooled format, so rescore the whole MD3 pool.
+    if (entry.format === "MATCH_DAY_3_PICKEM" && entry.poolId) {
+      await scoreMd3Pool(tx, entry.poolId, entry.tournamentId);
+      return;
+    }
     const answer = asResults(entry.tournament.officialResults);
     const cfg = asScoringConfig(entry.tournament.scoringConfig);
     await scoreEntryBreakdowns(tx, [entry], answer, cfg);
