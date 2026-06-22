@@ -159,7 +159,7 @@ async function main() {
       },
     });
     const gated = await setEnteredChallenge(u1.id, groupEntry.id, true);
-    assert(gated === false, "a full-bracket entry can't enter the knockout Challenge");
+    assert(gated.notFound === true, "a full-bracket entry can't enter the knockout Challenge");
 
     // 7. recomputeStandalone rescores standalone entries when results land. The
     //    answer key has the group stage filled; add a knockout winner matching the

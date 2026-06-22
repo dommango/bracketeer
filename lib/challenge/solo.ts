@@ -12,6 +12,7 @@ import { upsertUiEntry, getStandaloneEntry } from "@/lib/pool/submit-picks";
 import { recomputeEntry } from "@/lib/pool/scoring";
 import { knockoutOnlyPicks, isKnockoutLocked } from "@/lib/pool/knockout";
 import { validatePicks, inconsistentKnockoutPicks } from "@/lib/pool/pick-form";
+import { CHALLENGE_ENTRY_CAP } from "@/lib/challenge/eligibility";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import type { Picks } from "@/lib/scoring/types";
 
@@ -116,25 +117,51 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
   return res;
 }
 
-// Opt a solo bracket into (or out of) the public Knockout Challenge. Knockout-
-// only — group brackets can't enter. Recomputes the entry so its cached score is
-// fresh on the Challenge board. No-op (returns false) if the bracket isn't the
-// user's or isn't a knockout bracket.
+// Outcome of an opt-in attempt. ok=false with a reason when the cap is hit, so
+// the caller can surface a clear message rather than a generic failure.
+export interface EnterChallengeResult {
+  ok: boolean;
+  // Set only when the bracket couldn't be found / isn't a challenge bracket.
+  notFound?: boolean;
+  // Set when the per-person entry cap blocked a new opt-in.
+  capReached?: boolean;
+}
+
+// Opt a bracket into (or out of) its public challenge. Works for both challenge
+// formats — KNOCKOUT and MATCH_DAY_3_PICKEM (group/full brackets can't enter).
+// Enforces the per-person, per-format entry cap on the way in: a user may have at
+// most CHALLENGE_ENTRY_CAP entered brackets of a given format. Recomputes the
+// entry so its cached score is fresh on the board. Returns notFound when the
+// bracket isn't the user's challenge bracket.
 export async function setEnteredChallenge(
   userId: string,
   entryId: string,
   entered: boolean,
-): Promise<boolean> {
+): Promise<EnterChallengeResult> {
   const entry = await prisma.entry.findFirst({
-    where: { id: entryId, userId, format: "KNOCKOUT" },
-    select: { id: true },
+    where: { id: entryId, userId, format: { in: ["KNOCKOUT", "MATCH_DAY_3_PICKEM"] } },
+    select: { id: true, format: true, enteredChallenge: true },
   });
-  if (!entry) return false;
+  if (!entry) return { ok: false, notFound: true };
+
+  // Cap only applies when newly entering (not when leaving, and not when it's
+  // already entered). Count the user's other entered brackets of the same format.
+  if (entered && !entry.enteredChallenge) {
+    const alreadyEntered = await prisma.entry.count({
+      where: {
+        userId,
+        format: entry.format,
+        enteredChallenge: true,
+        id: { not: entry.id },
+      },
+    });
+    if (alreadyEntered >= CHALLENGE_ENTRY_CAP) return { ok: false, capReached: true };
+  }
 
   await prisma.entry.update({
     where: { id: entry.id },
     data: { enteredChallenge: entered },
   });
   await recomputeEntry(entry.id);
-  return true;
+  return { ok: true };
 }

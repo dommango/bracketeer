@@ -10,6 +10,9 @@ import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queri
 import { asScoringConfig, type LeaderboardRow } from "@/lib/pool/scoring";
 import { rankEnteredRows } from "@/lib/challenge/rank-entered";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
+import { pickRowsToSubmission } from "@/lib/pool/picks";
+import { decodeMd3Rows } from "@/lib/pool/md3-picks";
+import { isKnockoutEntryComplete, isMd3EntryComplete } from "@/lib/challenge/eligibility";
 
 // Knockout pick rows carry the match id in their CSV-mirrored category ("M73").
 const KNOCKOUT_PICK_SECTIONS = [
@@ -33,11 +36,21 @@ export async function getChallengeLeaderboard(
       userId: true,
       tiebreak: true,
       breakdown: { select: { totalPoints: true, byCategory: true } },
+      picks: { select: { section: true, category: true, key: true, code: true, teamOrValue: true } },
     },
   });
-  if (entries.length === 0) return [];
+  // Prize/board eligibility: only complete & valid brackets count (Part C). An
+  // incomplete bracket is never materialized onto the public board.
+  const eligible = entries.filter((e) => {
+    try {
+      return isKnockoutEntryComplete(pickRowsToSubmission(e.picks).picks);
+    } catch {
+      return false;
+    }
+  });
+  if (eligible.length === 0) return [];
 
-  const rows: LeaderboardRow[] = entries.map((e) => ({
+  const rows: LeaderboardRow[] = eligible.map((e) => ({
     rank: 0,
     entryId: e.id,
     label: e.label,
@@ -50,7 +63,7 @@ export async function getChallengeLeaderboard(
   const withLive = await overlayLiveProjection(
     tournamentId,
     rows,
-    entries.map((e) => e.id),
+    eligible.map((e) => e.id),
   );
 
   // rankEnteredRows filters by id-set then ranks; passing every row's id makes
@@ -105,4 +118,45 @@ async function overlayLiveProjection(
     const pts = projected.get(r.entryId) ?? 0;
     return pts > 0 ? { ...r, projected: pts } : r;
   });
+}
+
+// The public Match Day 3 Pickem challenge board: every MD3 entry whose owner has
+// opted in (Entry.enteredChallenge) across all MD3 pools for the tournament,
+// ranked together. Mirrors the knockout board but scores off the cached MD3
+// ScoreBreakdown (refreshed on each FINAL result via scoreMd3Pool) — no live
+// in-progress projection for v1. Eligibility: only complete brackets (all 24
+// fixtures predicted) count toward the board / prize.
+export async function getMd3ChallengeLeaderboard(
+  tournamentSlug: string = DEFAULT_TOURNAMENT_SLUG,
+): Promise<LeaderboardRow[]> {
+  const tournamentId = await getTournamentIdBySlug(tournamentSlug);
+
+  const entries = await prisma.entry.findMany({
+    where: { tournamentId, format: "MATCH_DAY_3_PICKEM", enteredChallenge: true },
+    select: {
+      id: true,
+      label: true,
+      userId: true,
+      tiebreak: true,
+      breakdown: { select: { totalPoints: true, byCategory: true } },
+      picks: { select: { category: true, key: true, teamOrValue: true } },
+    },
+  });
+
+  const eligible = entries.filter((e) => isMd3EntryComplete(decodeMd3Rows(e.picks)));
+  if (eligible.length === 0) return [];
+
+  const rows: LeaderboardRow[] = eligible.map((e) => ({
+    rank: 0,
+    entryId: e.id,
+    label: e.label,
+    userId: e.userId,
+    total: e.breakdown?.totalPoints ?? 0,
+    breakdown: e.breakdown?.byCategory ?? null,
+    tiebreak: e.tiebreak,
+  }));
+
+  // rankEnteredRows filters by id-set then ranks; passing every row's id makes
+  // the filter a no-op and reuses its unit-tested competition rank.
+  return rankEnteredRows(rows, new Set(rows.map((r) => r.entryId)));
 }

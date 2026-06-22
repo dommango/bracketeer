@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/pool/access";
 import { saveSoloBracket, setEnteredChallenge } from "@/lib/challenge/solo";
+import { CHALLENGE_ENTRY_CAP } from "@/lib/challenge/eligibility";
 import { attachEntryToPool } from "@/lib/pool/manage";
 import { rateLimit } from "@/lib/rate-limit";
 import type { Picks } from "@/lib/scoring/types";
@@ -117,8 +118,16 @@ export async function toggleChallengeAction(
   }
 
   try {
-    const ok = await setEnteredChallenge(user.id, entryId, entered);
-    if (!ok) return { ok: false, error: "Build your knockout bracket before entering the Challenge." };
+    const res = await setEnteredChallenge(user.id, entryId, entered);
+    if (!res.ok) {
+      if (res.capReached) {
+        return {
+          ok: false,
+          error: `You can enter at most ${CHALLENGE_ENTRY_CAP} brackets in the Challenge.`,
+        };
+      }
+      return { ok: false, error: "Build your knockout bracket before entering the Challenge." };
+    }
     revalidatePath("/bracket");
     revalidatePath("/challenge");
     return { ok: true };

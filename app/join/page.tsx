@@ -31,8 +31,9 @@ export default async function JoinPage({
           Enter your join code
         </h1>
         <p className="mt-2 text-[13px] text-ink-3">
-          Joining links any bracket imported under your email and lets you chat and submit
-          picks.
+          A code works for any game — full tournament, Knockout Challenge, or Match Day 3 Pickem.
+          Once you&apos;re in, the pool shows which game it plays and its current state (picks open,
+          opens later, or locked). Joining also links any bracket imported under your email.
         </p>
 
         {user ? (

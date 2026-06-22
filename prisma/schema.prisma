@@ -396,6 +396,23 @@ enum PoolTier {
   PREMIUM
 }
 
+// The Bracketeer-sponsored public challenges that carry a prize. A subset of the
+// PoolFormat values (full-bracket pools have no public challenge).
+enum ChallengeKind {
+  KNOCKOUT
+  MATCH_DAY_3_PICKEM
+}
+
+// Lifecycle of a recorded prize award. PENDING = winner detected, awaiting manual
+// gift-card fulfillment; REVIEW = a rank-1 tie an admin must resolve; SENT = card
+// dispatched; SKIPPED = intentionally not awarded.
+enum PrizeStatus {
+  PENDING
+  REVIEW
+  SENT
+  SKIPPED
+}
+
 model Pool {
   id           String     @id @default(cuid())
   tournamentId String
@@ -635,4 +652,31 @@ model Feedback {
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+}
+
+// A recorded Bracketeer-sponsored prize for a public-challenge winner. Phase 1 is
+// detect-and-record: the resolver (lib/challenge/prizes.ts) upserts one row per
+// (challenge, tournament) when the challenge completes, notifies the winner, and
+// an admin fulfills the gift card by hand (status PENDING → SENT). FKs are stored
+// as plain ids (audit-style, no cascade) so the table is fully additive. entryId/
+// userId are null when a rank-1 tie needs admin review (status REVIEW).
+model PrizeAward {
+  id           String        @id @default(cuid())
+  challenge    ChallengeKind
+  tournamentId String
+  entryId      String?
+  userId       String?
+  rank         Int           @default(1)
+  status       PrizeStatus   @default(PENDING)
+  description  String
+  amount       Int?
+  currency     String        @default("GBP")
+  createdAt    DateTime      @default(now())
+  sentAt       DateTime?
+  // The admin email that marked the card sent.
+  sentBy       String?
+
+  // One award per challenge per tournament — makes the resolver idempotent.
+  @@unique([challenge, tournamentId])
+  @@index([status])
 }

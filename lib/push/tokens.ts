@@ -47,3 +47,14 @@ export async function iosTokensForPool(poolId: string): Promise<string[]> {
   });
   return [...new Set(rows.map((r) => r.token))];
 }
+
+// Every iOS device token for a single user. Used to reach a challenge winner
+// directly (they may own a standalone entry with no pool, so the pool-scoped
+// lookup above wouldn't find them).
+export async function iosTokensForUser(userId: string): Promise<string[]> {
+  const rows = await prisma.pushToken.findMany({
+    where: { platform: "IOS", userId },
+    select: { token: true },
+  });
+  return [...new Set(rows.map((r) => r.token))];
+}

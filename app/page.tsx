@@ -3,6 +3,14 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
+import type { PoolFormat } from "@/lib/pool/manage";
+import {
+  GAME_CATALOG,
+  resolveGamePhase,
+  featuredGame,
+  gameStateLine,
+  prizeTeaser,
+} from "@/lib/pool/games";
 import { SignInPanel } from "./signin/SignInPanel";
 import { Footer } from "./Footer";
 import { Hero } from "./Hero";
@@ -19,7 +27,7 @@ export default async function Home() {
   const memberships = await prisma.membership.findMany({
     where: { userId: user.id },
     orderBy: { joinedAt: "asc" },
-    select: { id: true, role: true, pool: { select: { name: true, joinCode: true } } },
+    select: { id: true, role: true, pool: { select: { name: true, joinCode: true, format: true } } },
   });
 
   // Exactly one pool: skip the hub and drop the returning user into it.
@@ -30,7 +38,11 @@ export default async function Home() {
   return (
     <SignedInHub
       name={user.name ?? user.email ?? "there"}
-      pools={memberships.map((m) => ({ name: m.pool.name, joinCode: m.pool.joinCode }))}
+      pools={memberships.map((m) => ({
+        name: m.pool.name,
+        joinCode: m.pool.joinCode,
+        format: m.pool.format as PoolFormat,
+      }))}
     />
   );
 }
@@ -40,13 +52,58 @@ const PRIMARY_BTN =
 const SECONDARY_BTN =
   "inline-flex h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-[18px] font-semibold text-pitch-dark transition-colors hover:bg-surface-sunk active:scale-[0.97]";
 
+function FeaturedBanner({ now }: { now: Date }) {
+  const featured = featuredGame(now);
+  if (!featured) return null;
+
+  const game = GAME_CATALOG[featured];
+  const teaser = prizeTeaser(featured);
+  const createHref =
+    featured === "MATCH_DAY_3_PICKEM"
+      ? "/pool/create?game=md3"
+      : featured === "KNOCKOUT"
+        ? "/pool/create?game=knockout"
+        : "/pool/create";
+
+  return (
+    <div className="mt-4 rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
+      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">
+        Live now · {game.name}
+      </p>
+      <h2 className="mt-1 font-display text-xl text-ink">{game.tagline}</h2>
+      <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">{gameStateLine(featured, now)}</p>
+      {teaser ? (
+        <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
+      ) : null}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Link href={createHref} className={PRIMARY_BTN}>
+          Create
+        </Link>
+        <Link href="/join" className={SECONDARY_BTN}>
+          Join
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function PoolStateBadge({ format, now }: { format: PoolFormat; now: Date }) {
+  const label = resolveGamePhase(format, now).label;
+  return (
+    <span className="shrink-0 rounded-full bg-surface-sunk px-2 py-0.5 text-[11px] font-semibold text-ink-2">
+      {label}
+    </span>
+  );
+}
+
 function SignedInHub({
   name,
   pools,
 }: {
   name: string;
-  pools: { name: string; joinCode: string }[];
+  pools: { name: string; joinCode: string; format: PoolFormat }[];
 }) {
+  const now = new Date();
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
       <div className="flex items-center justify-between">
@@ -67,6 +124,8 @@ function SignedInHub({
         <Hero />
       </div>
 
+      <FeaturedBanner now={now} />
+
       <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
         <h2 className="font-display text-lg text-ink">
           {pools.length > 0 ? "Your pools" : "You’re not in a pool yet"}
@@ -77,7 +136,7 @@ function SignedInHub({
               <li key={p.joinCode}>
                 <Link
                   href={`/pool/${p.joinCode}`}
-                  className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-ink">{p.name}</span>
@@ -85,7 +144,10 @@ function SignedInHub({
                       {p.joinCode}
                     </span>
                   </span>
-                  <span className="font-display text-pitch-dark">→</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <PoolStateBadge format={p.format} now={now} />
+                    <span className="font-display text-pitch-dark">→</span>
+                  </span>
                 </Link>
               </li>
             ))}
