@@ -56,6 +56,9 @@ export async function getSoloBracket(
 
 export interface SaveSoloInput {
   userId: string;
+  // The standalone bracket to edit. Omit to create a NEW standalone bracket —
+  // a user may keep several (each placed independently).
+  entryId?: string | null;
   label: string;
   tiebreak: string;
   picks: Picks;
@@ -67,11 +70,11 @@ export interface SaveSoloResult {
   replaced: boolean;
 }
 
-// Create or update the user's solo knockout bracket. Mirrors the knockout branch
-// of submitPicksAction: gate on the field being set and not yet locked, strip to
+// Create or update a standalone knockout bracket. Mirrors the knockout branch of
+// submitPicksAction: gate on the field being set and not yet locked, strip to
 // knockout + awards, reject winners not in the official seed, then persist as a
-// standalone entry and recompute it. No pool membership — solo brackets stand
-// alone (poolId null).
+// standalone entry (poolId null) and recompute it. With entryId it edits that
+// bracket; without one it creates a new bracket. No pool membership.
 export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloResult> {
   const tournamentId = await getTournamentIdBySlug(input.tournamentSlug ?? DEFAULT_TOURNAMENT_SLUG);
   const { open, locksAt, seed } = await getKnockoutState(tournamentId);
@@ -96,14 +99,13 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
     select: { email: true },
   });
 
-  const existing = await getStandaloneEntry(tournamentId, input.userId, "KNOCKOUT");
-
   const res = await upsertUiEntry({
     poolId: null,
     tournamentId,
     format: "KNOCKOUT",
     userId: input.userId,
-    entryId: existing?.entryId,
+    entryId: input.entryId ?? undefined,
+    forceCreate: !input.entryId,
     label: input.label,
     picks,
     email: user?.email,

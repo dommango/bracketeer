@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/pool/access";
 import { saveSoloBracket, setEnteredChallenge } from "@/lib/challenge/solo";
+import { attachEntryToPool } from "@/lib/pool/manage";
 import { rateLimit } from "@/lib/rate-limit";
 import type { Picks } from "@/lib/scoring/types";
 
@@ -32,6 +33,9 @@ export interface SoloSaveResult {
   ok: boolean;
   error?: string;
   replaced?: boolean;
+  // The saved bracket's id — returned so a "new bracket" form can keep editing
+  // the row it just created instead of inserting another on the next save.
+  entryId?: string;
 }
 
 export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResult> {
@@ -49,13 +53,53 @@ export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResul
   try {
     const res = await saveSoloBracket({
       userId: user.id,
+      entryId: parsed.data.entryId,
       label: parsed.data.label,
       tiebreak: parsed.data.tiebreak,
       picks: parsed.data.picks as Picks,
     });
     revalidatePath("/bracket");
     revalidatePath("/challenge");
-    return { ok: true, replaced: res.replaced };
+    return { ok: true, replaced: res.replaced, entryId: res.entryId };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
+const attachSchema = z.object({
+  entryId: z.string().min(1),
+  joinCode: z.string().min(1).max(16),
+});
+
+export interface AttachResult {
+  ok: boolean;
+  error?: string;
+  // The pool's join code, so the client can route to /pool/<code> on success.
+  joinCode?: string;
+  poolName?: string;
+}
+
+export async function attachEntryToPoolAction(raw: unknown): Promise<AttachResult> {
+  const parsed = attachSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Enter a join code." };
+
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "Sign in first." };
+
+  if (!rateLimit(`attach:${user.id}`, 20, 60_000).ok) {
+    return { ok: false, error: "Too many attempts — wait a moment and try again." };
+  }
+
+  try {
+    const res = await attachEntryToPool({
+      userId: user.id,
+      entryId: parsed.data.entryId,
+      joinCode: parsed.data.joinCode,
+      displayName: user.name ?? undefined,
+    });
+    revalidatePath("/bracket");
+    revalidatePath(`/pool/${res.joinCode}`);
+    return { ok: true, joinCode: res.joinCode, poolName: res.poolName };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
