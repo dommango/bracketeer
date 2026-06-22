@@ -50,7 +50,7 @@ function Side({ side, isWinner, decided }: { side: MatchCenterSide; isWinner: bo
         ) : null}
       </span>
       {side.score !== null ? (
-        <span className="font-mono text-base font-bold tabular-nums">{side.score}</span>
+        <span className="w-7 shrink-0 text-right font-mono text-base font-bold tabular-nums">{side.score}</span>
       ) : null}
     </div>
   );
