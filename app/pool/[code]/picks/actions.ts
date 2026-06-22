@@ -94,8 +94,9 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
   const errors = validatePicks(picksToSave);
   if (errors.length > 0) return { ok: false, error: errors[0] };
 
+  let res;
   try {
-    const res = await upsertUiEntry({
+    res = await upsertUiEntry({
       poolId: pool.id,
       userId: user.id,
       entryId,
@@ -104,11 +105,19 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
       email: user.email,
       tiebreak,
     });
-    await recomputePool(pool.id);
-    await notifyPool(pool.id, "leaderboard");
-    revalidatePath(`/pool/${code}`);
-    return { ok: true, replaced: res.replaced, entryId: res.entryId };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
+
+  // The entry is committed. A failure refreshing the cached leaderboard must not
+  // report the save as failed (it would prompt a needless re-save); the board
+  // self-heals on the next recompute. notifyPool is already best-effort.
+  try {
+    await recomputePool(pool.id);
+    await notifyPool(pool.id, "leaderboard");
+  } catch (err) {
+    console.error("post-save leaderboard recompute failed:", err);
+  }
+  revalidatePath(`/pool/${code}`);
+  return { ok: true, replaced: res.replaced, entryId: res.entryId };
 }

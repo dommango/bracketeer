@@ -94,8 +94,17 @@ export function interpretStripeEvent(raw: unknown): StripeIntent | null {
     case "checkout.session.completed": {
       const poolId = str(obj.client_reference_id) ?? str(rec(obj.metadata).poolId);
       if (!poolId) return null;
-      // Only subscription checkouts grant premium (ignore one-off payment modes).
-      if (str(obj.mode) && obj.mode !== "subscription") return null;
+      // Only subscription checkouts grant premium (require it affirmatively, so a
+      // forged payload that omits `mode` can't slip through).
+      if (obj.mode !== "subscription") return null;
+      // Don't grant on a completed-but-unpaid checkout (e.g. async/delayed payment
+      // methods, or a trial that left the session unpaid): only paid sessions —
+      // or those needing no payment — upgrade. An absent payment_status is treated
+      // as paid for back-compat (real subscription checkouts always set it).
+      const paymentStatus = str(obj.payment_status);
+      if (paymentStatus && paymentStatus !== "paid" && paymentStatus !== "no_payment_required") {
+        return null;
+      }
       return {
         poolId,
         tier: "PREMIUM",
