@@ -9,7 +9,9 @@ import {
 } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { listMessages } from "@/lib/pool/chat";
+import { getMd3View } from "@/lib/pool/md3-view";
 import { Home } from "./Home";
+import { Md3Dashboard } from "./Md3Dashboard";
 
 // Personal dashboard: live scores, your standing(s), stats, the next match, and a
 // truncated leaderboard (full list lives at /pool/[code]/leaderboard).
@@ -28,6 +30,23 @@ export default async function PoolHomePage({
 
   const access = await getPoolAccess(pool.id);
   const sessionUser = access?.user ?? (await getSessionUser());
+
+  // Match Day 3 Pickem has its own lean dashboard (no bracket/group overlay).
+  if (pool.format === "MATCH_DAY_3_PICKEM") {
+    const [md3, poolView] = await Promise.all([
+      getMd3View(pool.tournament.id, pool.id, sessionUser?.id ?? null),
+      getPoolView(code),
+    ]);
+    return (
+      <Md3Dashboard
+        code={code}
+        view={md3}
+        leaderboard={poolView?.leaderboard ?? []}
+        youUserId={sessionUser?.id}
+        isMember={Boolean(access)}
+      />
+    );
+  }
 
   const [view, poolView, bracket, groupOverlay, recentChat] = await Promise.all([
     getHomeView(pool.id, sessionUser?.id ?? null),

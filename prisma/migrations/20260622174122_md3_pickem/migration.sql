@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "PoolFormat" ADD VALUE 'MATCH_DAY_3_PICKEM';

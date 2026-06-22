@@ -27,10 +27,11 @@ export async function createPoolAction(
   const displayName = String(formData.get("displayName") || "").trim();
   if (!name) return { error: "Give your pool a name." };
 
-  // Only the two known game types are accepted; anything else falls back to the
+  // Only the known game types are accepted; anything else falls back to the
   // classic full-bracket pool.
+  const raw = String(formData.get("format") || "");
   const format: PoolFormat =
-    String(formData.get("format") || "") === "KNOCKOUT" ? "KNOCKOUT" : "FULL_BRACKET";
+    raw === "KNOCKOUT" || raw === "MATCH_DAY_3_PICKEM" ? raw : "FULL_BRACKET";
 
   let joinCode: string;
   try {

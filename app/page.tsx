@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
 import { SignInPanel } from "./signin/SignInPanel";
 import { Footer } from "./Footer";
+import { Hero } from "./Hero";
 
 // Session-aware landing. Signed-out visitors get the sign-in / register panel
 // directly; signed-in visitors go straight to their pool (single membership) or
@@ -60,6 +61,10 @@ function SignedInHub({
             Sign out
           </button>
         </form>
+      </div>
+
+      <div className="mt-4">
+        <Hero />
       </div>
 
       <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">

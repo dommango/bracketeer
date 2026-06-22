@@ -61,7 +61,13 @@ export default async function PoolLayout({
             }}
           />
           <div className="relative">
-            <div className="min-w-0">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.1em] text-white/85 underline-offset-2 hover:text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]"
+            >
+              <span aria-hidden="true">←</span> Bracketeer
+            </Link>
+            <div className="mt-3 min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
                 {pool.tournamentName}
               </p>
@@ -127,7 +133,7 @@ export default async function PoolLayout({
         <Footer />
       </main>
 
-      <BottomNav code={code} />
+      <BottomNav code={code} format={pool.format} />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import type { ReactNode, SVGProps } from "react";
 // Home matches exactly; Brackets and Matches each light up across a family of
 // related routes (a tab is a section, not a single page).
 
-type TabKey = "home" | "brackets" | "matches";
+type TabKey = "home" | "brackets" | "matches" | "picks";
 
 type Tab = {
   key: TabKey;
@@ -20,7 +20,7 @@ type Tab = {
   icon: ReactNode;
 };
 
-export function BottomNav({ code }: { code: string }) {
+export function BottomNav({ code, format }: { code: string; format?: string }) {
   const pathname = usePathname() ?? "";
   const base = `/pool/${code}`;
   // A tab stays lit across every route in its section. Match a path against any
@@ -28,14 +28,32 @@ export function BottomNav({ code }: { code: string }) {
   const anyPrefix = (hrefs: string[]) => (p: string) =>
     hrefs.some((h) => p === h || p.startsWith(`${h}/`));
 
+  const homeTab: Tab = {
+    key: "home",
+    label: "Home",
+    href: base,
+    isActive: (p) => p === base,
+    icon: <HomeGlyph />,
+  };
+
+  // Match Day 3 Pickem has no bracket/matches sections — just the dashboard
+  // (which carries the leaderboard) and the scoreline picks grid.
+  if (format === "MATCH_DAY_3_PICKEM") {
+    const tabs: Tab[] = [
+      homeTab,
+      {
+        key: "picks",
+        label: "Picks",
+        href: `${base}/md3`,
+        isActive: anyPrefix([`${base}/md3`]),
+        icon: <BracketGlyph />,
+      },
+    ];
+    return <NavBar tabs={tabs} pathname={pathname} />;
+  }
+
   const tabs: Tab[] = [
-    {
-      key: "home",
-      label: "Home",
-      href: base,
-      isActive: (p) => p === base,
-      icon: <HomeGlyph />,
-    },
+    homeTab,
     {
       key: "brackets",
       label: "Brackets",
@@ -65,6 +83,11 @@ export function BottomNav({ code }: { code: string }) {
       icon: <MatchesGlyph />,
     },
   ];
+
+  return <NavBar tabs={tabs} pathname={pathname} />;
+}
+
+function NavBar({ tabs, pathname }: { tabs: Tab[]; pathname: string }) {
 
   return (
     <nav

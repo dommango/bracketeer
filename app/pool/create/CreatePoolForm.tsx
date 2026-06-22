@@ -8,10 +8,16 @@ const INPUT =
   "h-11 w-full rounded-md border border-line bg-surface px-[18px] text-[15px] text-ink outline-none focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]";
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
-// The two game types, in display order. KNOCKOUT is the featured standalone
+// The game types, in display order. MATCH_DAY_3_PICKEM is the quick group-stage
+// game (open only while MD3 fixtures remain); KNOCKOUT is the featured standalone
 // challenge; FULL_BRACKET (shown as "Full Tournament Game") is the classic
 // whole-tournament pool — only creatable before the group stage kicks off.
 const GAME_TYPES: { value: PoolFormat; title: string; blurb: string }[] = [
+  {
+    value: "MATCH_DAY_3_PICKEM",
+    title: "Match Day 3 Pickem",
+    blurb: "Predict the score of every final group-stage match. Each pick locks at its kickoff.",
+  },
   {
     value: "KNOCKOUT",
     title: "Knockout Challenge",
@@ -28,19 +34,26 @@ export function CreatePoolForm({
   defaultDisplayName,
   defaultFormat = "FULL_BRACKET",
   fullGameAvailable = true,
+  md3Available = true,
 }: {
   defaultDisplayName: string;
   defaultFormat?: PoolFormat;
   // False once the tournament has kicked off — the full-tournament game is then
   // shown disabled and the form falls back to the Knockout Challenge.
   fullGameAvailable?: boolean;
+  // False once the last Match-Day-3 fixture has kicked off — that game is then
+  // shown disabled.
+  md3Available?: boolean;
 }) {
   const [state, action, pending] = useActionState<CreatePoolState, FormData>(
     createPoolAction,
     {},
   );
+  const isUnavailable = (f: PoolFormat) =>
+    (f === "FULL_BRACKET" && !fullGameAvailable) ||
+    (f === "MATCH_DAY_3_PICKEM" && !md3Available);
   const [format, setFormat] = useState<PoolFormat>(
-    fullGameAvailable ? defaultFormat : "KNOCKOUT",
+    isUnavailable(defaultFormat) ? "KNOCKOUT" : defaultFormat,
   );
 
   return (
@@ -49,7 +62,7 @@ export function CreatePoolForm({
         <legend className={LABEL}>Game type</legend>
         <div className="mt-1.5 space-y-2">
           {GAME_TYPES.map((g) => {
-            const disabled = g.value === "FULL_BRACKET" && !fullGameAvailable;
+            const disabled = isUnavailable(g.value);
             const selected = format === g.value && !disabled;
             return (
               <label
@@ -76,7 +89,9 @@ export function CreatePoolForm({
                   <span className="mt-0.5 block text-[13px] text-ink-3">{g.blurb}</span>
                   {disabled ? (
                     <span className="mt-1 block text-[12px] font-semibold text-ink-3">
-                      Closed — the group stage has kicked off.
+                      {g.value === "MATCH_DAY_3_PICKEM"
+                        ? "Closed — Match Day 3 has finished."
+                        : "Closed — the group stage has kicked off."}
                     </span>
                   ) : null}
                 </span>

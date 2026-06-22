@@ -382,6 +382,10 @@ enum MemberRole {
 enum PoolFormat {
   FULL_BRACKET
   KNOCKOUT
+  // Match Day 3 Pickem: predict the scoreline of every final group-stage match
+  // (the 24 round-3 games). Picks lock per-match at each fixture's kickoff and
+  // score against the live Result rows — never against officialResults.
+  MATCH_DAY_3_PICKEM
 }
 
 // Billing tier for a pool. FREE caps the member count; PREMIUM (a per-pool Stripe
