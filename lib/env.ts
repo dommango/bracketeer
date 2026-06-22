@@ -12,6 +12,8 @@ const schema = z.object({
   AUTH_URL: z.string().default(""),
   AUTH_GOOGLE_ID: z.string().default(""),
   AUTH_GOOGLE_SECRET: z.string().default(""),
+  AUTH_FACEBOOK_ID: z.string().default(""),
+  AUTH_FACEBOOK_SECRET: z.string().default(""),
   // Comma-separated emails allowed to enter official results (the tournament
   // admins). Empty in dev — see isAdminEmail below for the open-dev fallback.
   ADMIN_EMAILS: z.string().default(""),
@@ -64,6 +66,7 @@ const schema = z.object({
 export const env = schema.parse(process.env);
 
 export const googleEnabled = Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET);
+export const facebookEnabled = Boolean(env.AUTH_FACEBOOK_ID && env.AUTH_FACEBOOK_SECRET);
 export const emailEnabled = Boolean(env.EMAIL_SERVER);
 export const sportsApiEnabled = Boolean(env.SPORTS_API_KEY);
 export const oddsApiEnabled = Boolean(env.ODDS_API_KEY);

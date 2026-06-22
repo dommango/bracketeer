@@ -11,11 +11,12 @@
 
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
+import Facebook from "next-auth/providers/facebook";
 import Nodemailer from "next-auth/providers/nodemailer";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { createTransport } from "nodemailer";
 import { prisma } from "@/lib/db";
-import { env, googleEnabled, emailEnabled } from "@/lib/env";
+import { env, googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { claimEntriesForUser } from "@/lib/auth/claim";
 
 const providers: NextAuthConfig["providers"] = [];
@@ -26,6 +27,17 @@ if (googleEnabled) {
       clientId: env.AUTH_GOOGLE_ID,
       clientSecret: env.AUTH_GOOGLE_SECRET,
       // Friend-group MVP: let the same email link Google + magic-link accounts.
+      allowDangerousEmailAccountLinking: true,
+    }),
+  );
+}
+
+if (facebookEnabled) {
+  providers.push(
+    Facebook({
+      clientId: env.AUTH_FACEBOOK_ID,
+      clientSecret: env.AUTH_FACEBOOK_SECRET,
+      // Friend-group MVP: let the same email link Facebook + magic-link accounts.
       allowDangerousEmailAccountLinking: true,
     }),
   );
