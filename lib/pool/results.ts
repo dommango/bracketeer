@@ -170,22 +170,35 @@ export async function upsertGroupMatchResultFromApi(
 
   const match = await prisma.match.findUnique({
     where: { tournamentId_matchNo: { tournamentId, matchNo } },
-    select: { id: true, result: { select: { source: true, status: true } } },
+    select: {
+      id: true,
+      result: { select: { source: true, status: true, homeScore: true, awayScore: true } },
+    },
   });
   if (!match) return { applied: false, matchId: null, newlyFinal: false };
   if (match.result?.source === "MANUAL") return { applied: false, matchId: match.id, newlyFinal: false };
+
+  // Monotonic: once a match is FINAL, never let a later poll regress it. A feed
+  // that re-reports a finished match as live (or sends a partial payload) must not
+  // flip status back to LIVE or un-score the match.
+  if (match.result?.status === "FINAL" && !input.finished) {
+    return { applied: false, matchId: match.id, newlyFinal: false };
+  }
 
   // True only on the poll that flips this match to FINAL — drives the one-time
   // full-time chat post (a repeated FINAL on later polls must not re-announce).
   const newlyFinal = input.finished && match.result?.status !== "FINAL";
 
   const status = input.finished ? ("FINAL" as const) : ("LIVE" as const);
+
+  // Never clobber a stored real score with a null from a partial payload, and
+  // derive the winner from these effective (coalesced) scores so a FINAL poll
+  // that arrives with null goals can't leave 2–1 with no winner highlighted.
+  const homeScore = input.homeScore ?? match.result?.homeScore ?? null;
+  const awayScore = input.awayScore ?? match.result?.awayScore ?? null;
   const winnerCode =
-    input.finished &&
-    input.homeScore !== null &&
-    input.awayScore !== null &&
-    input.homeScore !== input.awayScore
-      ? input.homeScore > input.awayScore
+    input.finished && homeScore !== null && awayScore !== null && homeScore !== awayScore
+      ? homeScore > awayScore
         ? input.homeCode
         : input.awayCode
       : null;
@@ -193,8 +206,8 @@ export async function upsertGroupMatchResultFromApi(
   const row = {
     homeTeamCode: input.homeCode,
     awayTeamCode: input.awayCode,
-    homeScore: input.homeScore,
-    awayScore: input.awayScore,
+    homeScore,
+    awayScore,
     winnerCode,
     elapsed: input.elapsed ?? null,
     status,

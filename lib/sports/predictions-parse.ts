@@ -38,8 +38,8 @@ export interface ApiPredictionResponse {
     percent?: { home?: string | null; draw?: string | null; away?: string | null };
   };
   teams?: {
-    home?: { id?: number | null; last_5?: { form?: string | null } | null };
-    away?: { id?: number | null; last_5?: { form?: string | null } | null };
+    home?: { id?: number | null; name?: string | null; last_5?: { form?: string | null } | null };
+    away?: { id?: number | null; name?: string | null; last_5?: { form?: string | null } | null };
   };
   h2h?: Array<{
     fixture?: { date?: string | null };
@@ -132,5 +132,41 @@ export function parsePrediction(resp: ApiPredictionResponse): PredictionInsight 
     homeForm: resp.teams?.home?.last_5?.form ?? null,
     awayForm: resp.teams?.away?.last_5?.form ?? null,
     h2h: summarizeH2H(resp.h2h ?? [], homeId, awayId),
+  };
+}
+
+// API-Football's designated home is arbitrary at neutral-site World Cup venues and
+// can differ from our fixture's home side. parsePrediction orients everything to
+// the API home; this reorients it to OUR home so the win%, form, and H2H render
+// under the team they actually describe (mirrors orientToHome in lib/odds/map.ts).
+// No-op — and safe — unless both codes resolve and disagree, so an unmapped team
+// name (apiHomeCode null) leaves the API orientation untouched rather than guessing.
+export function reorientPrediction(
+  ins: PredictionInsight,
+  apiHomeCode: string | null,
+  targetHomeCode: string | null,
+): PredictionInsight {
+  if (!apiHomeCode || !targetHomeCode || apiHomeCode === targetHomeCode) return ins;
+  return {
+    homePercent: ins.awayPercent,
+    drawPercent: ins.drawPercent,
+    awayPercent: ins.homePercent,
+    advice: ins.advice, // free text that names teams explicitly — position-independent
+    homeForm: ins.awayForm,
+    awayForm: ins.homeForm,
+    h2h: ins.h2h
+      ? {
+          played: ins.h2h.played,
+          homeWins: ins.h2h.awayWins,
+          awayWins: ins.h2h.homeWins,
+          draws: ins.h2h.draws,
+          meetings: ins.h2h.meetings.map((m) => ({
+            date: m.date,
+            homeGoals: m.awayGoals,
+            awayGoals: m.homeGoals,
+            outcome: m.outcome === "home" ? "away" : m.outcome === "away" ? "home" : "draw",
+          })),
+        }
+      : null,
   };
 }
