@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parsePrediction, type ApiPredictionResponse } from "./predictions-parse";
+import {
+  parsePrediction,
+  reorientPrediction,
+  type ApiPredictionResponse,
+  type PredictionInsight,
+} from "./predictions-parse";
 
 describe("parsePrediction", () => {
   it("parses percents, advice and form", () => {
@@ -116,5 +121,55 @@ describe("parsePrediction", () => {
       awayForm: null,
       h2h: null,
     });
+  });
+});
+
+describe("reorientPrediction", () => {
+  const ins: PredictionInsight = {
+    homePercent: 55,
+    drawPercent: 30,
+    awayPercent: 15,
+    advice: "Brazil to win",
+    homeForm: "WWDLW",
+    awayForm: "LDLWD",
+    h2h: {
+      played: 3,
+      homeWins: 2,
+      awayWins: 1,
+      draws: 0,
+      meetings: [{ date: "2024-01-01", homeGoals: 2, awayGoals: 1, outcome: "home" }],
+    },
+  };
+
+  it("swaps home/away fields when the API home maps to our away side", () => {
+    const out = reorientPrediction(ins, "BRA", "SRB"); // API home BRA, our home SRB → swap
+    expect(out.homePercent).toBe(15);
+    expect(out.awayPercent).toBe(55);
+    expect(out.drawPercent).toBe(30); // draw is orientation-independent
+    expect(out.homeForm).toBe("LDLWD");
+    expect(out.awayForm).toBe("WWDLW");
+    expect(out.advice).toBe("Brazil to win"); // free text, untouched
+    expect(out.h2h).toEqual({
+      played: 3,
+      homeWins: 1,
+      awayWins: 2,
+      draws: 0,
+      meetings: [{ date: "2024-01-01", homeGoals: 1, awayGoals: 2, outcome: "away" }],
+    });
+  });
+
+  it("is a no-op when the API home already matches our home", () => {
+    expect(reorientPrediction(ins, "BRA", "BRA")).toBe(ins);
+  });
+
+  it("leaves orientation untouched when either code can't be resolved", () => {
+    expect(reorientPrediction(ins, null, "SRB")).toBe(ins);
+    expect(reorientPrediction(ins, "BRA", null)).toBe(ins);
+  });
+
+  it("handles a null h2h", () => {
+    const out = reorientPrediction({ ...ins, h2h: null }, "BRA", "SRB");
+    expect(out.h2h).toBeNull();
+    expect(out.homePercent).toBe(15);
   });
 });

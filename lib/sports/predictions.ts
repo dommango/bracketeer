@@ -8,7 +8,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { sportsApiEnabled } from "@/lib/env";
 import { fetchPrediction } from "@/lib/sports/client";
-import { parsePrediction } from "@/lib/sports/predictions-parse";
+import { parsePrediction, reorientPrediction } from "@/lib/sports/predictions-parse";
+import { normalizeTeam } from "@/lib/odds/map";
 
 export interface PredictionsPollSummary {
   considered: number;
@@ -51,6 +52,12 @@ export async function pollPredictions(now: Date = new Date()): Promise<Predictio
       id: true,
       externalRef: true,
       scheduledAt: true,
+      // Our designated home for the fixture — for GROUP matches the slot ref is a
+      // real team code; a played match's Result row takes precedence. (Knockout
+      // slot refs are placeholders like "W73", not codes — see targetHome below.)
+      roundCode: true,
+      homeSlotRef: true,
+      result: { select: { homeTeamCode: true } },
       prediction: { select: { fetchedAt: true } },
     },
     orderBy: { scheduledAt: "asc" },
@@ -76,7 +83,16 @@ export async function pollPredictions(now: Date = new Date()): Promise<Predictio
       const resp = await fetchPrediction(fixtureId);
       fetched++;
       if (!resp) continue;
-      const ins = parsePrediction(resp);
+      // Reorient to our home side (the provider's home is arbitrary at neutral WC
+      // venues). targetHome is a 3-letter code for group fixtures; apiHome resolves
+      // the provider's home name to a code — null on either side leaves orientation
+      // as-is (no wrong guess).
+      const apiHome = normalizeTeam(resp.teams?.home?.name ?? "");
+      // A played match's Result home wins; else the GROUP slot ref (a real code).
+      // Knockout slot refs ("W73") aren't codes, so leave those as null → no swap.
+      const targetHome =
+        m.result?.homeTeamCode ?? (m.roundCode === "GROUP" ? m.homeSlotRef : null);
+      const ins = reorientPrediction(parsePrediction(resp), apiHome, targetHome);
       const data = {
         homePercent: ins.homePercent,
         drawPercent: ins.drawPercent,

@@ -170,10 +170,20 @@ export async function upsertGroupMatchResultFromApi(
 
   const match = await prisma.match.findUnique({
     where: { tournamentId_matchNo: { tournamentId, matchNo } },
-    select: { id: true, result: { select: { source: true, status: true } } },
+    select: {
+      id: true,
+      result: { select: { source: true, status: true, homeScore: true, awayScore: true } },
+    },
   });
   if (!match) return { applied: false, matchId: null, newlyFinal: false };
   if (match.result?.source === "MANUAL") return { applied: false, matchId: match.id, newlyFinal: false };
+
+  // Monotonic: once a match is FINAL, never let a later poll regress it. A feed
+  // that re-reports a finished match as live (or sends a partial payload) must not
+  // flip status back to LIVE or un-score the match.
+  if (match.result?.status === "FINAL" && !input.finished) {
+    return { applied: false, matchId: match.id, newlyFinal: false };
+  }
 
   // True only on the poll that flips this match to FINAL — drives the one-time
   // full-time chat post (a repeated FINAL on later polls must not re-announce).
@@ -193,8 +203,9 @@ export async function upsertGroupMatchResultFromApi(
   const row = {
     homeTeamCode: input.homeCode,
     awayTeamCode: input.awayCode,
-    homeScore: input.homeScore,
-    awayScore: input.awayScore,
+    // Never clobber a stored real score with a null from a partial payload.
+    homeScore: input.homeScore ?? match.result?.homeScore ?? null,
+    awayScore: input.awayScore ?? match.result?.awayScore ?? null,
     winnerCode,
     elapsed: input.elapsed ?? null,
     status,

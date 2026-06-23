@@ -54,7 +54,10 @@ function Fixtures({ detail, code }: { detail: TeamDetail; code: string }) {
           const isHome = m.home.code === detail.code;
           const opp = isHome ? m.away : m.home;
           const teamSide = isHome ? m.home : m.away;
-          const decided = m.status !== "SCHEDULED";
+          // Show a score only once both are in — a just-kicked-off LIVE match can
+          // have null scores, which would otherwise render as a bare "–".
+          const decided =
+            m.status !== "SCHEDULED" && teamSide.score !== null && opp.score !== null;
           const won = m.winnerCode === detail.code;
           return (
             <li key={m.matchNo}>
