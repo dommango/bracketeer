@@ -11,7 +11,7 @@ import type { PoolFormat } from "@/lib/pool/manage";
 import { KNOCKOUT_PICKS_OPEN_UTC } from "@/lib/pool/knockout";
 import { firstMd3Kickoff, lastMd3Kickoff } from "@/lib/pool/match-day-3";
 import { kickoffFor } from "@/lib/scoring/schedule";
-import { PRIZES, isChallengeFormat } from "@/lib/challenge/prizes-config";
+import { isChallengeFormat } from "@/lib/challenge/prizes-config";
 
 export interface GameCatalogEntry {
   // The game's display name as a closed/private pool (e.g. "Knockout Stage Pool").
@@ -186,11 +186,11 @@ export function featuredGame(now: Date = new Date()): PoolFormat | null {
   return null;
 }
 
-// The headline prize teaser for a challenge format, sourced from PRIZES so copy
-// stays consistent with the recorded award. Null for formats without a prize.
+// The headline prize teaser for a challenge format. Null for formats without a
+// prize (the amount/award itself lives in PRIZES; copy stays deliberately generic).
 export function prizeTeaser(format: PoolFormat): string | null {
   if (!isChallengeFormat(format)) return null;
-  return `Win ${PRIZES[format].description} — top the challenge.`;
+  return "Top the Challenge, win a prize.";
 }
 
 const MONTH_DAY = new Intl.DateTimeFormat("en-GB", {
@@ -213,9 +213,9 @@ export function gameStateLine(format: PoolFormat, now: Date = new Date()): strin
   if (format === "MATCH_DAY_3_PICKEM") {
     switch (state.phase) {
       case "PICKS_OPEN":
-        return state.deadline ? `Open now · first pick locks ${dayLabel(state.deadline)}` : "Open now";
+        return "Open now · picks close at the start of each match";
       case "PICKS_CLOSING":
-        return "Open now · some fixtures already locked";
+        return "Open now · picks close at the start of each match";
       default:
         return "Closed — Match Day Pickem has finished";
     }
