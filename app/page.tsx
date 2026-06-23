@@ -59,15 +59,17 @@ function FeaturedBanner({ now }: { now: Date }) {
   const game = GAME_CATALOG[featured];
   const teaser = prizeTeaser(featured);
 
-  // Match Day 3 Pickem is a public challenge — there's no pool to create or join,
-  // you just play. Pool games (Knockout) keep the create/join pair.
+  // Match Day Pickem is a public challenge — there's no pool to create or join,
+  // you just play (so it shows its challenge name). Pool games (Knockout) keep the
+  // create/join pair and show the pool name.
   const isMd3 = featured === "MATCH_DAY_3_PICKEM";
+  const bannerName = isMd3 ? game.challengeName : game.poolName;
   const createHref = featured === "KNOCKOUT" ? "/pool/create?game=knockout" : "/pool/create";
 
   return (
     <div className="mt-4 rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
       <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">
-        Live now · {game.name}
+        Live now · {bannerName}
       </p>
       <h2 className="mt-1 font-display text-xl text-ink">{game.tagline}</h2>
       <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">{gameStateLine(featured, now)}</p>

@@ -3,14 +3,15 @@ import Link from "next/link";
 import { getTournamentAdmin } from "@/lib/pool/access";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
 import { prisma } from "@/lib/db";
+import { GAME_CATALOG } from "@/lib/pool/games";
+import type { PoolFormat } from "@/lib/pool/manage";
 import { markPrizeSentAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-const CHALLENGE_LABEL: Record<string, string> = {
-  KNOCKOUT: "Knockout Challenge",
-  MATCH_DAY_3_PICKEM: "Match Day 3 Pickem",
-};
+function challengeLabel(challenge: string): string {
+  return GAME_CATALOG[challenge as PoolFormat]?.challengeName ?? challenge;
+}
 
 const STATUS_STYLE: Record<string, string> = {
   PENDING: "bg-gold-tint text-gold-dark",
@@ -75,7 +76,7 @@ export default async function AdminPrizesPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-semibold text-black">
-                        {CHALLENGE_LABEL[a.challenge] ?? a.challenge}
+                        {challengeLabel(a.challenge)}
                       </p>
                       <p className="mt-0.5 text-sm text-black/60">
                         {a.status === "REVIEW"

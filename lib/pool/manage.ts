@@ -56,15 +56,15 @@ export async function createPool(input: CreatePoolInput): Promise<CreatedPool> {
   // UI hides the option too; this is the server-side backstop.
   if (format === "FULL_BRACKET" && arePicksLocked(tournament.startsAt)) {
     throw new Error(
-      "The group stage has kicked off — full tournament games are closed. Create a Knockout Challenge instead.",
+      "The group stage has kicked off — Full Tournament Pools are closed. Create a Knockout Stage Pool instead.",
     );
   }
 
-  // Match Day 3 Pickem is a public challenge, not a pool — there's no private MD3
+  // Match Day Pickem is a public challenge, not a pool — there's no private MD3
   // pool to create. Entries are made directly at /challenge/md3/play. The create
   // UI doesn't offer it; this is the server-side backstop.
   if (format === "MATCH_DAY_3_PICKEM") {
-    throw new Error("Match Day 3 Pickem is a challenge, not a pool — play it at /challenge/md3.");
+    throw new Error("Match Day Pickem is a challenge, not a pool — play it at /challenge/md3.");
   }
 
   const joinCode = await allocateJoinCode();
@@ -190,10 +190,10 @@ export async function attachEntryToPool(input: AttachEntryInput): Promise<Attach
   if (entry.format !== pool.format) {
     const want =
       pool.format === "KNOCKOUT"
-        ? "knockout"
+        ? "Knockout Stage"
         : pool.format === "MATCH_DAY_3_PICKEM"
-          ? "Match Day 3 Pickem"
-          : "full-tournament";
+          ? "Match Day Pickem"
+          : "Full Tournament";
     throw new Error(`This is a ${want} pool — your bracket doesn't match its game.`);
   }
 

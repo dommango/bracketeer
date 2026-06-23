@@ -133,7 +133,7 @@ export default async function PoolLayout({
         <Footer />
       </main>
 
-      <BottomNav code={code} format={pool.format} />
+      <BottomNav code={code} />
     </div>
   );
 }

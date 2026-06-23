@@ -46,7 +46,7 @@ export default async function CreatePoolPage({
 
   const cards: GameCardVM[] = orderedFormats(now).map((f) => ({
     value: f,
-    title: GAME_CATALOG[f].name,
+    title: GAME_CATALOG[f].poolName ?? "",
     blurb: GAME_CATALOG[f].blurb,
     stateLine: gameStateLine(f, now),
     prizeTeaser: prizeTeaser(f),
@@ -81,7 +81,7 @@ export default async function CreatePoolPage({
           New pool
         </p>
         <h1 className="mt-1.5 font-display text-[26px] leading-tight text-ink">
-          Start a {lead.name}
+          Start a {lead.poolName}
         </h1>
         <p className="mt-2 text-[13px] text-ink-3">
           {lead.blurb} You&apos;ll get a join code to share.

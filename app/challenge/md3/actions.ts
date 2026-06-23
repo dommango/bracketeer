@@ -36,7 +36,7 @@ export async function saveMd3ChallengeEntry(
   formData: FormData,
 ): Promise<SaveMd3ChallengeState> {
   const user = await getSessionUser();
-  if (!user) return { error: "Sign in to enter the Match Day 3 Pickem challenge." };
+  if (!user) return { error: "Sign in to enter Match Day Pickem." };
 
   if (!rateLimit(`md3-challenge-save:${user.id}`, 30, 60_000).ok) {
     return { error: "Too many saves — give it a moment and try again." };

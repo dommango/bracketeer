@@ -15,13 +15,27 @@ const FULL_START = "2026-06-11T19:00:00Z";
 const at = (iso: string) => new Date(iso);
 
 describe("GAME_CATALOG", () => {
-  it("has an entry per format", () => {
+  it("has an entry per format with a context name + blurb", () => {
     const formats: PoolFormat[] = ["FULL_BRACKET", "KNOCKOUT", "MATCH_DAY_3_PICKEM"];
     for (const f of formats) {
       expect(GAME_CATALOG[f]).toBeTruthy();
-      expect(GAME_CATALOG[f].name.length).toBeGreaterThan(0);
+      // Every format names itself as a pool, a challenge, or both.
+      const name = GAME_CATALOG[f].poolName ?? GAME_CATALOG[f].challengeName ?? "";
+      expect(name.length).toBeGreaterThan(0);
       expect(GAME_CATALOG[f].blurb.length).toBeGreaterThan(0);
     }
+  });
+
+  it("names each format by context (pool vs challenge)", () => {
+    // Full tournament: pool only.
+    expect(GAME_CATALOG.FULL_BRACKET.poolName).toBe("Full Tournament Pool");
+    expect(GAME_CATALOG.FULL_BRACKET.challengeName).toBeUndefined();
+    // Knockout: a pool privately, a challenge publicly.
+    expect(GAME_CATALOG.KNOCKOUT.poolName).toBe("Knockout Stage Pool");
+    expect(GAME_CATALOG.KNOCKOUT.challengeName).toBe("Knockout Challenge");
+    // Match Day Pickem: challenge only.
+    expect(GAME_CATALOG.MATCH_DAY_3_PICKEM.challengeName).toBe("Match Day Pickem");
+    expect(GAME_CATALOG.MATCH_DAY_3_PICKEM.poolName).toBeUndefined();
   });
 });
 

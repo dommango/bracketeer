@@ -18,10 +18,9 @@ import { resolveR32Slots } from "@/lib/scoring/resolve";
 import { resolveKnockout } from "@/lib/pool/pick-form";
 import { saveSoloBracket, setEnteredChallenge } from "@/lib/challenge/solo";
 import { getChallengeLeaderboard, getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
-import { createPool, joinPool } from "@/lib/pool/manage";
-import { upsertMd3Picks, getMd3Entry } from "@/lib/pool/md3-picks";
+import { upsertStandaloneMd3Picks } from "@/lib/pool/md3-picks";
 import { md3Fixtures, MD3_MATCH_NOS } from "@/lib/pool/match-day-3";
-import { recomputePool } from "@/lib/pool/scoring";
+import { recomputeStandalone } from "@/lib/pool/scoring";
 import { resolveChallengePrizes } from "@/lib/challenge/prizes";
 
 const groups = Object.keys(GROUPS);
@@ -168,28 +167,21 @@ async function main() {
     assert(koCount === 1, "exactly one knockout award exists after re-run");
 
     // ============================ MD3 challenge ============================
-    const mdPool = await createPool({
-      userId: winner.id,
-      name: "MD3 Smoke",
-      displayName: "Winner",
-      format: "MATCH_DAY_3_PICKEM",
-    });
-    cleanupPoolIds.push(mdPool.id);
-    await joinPool({ userId: capper.id, joinCode: mdPool.joinCode });
-
+    // Match Day Pickem is challenge-only: standalone entries (no pool), entered.
     const fixtures = md3Fixtures();
     const fullScores = Object.fromEntries(fixtures.map((f) => [f.matchNo, { home: 2, away: 1 }]));
     const partialScores = Object.fromEntries(
       fixtures.slice(0, 10).map((f) => [f.matchNo, { home: 1, away: 0 }]),
     );
 
-    await upsertMd3Picks({ poolId: mdPool.id, userId: winner.id, label: "Winner", scores: fullScores });
-    await upsertMd3Picks({ poolId: mdPool.id, userId: capper.id, label: "Cap Tester", scores: partialScores });
-
-    const mdWinnerEntry = await getMd3Entry(mdPool.id, winner.id);
-    const mdCapperEntry = await getMd3Entry(mdPool.id, capper.id);
-    await setEnteredChallenge(winner.id, mdWinnerEntry!.entryId, true);
-    await setEnteredChallenge(capper.id, mdCapperEntry!.entryId, true);
+    const mdWinnerEntry = await upsertStandaloneMd3Picks({
+      tournamentId: tournament.id, userId: winner.id, label: "Winner", scores: fullScores,
+    });
+    const mdCapperEntry = await upsertStandaloneMd3Picks({
+      tournamentId: tournament.id, userId: capper.id, label: "Cap Tester", scores: partialScores,
+    });
+    await setEnteredChallenge(winner.id, mdWinnerEntry.entryId, true);
+    await setEnteredChallenge(capper.id, mdCapperEntry.entryId, true);
 
     const mdBoard = await getMd3ChallengeLeaderboard();
     assert(
@@ -223,7 +215,7 @@ async function main() {
         },
       });
     }
-    await recomputePool(mdPool.id);
+    await recomputeStandalone(tournament.id);
 
     res = await resolveChallengePrizes();
     assert(

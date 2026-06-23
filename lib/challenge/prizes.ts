@@ -10,16 +10,11 @@ import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queri
 import { getChallengeLeaderboard, getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { MD3_MATCH_NOS } from "@/lib/pool/match-day-3";
 import { PRIZES, type ChallengeFormat } from "@/lib/challenge/prizes-config";
+import { GAME_CATALOG } from "@/lib/pool/games";
 import { selectPrizeWinner } from "@/lib/challenge/prizes-select";
 import { sendPrizeEmail } from "@/lib/email/send";
 import { sendPushToUser } from "@/lib/push/send";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
-
-// Display names for the challenges, used in winner notifications.
-const CHALLENGE_NAME: Record<ChallengeFormat, string> = {
-  KNOCKOUT: "Knockout Challenge",
-  MATCH_DAY_3_PICKEM: "Match Day 3 Pickem Challenge",
-};
 
 // Whether the knockout challenge has finished: the Final (match 104) is FINAL.
 async function isKnockoutComplete(tournamentId: string): Promise<boolean> {
@@ -111,7 +106,7 @@ async function resolveOne(
 // Best-effort winner notification (email + push). Never throws — a notify failure
 // must not undo the recorded award.
 async function notifyWinner(challenge: ChallengeFormat, winner: LeaderboardRow): Promise<void> {
-  const name = CHALLENGE_NAME[challenge];
+  const name = GAME_CATALOG[challenge].challengeName ?? "the challenge";
   const prize = PRIZES[challenge];
 
   if (winner.userId) {

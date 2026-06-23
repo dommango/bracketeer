@@ -10,7 +10,7 @@ import {
   isMd3MatchLocked,
   scoreMd3,
 } from "@/lib/pool/match-day-3";
-import { getMd3Entry, getStandaloneMd3Entry, type Md3Scores } from "@/lib/pool/md3-picks";
+import { getStandaloneMd3Entry, type Md3Scores } from "@/lib/pool/md3-picks";
 
 export interface Md3FixtureVM {
   matchNo: number;
@@ -32,17 +32,6 @@ export interface Md3View {
   scoredCount: number;
   pickedCount: number;
   openCount: number;
-}
-
-// The viewer's MD3 predictions in a pool (read model for the pool UI).
-export async function getMd3View(
-  tournamentId: string,
-  poolId: string,
-  userId: string | null,
-  now: Date = new Date(),
-): Promise<Md3View> {
-  const entry = userId ? await getMd3Entry(poolId, userId) : null;
-  return buildMd3View(tournamentId, entry?.scores ?? null, now);
 }
 
 // The viewer's MD3 predictions in the public challenge (standalone entry, no pool).

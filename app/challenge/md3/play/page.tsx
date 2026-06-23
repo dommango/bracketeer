@@ -34,11 +34,11 @@ export default async function Md3ChallengePlayPage() {
           <Link href="/signin?callbackUrl=/challenge/md3/play" className="font-semibold text-pitch hover:underline">
             Sign in
           </Link>{" "}
-          to enter the Match Day 3 Pickem challenge.
+          to enter Match Day Pickem.
         </p>
       ) : !gameOpen ? (
         <p className="rounded-2xl border border-dashed border-line bg-surface-sunk p-4 text-center text-sm text-ink-3">
-          Match Day 3 is locked — every fixture has kicked off.
+          Match Day Pickem is locked — every fixture has kicked off.
         </p>
       ) : (
         <p className="rounded-2xl border border-line bg-surface px-4 py-3 text-[13px] text-ink-3">

@@ -125,7 +125,7 @@ function BracketCard({
         ) : null}
         {!isKnockout ? (
           <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[11px] font-semibold text-ink-3">
-            Full tournament
+            Full Tournament
           </span>
         ) : null}
       </div>

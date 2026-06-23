@@ -157,13 +157,10 @@ function Selections({ selections }: { selections: EntrySelections }) {
 
 // The reveal banner shown before picks lock — phrased per format, since lock
 // timing differs (full bracket at tournament kickoff, knockout at the R32
-// kickoff, match-day-3 pick'em per fixture). Defaults to neutral wording.
+// kickoff). Defaults to neutral wording.
 function revealCopy(format?: string): string {
   if (format === "KNOCKOUT") {
     return "Picks reveal at kickoff — come back once picks lock at the Round of 32 kickoff to see this bracket.";
-  }
-  if (format === "MATCH_DAY_3_PICKEM") {
-    return "Picks reveal at kickoff — picks lock per match at each fixture kickoff, so come back then to see this bracket.";
   }
   if (format === "FULL_BRACKET") {
     return "Picks reveal at kickoff — come back once the tournament locks to see this bracket.";
