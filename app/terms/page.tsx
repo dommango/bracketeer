@@ -2,58 +2,96 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-// Placeholder Terms of Service. Boilerplate only — the wording is a starting point,
-// not legal advice, and the bracketed items still need real values before launch.
+// Plain-language Terms of Service. Operator: Dom Mangonon (individual). Governing
+// law: United States — the specific state is the one bracketed value left to fill.
+// Not a substitute for legal review before a public launch (prizes + public data
+// collection carry real exposure).
 const LAST_UPDATED = "June 2026";
 
 const SECTIONS: { heading: string; body: string[] }[] = [
   {
-    heading: "1. Who we are",
+    heading: "1. About these terms",
     body: [
-      "Bracketeer (“we”, “us”) is a free-to-play prediction game for the 2026 FIFA World Cup, operated by Dom Mangonon. By using the app you agree to these terms.",
+      "Bracketeer (“Bracketeer”, “we”, “us”) is a free-to-play prediction game for the 2026 FIFA World Cup, operated by Dom Mangonon. These Terms of Service govern your use of the app. By using Bracketeer you agree to them; if you don’t agree, please don’t use the app.",
     ],
   },
   {
-    heading: "2. Eligibility & accounts",
+    heading: "2. Who can use Bracketeer",
     body: [
-      "You need an account to play. You’re responsible for keeping your sign-in secure and for everything done under your account. Provide accurate information when you sign up.",
+      "You must be at least 13 years old to use Bracketeer. If you are under 18, you may use it only with the involvement and consent of a parent or guardian. You are responsible for everything that happens under your account.",
     ],
   },
   {
-    heading: "3. The games",
+    heading: "3. Your account",
     body: [
-      "Bracketeer offers prediction games (e.g. Match Day Pickem and the Knockout Challenge) and private pools you can create or join. Picks lock at the times shown in the app, and scoring follows the rules described on each game’s page. We may correct results or scores if a data provider is wrong.",
+      "You sign in with Google, Facebook, or an email magic link. Keep your sign-in method secure — you’re responsible for activity on your account. Provide accurate information, and let us know if you believe your account has been used without permission.",
     ],
   },
   {
-    heading: "4. Prizes",
+    heading: "4. The games",
     body: [
-      "Some public challenges may offer a prize. Any prize, its value, and how a winner is determined are described where the challenge is promoted. Prizes are a goodwill offering and may change or be withdrawn. [Prize terms TBD.]",
+      "Bracketeer offers prediction games — including Match Day Pickem and the Knockout Challenge — and private pools you can create or join with friends using a join code. Picks lock at the times shown in the app, and scoring follows the rules described on each game’s page.",
+      "Results and live scores come from third-party data providers and may be delayed or occasionally wrong. We may correct results, scores, or standings to reflect the official outcome, which can change points.",
     ],
   },
   {
-    heading: "5. Acceptable use",
+    heading: "5. Prizes",
     body: [
-      "Don’t abuse the service: no cheating, scraping, attempting to disrupt the app, or impersonating others. We may suspend accounts that break these terms.",
+      "Some public challenges may offer a prize, such as a gift card. Bracketeer is free to play — no purchase is necessary to enter or win. Any prize, its value, and how a winner is determined are described where that challenge is promoted.",
+      "Prizes are offered as a goodwill gesture and may change or be withdrawn. Prizes are open only to eligible participants where permitted by law and are void where prohibited. You are responsible for any taxes on a prize you receive. We may require reasonable verification before awarding a prize.",
     ],
   },
   {
-    heading: "6. No affiliation",
+    heading: "6. Acceptable use",
     body: [
-      "Bracketeer is an independent fan project. It is not affiliated with, endorsed by, or sponsored by FIFA or any team. Team names and tournament data are used for identification only.",
+      "Don’t misuse the service. In particular: no cheating or manipulating results, no automated scraping or bots, no attempts to disrupt or gain unauthorized access to the app, no impersonating others, and no unlawful, abusive, or infringing activity. We may suspend or terminate accounts that break these terms.",
     ],
   },
   {
-    heading: "7. Disclaimer & liability",
+    heading: "7. Your content",
     body: [
-      "The app is provided “as is”, without warranties. To the extent permitted by law, we’re not liable for losses arising from your use of the app. [Governing law / jurisdiction TBD.]",
+      "You keep ownership of what you submit — your picks, display name, and chat messages. You grant us a non-exclusive license to store and display that content within the service (for example, your display name and standings on a leaderboard, or your messages in a pool’s chat). You’re responsible for what you post, and you agree not to post unlawful, harassing, or infringing content.",
     ],
   },
   {
-    heading: "8. Changes & contact",
+    heading: "8. Not affiliated with FIFA",
     body: [
-      "We may update these terms; material changes will be noted here. Questions? Contact us at [contact email TBD].",
+      "Bracketeer is an independent fan project. It is not affiliated with, endorsed by, or sponsored by FIFA, any football association, or any team. Tournament names, team names, and related data are used for identification and commentary only, and remain the property of their respective owners.",
     ],
+  },
+  {
+    heading: "9. Third-party services",
+    body: [
+      "Bracketeer relies on third-party services — including sign-in providers, live sports-data and odds providers, payment processing, push notifications, and hosting. Your use of those services through Bracketeer may also be subject to their own terms. See our Privacy Policy for the categories of providers we use.",
+    ],
+  },
+  {
+    heading: "10. Disclaimers",
+    body: [
+      "Bracketeer is provided “as is” and “as available”, without warranties of any kind. We don’t guarantee that the app will be uninterrupted, error-free, or that scores, standings, or projections are accurate or current.",
+    ],
+  },
+  {
+    heading: "11. Limitation of liability",
+    body: [
+      "To the fullest extent permitted by law, Bracketeer and its operator will not be liable for any indirect, incidental, or consequential damages, or for any loss arising from your use of (or inability to use) the app.",
+    ],
+  },
+  {
+    heading: "12. Changes",
+    body: [
+      "We may update the app or these terms from time to time. Material changes will be noted here with an updated date. Continuing to use Bracketeer after a change means you accept the updated terms.",
+    ],
+  },
+  {
+    heading: "13. Governing law",
+    body: [
+      "These terms are governed by the laws of the State of [your state], United States, without regard to conflict-of-law rules. Any disputes will be handled in the courts located there.",
+    ],
+  },
+  {
+    heading: "14. Contact",
+    body: ["Questions about these terms? Email us at dommango@gmail.com."],
   },
 ];
 
@@ -71,11 +109,6 @@ export default function TermsPage() {
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">Legal</p>
         <h1 className="mt-1.5 font-display text-[26px] leading-tight text-ink">Terms of Service</h1>
         <p className="mt-2 text-[13px] text-ink-3">Last updated {LAST_UPDATED}.</p>
-
-        <p className="mt-4 rounded-2xl border border-gold/40 bg-gold-tint px-4 py-3 text-[12px] font-semibold text-gold-dark">
-          Draft — placeholder wording, not legal advice. Bracketed items still need
-          finalizing before launch.
-        </p>
 
         <div className="mt-5 space-y-5">
           {SECTIONS.map((s) => (

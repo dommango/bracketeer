@@ -2,52 +2,80 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-// Placeholder Privacy Policy. Describes, in plain terms, what we collect and why —
-// the spirit of the request ("tell people what their info is used for"). Boilerplate
-// only, not legal advice; bracketed items still need real values before launch.
+// Plain-language Privacy Policy. Operator: Dom Mangonon (individual), contact
+// dommango@gmail.com. Data + provider categories reflect the app's actual
+// integrations (auth, sports/odds feeds, payments, push, GIFs, feedback routing,
+// hosting). Not a substitute for legal review before a public launch.
 const LAST_UPDATED = "June 2026";
 
 const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "The short version",
     body: [
-      "Bracketeer is a free prediction game for the 2026 FIFA World Cup. We collect the minimum we need to run the games, show leaderboards, and let you compete with friends. We don’t sell your personal information.",
+      "Bracketeer is a free prediction game for the 2026 FIFA World Cup, operated by Dom Mangonon. We collect the minimum we need to run the games, show leaderboards, and let you compete with friends. We don’t sell your personal information. Questions: dommango@gmail.com.",
     ],
   },
   {
-    heading: "What we collect",
+    heading: "Information we collect",
     body: [
-      "Account details: your email address and the display name you choose.",
-      "Your gameplay: the picks and brackets you submit, and the pools you create or join.",
-      "Feedback you send: the text, the page you were on, and any screenshots you choose to attach.",
-      "Basic technical data: standard log/device information needed to operate and secure the app.",
+      "Account information: your email address and the display name you choose. You sign in with Google, Facebook, or an email magic link; we receive your email (and, for social sign-in, basic profile info) from those providers.",
+      "Your gameplay: the picks and brackets you submit, the pools you create or join, and the chat messages you post.",
+      "Feedback you send: the text of your report, the page you were on, and any screenshots you choose to attach.",
+      "Technical data: standard log and device information, plus the essential cookies needed to keep you signed in and operate the app securely.",
     ],
   },
   {
     heading: "How we use it",
     body: [
       "To run the games — score your picks, build leaderboards, and resolve brackets.",
-      "To show your display name and standings to other members of games and pools you join.",
-      "To send game-related messages you’ve opted into (e.g. result and reminder notifications).",
-      "To fix bugs and improve the app, using feedback and aggregate usage.",
+      "To show your display name and standings to other members of games and pools you join, and your messages in those pools’ chat.",
+      "To send account and game-related messages you’ve enabled, such as result and reminder notifications.",
+      "To process payments if you choose a premium pool.",
+      "To diagnose bugs and improve the app, using feedback and aggregate usage.",
     ],
   },
   {
     heading: "Who we share it with",
     body: [
-      "We don’t sell your data. We share it only with service providers that help us run the app — for example sign-in, email delivery, push notifications, and hosting — and only as needed to provide the service. [Specific providers TBD.]",
+      "We don’t sell your personal information. We share it only with service providers that help us run Bracketeer, and only as needed to provide the service. Depending on the features in use, these include:",
+      "• Sign-in: Google and Facebook (OAuth) and our email-link delivery provider.",
+      "• Live data: API-Football (api-sports.io) for scores and fixtures, and The Odds API for betting odds.",
+      "• Payments: Stripe, for premium pools (we don’t store your full card details).",
+      "• Notifications: Apple Push Notification service, for app push.",
+      "• Chat media: Giphy, when you add a GIF.",
+      "• Feedback routing: Notion, where your feedback reports are mirrored for triage.",
+      "• Hosting and infrastructure: our cloud hosting provider (Railway).",
+      "We may also disclose information if required by law or to protect the service and its users.",
     ],
   },
   {
-    heading: "Your choices",
+    heading: "Your choices and rights",
     body: [
-      "You can update your display name, control notifications, and request deletion of your account and associated data. To make a request, contact us at [contact email TBD].",
+      "You can update your display name, control your notification settings, and request access to or deletion of your account and associated data by emailing dommango@gmail.com. Depending on where you live, you may have additional rights over your personal data (for example, under GDPR or CCPA); we’ll honor those requests as required by law.",
     ],
   },
   {
-    heading: "Retention & changes",
+    heading: "Data retention",
     body: [
-      "We keep your information for as long as your account is active or as needed to run the games, then delete or anonymize it. We may update this policy; material changes will be noted here.",
+      "We keep your information for as long as your account is active or as needed to run the games, and then delete or anonymize it. Some records may be retained longer where required by law.",
+    ],
+  },
+  {
+    heading: "Children",
+    body: [
+      "Bracketeer is intended for people 13 and older and is not directed at children under 13. If you are under 18, please use it with a parent or guardian’s involvement. If you believe a child under 13 has given us personal information, contact us and we’ll delete it.",
+    ],
+  },
+  {
+    heading: "Security & international use",
+    body: [
+      "We use reasonable measures to protect your information, but no method of storage or transmission is completely secure. Bracketeer is operated from the United States; if you use it from elsewhere, your information will be processed in the United States.",
+    ],
+  },
+  {
+    heading: "Changes & contact",
+    body: [
+      "We may update this policy; material changes will be noted here with an updated date. Questions or requests? Email dommango@gmail.com.",
     ],
   },
 ];
@@ -66,11 +94,6 @@ export default function PrivacyPage() {
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">Legal</p>
         <h1 className="mt-1.5 font-display text-[26px] leading-tight text-ink">Privacy Policy</h1>
         <p className="mt-2 text-[13px] text-ink-3">Last updated {LAST_UPDATED}.</p>
-
-        <p className="mt-4 rounded-2xl border border-gold/40 bg-gold-tint px-4 py-3 text-[12px] font-semibold text-gold-dark">
-          Draft — placeholder wording, not legal advice. Bracketed items still need
-          finalizing before launch.
-        </p>
 
         <div className="mt-5 space-y-5">
           {SECTIONS.map((s) => (
