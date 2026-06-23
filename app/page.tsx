@@ -139,6 +139,35 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
   );
 }
 
+// Shown when the viewer isn't in any pool yet: a full promo for running your own
+// private Knockout Stage Pool with friends (distinct from the public Knockout
+// Challenge above — this is the create-and-invite, play-with-your-group game).
+function StartAPoolPromo({ now }: { now: Date }) {
+  const game = GAME_CATALOG.KNOCKOUT;
+  return (
+    <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
+      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">
+        Start your own pool
+      </p>
+      <h2 className="mt-1 font-display text-xl text-ink">{game.poolName}</h2>
+      <p className="mt-2 text-[13px] text-ink-3">{game.blurb}</p>
+      <p className="mt-2 text-[13px] font-semibold text-pitch-dark">
+        {gameStateLine("KNOCKOUT", now)}
+      </p>
+      <Link href="/pool/create?game=knockout" className={`mt-3 ${PRIMARY_BTN}`}>
+        Create a pool →
+      </Link>
+      <p className="mt-3 text-center text-[12px] text-ink-3">
+        Have a code from a friend?{" "}
+        <Link href="/join" className="font-semibold text-pitch-dark hover:underline">
+          Join a pool
+        </Link>{" "}
+        — any bracket imported under your email links automatically.
+      </p>
+    </div>
+  );
+}
+
 function PoolStateBadge({ format, now }: { format: PoolFormat; now: Date }) {
   const label = resolveGamePhase(format, now).label;
   return (
@@ -178,11 +207,9 @@ function SignedInHub({
 
       <PublicGames now={now} />
 
-      <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
-        <h2 className="font-display text-lg text-ink">
-          {pools.length > 0 ? "Your pools" : "You’re not in a pool yet"}
-        </h2>
-        {pools.length > 0 ? (
+      {pools.length > 0 ? (
+        <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
+          <h2 className="font-display text-lg text-ink">Your pools</h2>
           <ul className="mt-4 space-y-2">
             {pools.map((p) => (
               <li key={p.joinCode}>
@@ -204,22 +231,19 @@ function SignedInHub({
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="mt-1.5 text-[13px] text-ink-3">
-            Have a code from a friend? Join their pool — any bracket imported under your email
-            links automatically.
-          </p>
-        )}
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Link href="/join" className={SECONDARY_BTN}>
-            Join a pool
-          </Link>
-          <Link href="/pool/create" className={SECONDARY_BTN}>
-            Create a pool
-          </Link>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Link href="/join" className={SECONDARY_BTN}>
+              Join a pool
+            </Link>
+            <Link href="/pool/create" className={SECONDARY_BTN}>
+              Create a pool
+            </Link>
+          </div>
         </div>
-      </div>
+      ) : (
+        <StartAPoolPromo now={now} />
+      )}
 
       <Footer />
     </main>
