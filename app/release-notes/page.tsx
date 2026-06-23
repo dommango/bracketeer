@@ -12,7 +12,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
     date: "June 21, 2026",
     title: "Solo brackets & group overlay",
     notes: [
-      "Play solo: build your own knockout bracket without starting a pool, and opt it into the Bracketeer Knockout Challenge to compete with everyone who enters.",
+      "Play solo: build your own knockout bracket without starting a pool, and opt it into the Knockout Challenge to compete with everyone who enters.",
       "Home group standings now overlay your bracket — a 'You' column shows your predicted finishing order beside the live table.",
       "See exactly where your live points come from: each pick shows what it's earning (+3 correct position, +1 right team / wrong position), summed into a per-group total.",
       "Third-place standings now show full team names, mark your best-3rd advancer picks, and draw the top-8 qualification cut-off line.",

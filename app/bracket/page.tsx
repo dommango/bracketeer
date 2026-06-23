@@ -25,7 +25,7 @@ export default async function BracketsPage() {
       <header className="space-y-1">
         <h1 className="font-display text-2xl text-ink">Your brackets</h1>
         <p className="text-sm text-ink-3">
-          Build a knockout bracket, enter it into the Bracketeer Knockout Challenge, and add it to
+          Build a knockout bracket, enter it into the Knockout Challenge, and add it to
           any pool you like.
         </p>
       </header>
