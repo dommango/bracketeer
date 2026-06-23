@@ -25,7 +25,7 @@ export default async function BracketsPage() {
       <header className="space-y-1">
         <h1 className="font-display text-2xl text-ink">Your brackets</h1>
         <p className="text-sm text-ink-3">
-          Build a knockout bracket, enter it into the Bracketeer Knockout Challenge, and add it to
+          Build a knockout bracket, enter it into the Knockout Challenge, and add it to
           any pool you like.
         </p>
       </header>
@@ -125,7 +125,7 @@ function BracketCard({
         ) : null}
         {!isKnockout ? (
           <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[11px] font-semibold text-ink-3">
-            Full tournament
+            Full Tournament
           </span>
         ) : null}
       </div>
@@ -162,7 +162,7 @@ function SignInGate() {
   return (
     <section className="space-y-4">
       <Card>
-        <p className="text-sm text-ink-3">Sign in to build your own bracket.</p>
+        <p className="text-sm text-ink-3">Sign in to build your bracket.</p>
         <Link href="/signin" className={PRIMARY_BTN}>
           Sign in →
         </Link>

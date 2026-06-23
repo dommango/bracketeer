@@ -11,7 +11,7 @@ import type { BracketView } from "@/lib/pool/bracket-view";
 import type { BracketOverlay } from "@/lib/pool/queries";
 import type { ChatView } from "@/lib/pool/chat";
 import type { PoolFormat } from "@/lib/pool/manage";
-import { prizeTeaser } from "@/lib/pool/games";
+import { prizeTeaser, GAME_CATALOG } from "@/lib/pool/games";
 import { DISPLAY_TZ } from "@/lib/tz";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
@@ -190,7 +190,7 @@ function HomeChat({ code, messages }: { code: string; messages: ChatView[] }) {
         {[...messages].reverse().map((m) => (
           <li key={m.id} className="flex items-baseline gap-2 px-4 py-2.5 text-sm">
             <span className="shrink-0 font-semibold text-ink">
-              {m.kind === "SYSTEM" ? "Match update" : (m.authorName ?? "Player")}
+              {m.kind === "SYSTEM" ? "Match update" : (m.authorName ?? "Participant")}
             </span>
             <span className="min-w-0 flex-1 truncate text-ink-2">
               {m.body?.trim()
@@ -291,7 +291,7 @@ function KnockoutNotice({
   return (
     <div className="rounded-2xl border border-pitch/30 bg-pitch/5 p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-pitch-dark">
-        Knockout Challenge
+        {GAME_CATALOG.KNOCKOUT.challengeName}
       </p>
       {prizeTeaser("KNOCKOUT") ? (
         <p className="mt-1 text-[12px] font-semibold text-gold-dark">🏆 {prizeTeaser("KNOCKOUT")}</p>
@@ -300,7 +300,7 @@ function KnockoutNotice({
         <>
           <p className="mt-1.5 text-sm text-ink-2">
             The last 32 are set — knockout picks are open. Fill out your bracket before the
-            Round-of-32 kickoff.
+            Round of 32 kickoff.
           </p>
           <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl bg-pitch-tint px-3 py-2">
             <span className="text-xs font-bold uppercase tracking-[0.06em] text-pitch-dark">
@@ -309,7 +309,7 @@ function KnockoutNotice({
             {locksAt ? (
               <Countdown target={locksAt} showSeconds={false} className="text-sm text-pitch-dark" />
             ) : (
-              <span className="text-sm text-pitch-dark">at the Round-of-32 kickoff</span>
+              <span className="text-sm text-pitch-dark">at the Round of 32 kickoff</span>
             )}
           </div>
           <Link
@@ -322,7 +322,7 @@ function KnockoutNotice({
       ) : (
         <>
           <p className="mt-1.5 text-sm text-ink-2">
-            Picks open at the Round-of-32 draw, once the group stage wraps up. Invite your friends
+            Picks open at the Round of 32 draw, once the group stage wraps up. Invite your friends
             now with the join code — we’ll notify everyone when the bracket unlocks.
           </p>
           <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl bg-pitch-tint px-3 py-2">

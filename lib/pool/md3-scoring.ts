@@ -65,21 +65,17 @@ function decodePickRows(
   return out;
 }
 
-// Score every entry in an MD3 pool against the live results and upsert each
-// ScoreBreakdown. Shares the leaderboard/snapshot path in recomputePool.
-export async function scoreMd3Pool(tx: Db, poolId: string, tournamentId: string): Promise<void> {
+type Md3PickEntry = {
+  id: string;
+  picks: { section: string; category: string; key: string; code: string; teamOrValue: string }[];
+};
+
+// Score a set of MD3 entries against the live results and upsert each
+// ScoreBreakdown. The entry set is caller-chosen (a pool, the standalone set, or a
+// single entry) — results are loaded once and orientation is by team code.
+async function scoreMd3EntrySet(tx: Db, entries: Md3PickEntry[], tournamentId: string): Promise<void> {
   const results = await loadMd3Results(tx, tournamentId);
   const fixtures = md3Fixtures();
-
-  const entries = await tx.entry.findMany({
-    where: { poolId },
-    select: {
-      id: true,
-      picks: {
-        select: { section: true, category: true, key: true, code: true, teamOrValue: true },
-      },
-    },
-  });
 
   for (const entry of entries) {
     const byMatch = decodePickRows(entry.picks);
@@ -113,4 +109,36 @@ export async function scoreMd3Pool(tx: Db, poolId: string, tournamentId: string)
       create: { entryId: entry.id, totalPoints: total, byCategory: { md3: total }, perPick },
     });
   }
+}
+
+const MD3_PICK_SELECT = {
+  id: true,
+  picks: {
+    select: { section: true, category: true, key: true, code: true, teamOrValue: true },
+  },
+} as const;
+
+// Score every entry in an MD3 pool against the live results and upsert each
+// ScoreBreakdown. Shares the leaderboard/snapshot path in recomputePool.
+export async function scoreMd3Pool(tx: Db, poolId: string, tournamentId: string): Promise<void> {
+  const entries = await tx.entry.findMany({ where: { poolId }, select: MD3_PICK_SELECT });
+  await scoreMd3EntrySet(tx, entries, tournamentId);
+}
+
+// Score every standalone MD3 entry (poolId null) in a tournament — the solo
+// challenge brackets that live outside any pool. Run when MD3 results land so the
+// public Match Day 3 challenge board rescores alongside the pools.
+export async function scoreStandaloneMd3(tx: Db, tournamentId: string): Promise<void> {
+  const entries = await tx.entry.findMany({
+    where: { tournamentId, poolId: null, format: "MATCH_DAY_3_PICKEM" },
+    select: MD3_PICK_SELECT,
+  });
+  await scoreMd3EntrySet(tx, entries, tournamentId);
+}
+
+// Score a single MD3 entry by id (used by recomputeEntry for a standalone solo
+// save / challenge toggle, where there's no pool to rescore).
+export async function scoreMd3Entry(tx: Db, entryId: string, tournamentId: string): Promise<void> {
+  const entries = await tx.entry.findMany({ where: { id: entryId }, select: MD3_PICK_SELECT });
+  await scoreMd3EntrySet(tx, entries, tournamentId);
 }

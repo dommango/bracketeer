@@ -14,8 +14,12 @@ import { kickoffFor } from "@/lib/scoring/schedule";
 import { PRIZES, isChallengeFormat } from "@/lib/challenge/prizes-config";
 
 export interface GameCatalogEntry {
-  // The game's display name (e.g. "Match Day 3 Pickem").
-  name: string;
+  // The game's display name as a closed/private pool (e.g. "Knockout Stage Pool").
+  // Undefined for formats that only exist as a public challenge (Match Day Pickem).
+  poolName?: string;
+  // The game's display name as a public challenge (e.g. "Knockout Challenge").
+  // Undefined for formats with no public challenge (Full Tournament Pool).
+  challengeName?: string;
   // A one-line hook shown under the name on cards / banners.
   tagline: string;
   // A fuller description for the create page + card body.
@@ -24,29 +28,32 @@ export interface GameCatalogEntry {
   scoringSummary: string;
 }
 
-// Every user-facing game string in one place. Pulled verbatim from the copy that
-// was previously inlined across CreatePoolForm, create/page, KnockoutNotice,
-// Md3Dashboard and picks/page so those surfaces can render identically from here.
+// Every user-facing game string in one place. The same KNOCKOUT format reads as a
+// "Knockout Stage Pool" when it's a private pool and a "Knockout Challenge" on the
+// public board, so names are split by context (poolName / challengeName). Pulled
+// from copy previously inlined across CreatePoolForm, create/page, KnockoutNotice,
+// the challenge pages and the prize resolver so those surfaces can't drift.
 export const GAME_CATALOG: Record<PoolFormat, GameCatalogEntry> = {
   MATCH_DAY_3_PICKEM: {
-    name: "Match Day 3 Pickem",
+    challengeName: "Match Day Pickem",
     tagline: "The live game — predict the final group-stage scores.",
     blurb:
-      "Predict the exact scoreline of every final group-stage match. You'll get a join code to share — each pick locks at its own kickoff, so later fixtures stay open after earlier ones start.",
+      "Predict the exact scoreline of every final group-stage match. Each pick locks at its own kickoff, so later fixtures stay open after earlier ones start.",
     scoringSummary: "Exact score 5 · right result & goal difference 3 · right result 1.",
   },
   KNOCKOUT: {
-    name: "Knockout Challenge",
+    poolName: "Knockout Stage Pool",
+    challengeName: "Knockout Challenge",
     tagline: "Create & invite now — picks open when the last 32 are set.",
     blurb:
-      "Predict the knockout bracket against your friends. Create your pool and invite everyone now with the join code — picks open once the group stage wraps and the last 32 are set, then lock at the Round-of-32 kickoff.",
+      "Predict the knockout bracket against your friends. Create your pool and invite everyone now with the join code — picks open once the group stage wraps and the last 32 are set, then lock at the Round of 32 kickoff.",
     scoringSummary: "Round of 32 1 · R16 2 · QF 3 · SF 4 · Final 5.",
   },
   FULL_BRACKET: {
-    name: "Full Tournament Game",
-    tagline: "The classic pool — group stage through the final.",
+    poolName: "Full Tournament Pool",
+    tagline: "The full tournament — group stage through the final.",
     blurb:
-      "The classic pool — group stage through the final. Import or fill out the whole bracket. Only creatable before the group stage kicks off.",
+      "The full tournament — group stage through the final. Import or fill out the whole bracket. Only creatable before the group stage kicks off.",
     scoringSummary: "Group, third-place, and every knockout round are scored.",
   },
 };
@@ -210,7 +217,7 @@ export function gameStateLine(format: PoolFormat, now: Date = new Date()): strin
       case "PICKS_CLOSING":
         return "Open now · some fixtures already locked";
       default:
-        return "Closed — Match Day 3 has finished";
+        return "Closed — Match Day Pickem has finished";
     }
   }
 
@@ -221,7 +228,7 @@ export function gameStateLine(format: PoolFormat, now: Date = new Date()): strin
           ? `Create & invite now · picks open ${dayLabel(state.deadline)}`
           : "Create & invite now · picks open at the draw";
       case "PICKS_OPEN":
-        return "Picks open now · lock at the Round-of-32 kickoff";
+        return "Picks open now · lock at the Round of 32 kickoff";
       default:
         return "Locked — the Round of 32 has kicked off";
     }

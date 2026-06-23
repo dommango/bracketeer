@@ -103,7 +103,7 @@ function DeadlineBanner({
   }
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-pitch-tint px-4 py-3">
-      <span className="text-sm font-semibold text-pitch-dark">Picks lock at the Round-of-32 kickoff</span>
+      <span className="text-sm font-semibold text-pitch-dark">Picks lock at the Round of 32 kickoff</span>
       {locksAt ? <Countdown target={locksAt} className="text-sm text-pitch-dark" /> : null}
     </div>
   );

@@ -63,35 +63,6 @@ export function decodeMd3Rows(
   return scores;
 }
 
-// The user's MD3 predictions in a pool (null if they have no entry yet).
-export async function getMd3Entry(poolId: string, userId: string): Promise<Md3Entry | null> {
-  const entry = await prisma.entry.findFirst({
-    where: { poolId, userId },
-    select: {
-      id: true,
-      label: true,
-      enteredChallenge: true,
-      picks: { select: { category: true, key: true, teamOrValue: true } },
-    },
-  });
-  if (!entry) return null;
-  return {
-    entryId: entry.id,
-    label: entry.label,
-    scores: decodeMd3Rows(entry.picks),
-    enteredChallenge: entry.enteredChallenge,
-  };
-}
-
-export interface UpsertMd3Input {
-  poolId: string;
-  userId: string;
-  label: string;
-  // matchNo → predicted scoreline. May be partial; only valid, unlocked MD3
-  // fixtures are written.
-  scores: Md3Scores;
-}
-
 // Build the canonical Pick rows for a full set of scores, pulling each fixture's
 // home/away team codes from md3Fixtures (server-authoritative orientation).
 function rowsFor(scores: Md3Scores): { section: string; category: string; key: string; code: string; teamOrValue: string }[] {
@@ -115,41 +86,75 @@ export interface UpsertMd3Result {
   written: number; // fixtures actually saved (open ones)
 }
 
-// Save a user's MD3 predictions. Locked fixtures keep their stored value; open
-// fixtures take the submitted value (a submitted-but-locked change is ignored).
-// One Entry per (pool, user); idempotent.
-export async function upsertMd3Picks(
-  input: UpsertMd3Input,
+// Merge submitted scores over current ones honoring the per-match lock: a fixture
+// already kicked off is frozen to its stored value; an open fixture takes the
+// submitted value when present, else keeps the current one.
+function mergeMd3Scores(current: Md3Scores, submitted: Md3Scores, now: Date): Md3Scores {
+  const merged: Md3Scores = {};
+  for (const f of md3Fixtures()) {
+    const locked = isMd3MatchLocked(f.matchNo, now);
+    const chosen = locked ? current[f.matchNo] : (submitted[f.matchNo] ?? current[f.matchNo]);
+    if (chosen) merged[f.matchNo] = chosen;
+  }
+  return merged;
+}
+
+// The user's standalone MD3 entry for a tournament (poolId null), or null if they
+// haven't built one. A standalone entry feeds the public challenge without a pool;
+// it carries the same self-describing pick rows as a pooled MD3 entry.
+export async function getStandaloneMd3Entry(
+  tournamentId: string,
+  userId: string,
+): Promise<Md3Entry | null> {
+  const entry = await prisma.entry.findFirst({
+    where: { tournamentId, userId, poolId: null, format: "MATCH_DAY_3_PICKEM" },
+    select: {
+      id: true,
+      label: true,
+      enteredChallenge: true,
+      picks: { select: { category: true, key: true, teamOrValue: true } },
+    },
+  });
+  if (!entry) return null;
+  return {
+    entryId: entry.id,
+    label: entry.label,
+    scores: decodeMd3Rows(entry.picks),
+    enteredChallenge: entry.enteredChallenge,
+  };
+}
+
+export interface UpsertStandaloneMd3Input {
+  tournamentId: string;
+  userId: string;
+  label: string;
+  // matchNo → predicted scoreline. May be partial; only valid, unlocked MD3
+  // fixtures are written (locked fixtures keep their stored value).
+  scores: Md3Scores;
+}
+
+// Save a user's standalone MD3 predictions (one entry per user per tournament, no
+// pool). Per-match lock via mergeMd3Scores — locked fixtures keep their stored
+// value, open ones take the submission. Idempotent.
+export async function upsertStandaloneMd3Picks(
+  input: UpsertStandaloneMd3Input,
   now: Date = new Date(),
 ): Promise<UpsertMd3Result> {
-  const label = input.label.trim() || "Player";
+  const label = input.label.trim() || "Participant";
 
   return prisma.$transaction(async (tx) => {
-    const pool = await tx.pool.findUniqueOrThrow({
-      where: { id: input.poolId },
-      select: { tournamentId: true, format: true },
-    });
-    if (pool.format !== "MATCH_DAY_3_PICKEM") {
-      throw new Error("This pool isn't a Match Day 3 Pickem game.");
-    }
-
     const existing = await tx.entry.findFirst({
-      where: { poolId: input.poolId, userId: input.userId },
+      where: {
+        tournamentId: input.tournamentId,
+        userId: input.userId,
+        poolId: null,
+        format: "MATCH_DAY_3_PICKEM",
+      },
       select: { id: true, picks: { select: { category: true, key: true, teamOrValue: true } } },
     });
 
     const current: Md3Scores = existing ? decodeMd3Rows(existing.picks) : {};
-
-    // Merge: for each MD3 fixture, a locked one is frozen to its current value; an
-    // open one takes the submitted value when present, else keeps current.
-    const merged: Md3Scores = {};
-    for (const f of md3Fixtures()) {
-      const locked = isMd3MatchLocked(f.matchNo, now);
-      const submitted = input.scores[f.matchNo];
-      const chosen = locked ? current[f.matchNo] : (submitted ?? current[f.matchNo]);
-      if (chosen) merged[f.matchNo] = chosen;
-    }
-
+    const merged = mergeMd3Scores(current, input.scores, now);
     const rows = rowsFor(merged);
 
     let entryId: string;
@@ -160,8 +165,8 @@ export async function upsertMd3Picks(
     } else {
       const entry = await tx.entry.create({
         data: {
-          poolId: input.poolId,
-          tournamentId: pool.tournamentId,
+          poolId: null,
+          tournamentId: input.tournamentId,
           format: "MATCH_DAY_3_PICKEM",
           userId: input.userId,
           label,

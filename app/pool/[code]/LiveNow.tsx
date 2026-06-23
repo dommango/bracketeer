@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { MatchCenterRow, MatchCenterSide } from "@/lib/pool/match-center";
 import { Flag } from "./Flag";
 import { VenueLine } from "./VenueLine";
+import { roundLabel } from "@/lib/pool/rounds";
 
 // Same chromatic round sweep as the bracket / match center (group green → gold final).
 const ROUND_ACCENT: Record<string, string> = {
@@ -12,16 +13,6 @@ const ROUND_ACCENT: Record<string, string> = {
   SF: "var(--round-sf)",
   BRONZE: "var(--gold-dark)",
   FINAL: "var(--round-final)",
-};
-
-const ROUND_LABEL: Record<string, string> = {
-  GROUP: "Group stage",
-  R32: "Round of 32",
-  R16: "Round of 16",
-  QF: "Quarter-final",
-  SF: "Semi-final",
-  BRONZE: "Third place",
-  FINAL: "Final",
 };
 
 function LiveBadge() {
@@ -59,7 +50,7 @@ function LiveCard({ row, code }: { row: MatchCenterRow; code: string }) {
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
-          {ROUND_LABEL[row.roundCode] ?? row.roundCode}
+          {roundLabel(row.roundCode)}
         </span>
         <LiveBadge />
       </div>

@@ -155,7 +155,20 @@ function Selections({ selections }: { selections: EntrySelections }) {
   );
 }
 
-export function Profile({ profile }: { profile: ProfileData }) {
+// The reveal banner shown before picks lock — phrased per format, since lock
+// timing differs (full bracket at tournament kickoff, knockout at the R32
+// kickoff). Defaults to neutral wording.
+function revealCopy(format?: string): string {
+  if (format === "KNOCKOUT") {
+    return "Picks reveal at kickoff — come back once picks lock at the Round of 32 kickoff to see this bracket.";
+  }
+  if (format === "FULL_BRACKET") {
+    return "Picks reveal at kickoff — come back once the tournament locks to see this bracket.";
+  }
+  return "Come back once picks lock to see this bracket.";
+}
+
+export function Profile({ profile, format }: { profile: ProfileData; format?: string }) {
   const { accuracy, boldest } = profile;
   const isLeader = profile.rank === 1;
   return (
@@ -165,7 +178,7 @@ export function Profile({ profile }: { profile: ProfileData }) {
           isLeader ? "border-gold shadow-[var(--shadow-ring-gold)]" : "border-line shadow-[var(--shadow-xs)]"
         }`}
       >
-        <p className={LABEL}>{isLeader ? "Pool leader" : "Player"}</p>
+        <p className={LABEL}>{isLeader ? "Pool leader" : "Participant"}</p>
         <h2 className="mt-1 break-words font-display text-2xl text-ink">{profile.label}</h2>
         <div className="mt-3 flex items-end gap-4">
           <div className="leading-none">
@@ -233,9 +246,7 @@ export function Profile({ profile }: { profile: ProfileData }) {
         </>
       ) : (
         <div className="rounded-2xl border border-dashed border-line bg-surface p-6 text-center">
-          <p className="text-sm text-ink-3">
-            Picks reveal at kickoff — come back once the tournament locks to see this bracket.
-          </p>
+          <p className="text-sm text-ink-3">{revealCopy(format)}</p>
         </div>
       )}
     </div>

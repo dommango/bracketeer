@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { saveMd3Picks, type SaveMd3State } from "./actions";
+import { saveMd3ChallengeEntry, type SaveMd3ChallengeState } from "./actions";
 import type { Md3FixtureVM } from "@/lib/pool/md3-view";
 
-// Group fixtures by their kickoff day for light visual chunking.
+// Group fixtures by kickoff day for light visual chunking.
 function dayLabel(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     weekday: "short",
@@ -20,20 +20,19 @@ function kickoffLabel(iso: string): string {
 const SCORE_BOX =
   "h-11 w-12 rounded-lg border border-line bg-surface text-center text-[17px] font-semibold text-ink outline-none focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)] disabled:bg-surface-sunk disabled:text-ink-3";
 
-export function Md3PicksForm({
-  code,
+export function Md3ChallengeForm({
   fixtures,
   canEdit,
 }: {
-  code: string;
   fixtures: Md3FixtureVM[];
-  // False for non-members (read-only) — they can see fixtures but not save.
+  // False when signed out or the game is fully locked (read-only).
   canEdit: boolean;
 }) {
-  const [state, action, pending] = useActionState<SaveMd3State, FormData>(saveMd3Picks, {});
+  const [state, action, pending] = useActionState<SaveMd3ChallengeState, FormData>(
+    saveMd3ChallengeEntry,
+    {},
+  );
 
-  // Precompute a day header whenever the day changes down the (kickoff-ordered)
-  // list — derived before render so nothing is reassigned mid-render.
   const rows = fixtures.map((f, i) => {
     const day = dayLabel(f.kickoffISO);
     const showDay = i === 0 || day !== dayLabel(fixtures[i - 1].kickoffISO);
@@ -42,8 +41,6 @@ export function Md3PicksForm({
 
   return (
     <form action={action} className="space-y-3">
-      <input type="hidden" name="code" value={code} />
-
       <ul className="space-y-2">
         {rows.map(({ f, day, showDay }) => {
           const disabled = !canEdit || f.locked;
@@ -123,7 +120,7 @@ export function Md3PicksForm({
       ) : null}
       {state.ok ? (
         <p className="rounded-md border border-pitch/30 bg-pitch/5 px-3 py-2 text-sm text-pitch-dark">
-          Picks saved.
+          Predictions saved — you&apos;re in the challenge.
         </p>
       ) : null}
 
@@ -134,7 +131,7 @@ export function Md3PicksForm({
             disabled={pending}
             className="inline-flex h-12 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white shadow-[var(--shadow-md)] transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
           >
-            {pending ? "Saving…" : "Save picks"}
+            {pending ? "Saving…" : "Save predictions"}
           </button>
         </div>
       ) : null}

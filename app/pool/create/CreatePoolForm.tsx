@@ -46,7 +46,7 @@ export function CreatePoolForm({
   return (
     <form action={action} className="mt-5 space-y-4">
       <fieldset className="space-y-1.5">
-        <legend className={LABEL}>Game type</legend>
+        <legend className={LABEL}>Pool type</legend>
         <div className="mt-1.5 space-y-2">
           {cards.map((c) => {
             const selected = format === c.value && !c.disabled;

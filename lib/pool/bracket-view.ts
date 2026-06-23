@@ -6,7 +6,7 @@ import { resolveBracket } from "./bracket";
 import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { computeGroupTables, provisionalStandings, type GroupResultRow, type GroupTableRow } from "./group-table";
 import { slotLabel, KNOCKOUT_SLOT_REFS } from "./slot-label";
-import { matchTag } from "./rounds";
+import { matchTag, roundLabel, type RoundCode } from "./rounds";
 import { kickoffFor, venueFor } from "@/lib/scoring/schedule";
 import type { Results } from "@/lib/scoring/types";
 
@@ -40,6 +40,7 @@ export interface BracketMatch {
 }
 
 export interface BracketRound {
+  code: RoundCode;
   label: string;
   matches: BracketMatch[];
 }
@@ -107,13 +108,18 @@ export function buildBracketView(
     };
   };
 
+  const round = (code: RoundCode, matches: BracketMatch[]): BracketRound => ({
+    code,
+    label: roundLabel(code),
+    matches,
+  });
   const rounds: BracketRound[] = [
-    { label: "Round of 32", matches: R32.map((m) => row(m.id)) },
-    { label: "Round of 16", matches: R16.map((m) => row(m.id)) },
-    { label: "Quarter-finals", matches: QF.map((m) => row(m.id)) },
-    { label: "Semi-finals", matches: SF.map((m) => row(m.id)) },
-    { label: "Third-place play-off", matches: [row(BRONZE.id)] },
-    { label: "Final", matches: [row(FINAL.id)] },
+    round("R32", R32.map((m) => row(m.id))),
+    round("R16", R16.map((m) => row(m.id))),
+    round("QF", QF.map((m) => row(m.id))),
+    round("SF", SF.map((m) => row(m.id))),
+    round("BRONZE", [row(BRONZE.id)]),
+    round("FINAL", [row(FINAL.id)]),
   ];
 
   // Always compute tables (computeGroupTables seeds all 4 teams at 0 with no rows),

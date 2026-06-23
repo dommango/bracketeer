@@ -27,11 +27,11 @@ export async function createPoolAction(
   const displayName = String(formData.get("displayName") || "").trim();
   if (!name) return { error: "Give your pool a name." };
 
-  // Only the known game types are accepted; anything else falls back to the
-  // classic full-bracket pool.
+  // The two creatable pool formats are accepted; anything else falls back to the
+  // classic full-bracket pool. Match Day 3 Pickem is a challenge, not a pool, so
+  // it's not offered here (play it at /challenge/md3).
   const raw = String(formData.get("format") || "");
-  const format: PoolFormat =
-    raw === "KNOCKOUT" || raw === "MATCH_DAY_3_PICKEM" ? raw : "FULL_BRACKET";
+  const format: PoolFormat = raw === "KNOCKOUT" ? "KNOCKOUT" : "FULL_BRACKET";
 
   let joinCode: string;
   try {

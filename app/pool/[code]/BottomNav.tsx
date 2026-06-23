@@ -20,7 +20,7 @@ type Tab = {
   icon: ReactNode;
 };
 
-export function BottomNav({ code, format }: { code: string; format?: string }) {
+export function BottomNav({ code }: { code: string }) {
   const pathname = usePathname() ?? "";
   const base = `/pool/${code}`;
   // A tab stays lit across every route in its section. Match a path against any
@@ -35,22 +35,6 @@ export function BottomNav({ code, format }: { code: string; format?: string }) {
     isActive: (p) => p === base,
     icon: <HomeGlyph />,
   };
-
-  // Match Day 3 Pickem has no bracket/matches sections — just the dashboard
-  // (which carries the leaderboard) and the scoreline picks grid.
-  if (format === "MATCH_DAY_3_PICKEM") {
-    const tabs: Tab[] = [
-      homeTab,
-      {
-        key: "picks",
-        label: "Picks",
-        href: `${base}/md3`,
-        isActive: anyPrefix([`${base}/md3`]),
-        icon: <BracketGlyph />,
-      },
-    ];
-    return <NavBar tabs={tabs} pathname={pathname} />;
-  }
 
   const tabs: Tab[] = [
     homeTab,

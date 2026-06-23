@@ -23,7 +23,7 @@ export default async function ProfilePage({
       <BracketsTabNav code={code} />
       <div className="flex items-center justify-between">
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-          Player profile
+          Participant profile
         </h2>
         <Link
           href={`/pool/${code}/leaderboard`}
@@ -32,7 +32,7 @@ export default async function ProfilePage({
           ← Leaderboard
         </Link>
       </div>
-      <Profile profile={profile} />
+      <Profile profile={profile} format={pool.format} />
     </section>
   );
 }

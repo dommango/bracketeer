@@ -10,7 +10,7 @@ import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
 import { assignRanks } from "@/lib/pool/rank";
-import { scoreMd3Pool } from "@/lib/pool/md3-scoring";
+import { scoreMd3Pool, scoreMd3Entry, scoreStandaloneMd3 } from "@/lib/pool/md3-scoring";
 
 type Db = Prisma.TransactionClient;
 
@@ -45,8 +45,11 @@ export async function recomputePool(poolId: string) {
         include: { tournament: true },
       });
 
-      // Match Day 3 Pickem scores against live per-match Result rows, not the
-      // answer key — its own engine. Every other format uses the parity oracle.
+      // Match Day Pickem scores against live per-match Result rows, not the answer
+      // key — its own engine. Every other format uses the parity oracle. MD3 is now
+      // challenge-only (no new MD3 pools); this pool arm is a defensive backstop for
+      // any not-yet-migrated MD3 pool and can be removed once the prod migration has
+      // run (scripts/migrate-md3-pools-to-challenge.ts).
       if (pool.format === "MATCH_DAY_3_PICKEM") {
         await scoreMd3Pool(tx, poolId, pool.tournamentId);
       } else {
@@ -108,11 +111,14 @@ export async function recomputeEntry(entryId: string): Promise<void> {
       where: { id: entryId },
       include: { picks: true, tournament: { select: { officialResults: true, scoringConfig: true } } },
     });
-    // Match Day 3 entries score against live Result rows via their own engine; the
-    // parity oracle would decode their match_day_3 pick rows as an empty bracket
-    // (0 pts). MD3 is always a pooled format, so rescore the whole MD3 pool.
-    if (entry.format === "MATCH_DAY_3_PICKEM" && entry.poolId) {
-      await scoreMd3Pool(tx, entry.poolId, entry.tournamentId);
+    // Match Day Pickem entries score against live Result rows via their own engine;
+    // the parity oracle would decode their match_day_3 pick rows as an empty bracket
+    // (0 pts). Challenge entries are standalone (poolId null) and rescore just
+    // themselves. The pooled arm is a defensive backstop for any not-yet-migrated
+    // MD3 pool; removable once the prod migration has run.
+    if (entry.format === "MATCH_DAY_3_PICKEM") {
+      if (entry.poolId) await scoreMd3Pool(tx, entry.poolId, entry.tournamentId);
+      else await scoreMd3Entry(tx, entry.id, entry.tournamentId);
       return;
     }
     const answer = asResults(entry.tournament.officialResults);
@@ -136,7 +142,12 @@ export async function recomputeStandalone(tournamentId: string): Promise<number>
       where: { tournamentId, poolId: null },
       include: { picks: true },
     });
-    await scoreEntryBreakdowns(tx, entries, answer, cfg);
+    // MD3 standalone entries score against live results, not the answer key (the
+    // oracle would read their pick rows as an empty bracket → 0). Split them out.
+    const bracketEntries = entries.filter((e) => e.format !== "MATCH_DAY_3_PICKEM");
+    const hasMd3 = entries.some((e) => e.format === "MATCH_DAY_3_PICKEM");
+    await scoreEntryBreakdowns(tx, bracketEntries, answer, cfg);
+    if (hasMd3) await scoreStandaloneMd3(tx, tournamentId);
     return entries.length;
   });
 }

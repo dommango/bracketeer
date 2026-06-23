@@ -70,7 +70,7 @@ export default async function ManagePage({
       <p className="mt-1 text-sm text-ink-3">{pool.name}</p>
 
       {/* Share */}
-      <Section title="Invite players">
+      <Section title="Invite participants">
         <div className="flex items-center gap-2">
           <div className="flex h-11 flex-1 items-center rounded-md border border-line bg-surface px-4">
             <span className="font-mono font-bold text-ink-3">#</span>
@@ -143,8 +143,8 @@ export default async function ManagePage({
               </p>
               <p className="text-xs text-ink-3">
                 {premium
-                  ? "Unlimited members."
-                  : `Up to ${cap} members. Upgrade for an unlimited pool.`}
+                  ? "Unlimited participants."
+                  : `Up to ${cap} participants. Upgrade for unlimited participants.`}
               </p>
             </div>
             <span className="font-display text-pitch-dark">→</span>
@@ -153,7 +153,7 @@ export default async function ManagePage({
       ) : null}
 
       {/* Members */}
-      <Section title={`Members (${members.length})`}>
+      <Section title={`Participants (${members.length})`}>
         <ul className="space-y-2">
           {members.map((m) => (
             <li
@@ -202,7 +202,7 @@ export default async function ManagePage({
       <Section title={`Entries (${entries.length})`}>
         {entries.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-line bg-surface p-6 text-center text-sm text-ink-3">
-            No entries yet. Import the bracket CSVs below, or have members fill out
+            No entries yet. Import the bracket CSVs below, or have participants fill out
             their bracket.
           </p>
         ) : (
@@ -250,8 +250,8 @@ export default async function ManagePage({
       {/* Import */}
       <Section title="Import brackets">
         <p className="text-sm text-ink-3">
-          Upload the per-contestant CSV exports from the original bracket tool. Each
-          file becomes an entry; re-importing the same contestant updates it.
+          Upload the per-participant CSV exports from the original bracket tool. Each
+          file becomes an entry; re-importing the same participant updates it.
         </p>
         <ImportForm code={code} />
       </Section>

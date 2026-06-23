@@ -20,7 +20,7 @@ export function AttachToPoolForm({ entryId }: { entryId: string }) {
       if (res.ok && res.joinCode) {
         router.push(`/pool/${res.joinCode}`);
       } else {
-        setError(res.error ?? "Could not join that pool.");
+        setError(res.error ?? "Could not add to that pool.");
       }
     });
   };
@@ -53,7 +53,7 @@ export function AttachToPoolForm({ entryId }: { entryId: string }) {
           disabled={pending || !code.trim()}
           className="inline-flex h-9 items-center justify-center rounded-full bg-pitch px-4 text-xs font-semibold text-white hover:bg-pitch-dark disabled:opacity-60"
         >
-          {pending ? "Joining…" : "Join"}
+          {pending ? "Adding…" : "Add"}
         </button>
         <button
           type="button"

@@ -35,4 +35,4 @@ export function remainingSlots(tier: PoolTier, currentCount: number): number | n
 // User-facing message when a FREE pool is full. Centralized so the join action,
 // invite acceptance, and any UI hint stay consistent.
 export const POOL_FULL_MESSAGE =
-  "This pool is full. The owner can upgrade to Premium to add more players.";
+  "This pool is full. The owner can upgrade to Premium to add more participants.";

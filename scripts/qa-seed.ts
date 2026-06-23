@@ -22,10 +22,11 @@ import { prisma } from "@/lib/db";
 import { GROUPS, R32, R16, QF, SF, FINAL } from "@/lib/scoring/data";
 import { emptyPicks, type Results, type Submission } from "@/lib/scoring/types";
 import { importSubmission } from "@/lib/pool/import";
-import { upsertMd3Picks, type Md3Scores } from "@/lib/pool/md3-picks";
+import { upsertStandaloneMd3Picks, type Md3Scores } from "@/lib/pool/md3-picks";
 import { md3Fixtures } from "@/lib/pool/match-day-3";
 import { joinPool } from "@/lib/pool/manage";
-import { recomputePool } from "@/lib/pool/scoring";
+import { recomputePool, recomputeStandalone } from "@/lib/pool/scoring";
+import { getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { POOL_FULL_MESSAGE, FREE_MEMBER_CAP } from "@/lib/billing/entitlements";
 import { DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 
@@ -275,19 +276,22 @@ async function main() {
     await importSubmission(koId, { contestant: { name: p.name, email: p.email, tiebreak: p.tiebreak }, picks: buildKnockoutPicks(mulberry32(p.seed * 53), p.chalk) });
   }
 
-  // 6) MD3QA — Match Day 3 Pickem, ~14 entries. Seed with an early `now` so
-  // every fixture is open and all predictions are written; then set 8 finals.
-  const md3Id = await ensurePool({ joinCode: "MDPICK", name: "Match Day 3 Showdown", ownerId, format: "MATCH_DAY_3_PICKEM", tier: "FREE", ownerDisplay: "Dom" });
+  // 6) MD3QA — Match Day Pickem, ~14 standalone challenge entries (no pool; MD3 is
+  // challenge-only). Seed with an early `now` so every fixture is open and all
+  // predictions are written, mark each entered, then set 8 finals.
   const fixtures = md3Fixtures();
   const seedNow = new Date("2026-06-01T00:00:00Z"); // before any MD3 kickoff → all open
   const md3People = [owner, ...makePeople(13, 4000)];
   for (const p of md3People) {
     const uid = p.email === owner.email ? ownerId : await ensureUser(p);
-    if (p.email !== owner.email) await addMember(md3Id, uid, p.name.split(" ")[0]);
     const rng = mulberry32(p.seed * 313);
     const scores: Md3Scores = {};
     for (const f of fixtures) scores[f.matchNo] = { home: Math.floor(rng() * 4), away: Math.floor(rng() * 4) };
-    await upsertMd3Picks({ poolId: md3Id, userId: uid, label: p.name.split(" ")[0], scores }, seedNow);
+    const { entryId } = await upsertStandaloneMd3Picks(
+      { tournamentId: tournament.id, userId: uid, label: p.name.split(" ")[0], scores },
+      seedNow,
+    );
+    await prisma.entry.update({ where: { id: entryId }, data: { enteredChallenge: true } });
   }
   // 8 finished MD3 matches.
   const md3Actuals: Array<[number, number]> = [[2, 1], [0, 0], [1, 2], [3, 1], [1, 1], [2, 0], [0, 2], [2, 2]];
@@ -365,7 +369,8 @@ async function main() {
   const hessBoard = await recomputePool(hessId);
   await recomputePool(capId);
   const koBoard = await recomputePool(koId);
-  const md3Board = await recomputePool(md3Id);
+  await recomputeStandalone(tournament.id);
+  const md3Board = await getMd3ChallengeLeaderboard();
 
   // Summary.
   const counts = {
@@ -383,7 +388,7 @@ async function main() {
   console.log(`\nFREECAP cap probe (cap=${FREE_MEMBER_CAP}): joined=${joined}, then -> "${capProbe}"`);
   console.log(`\nHESSQA  /pool/HESSQA   (${hessBoard.length} brackets) top: ${hessBoard.slice(0, 3).map((r) => `${r.label} ${r.total}`).join(", ")}`);
   console.log(`KOQA    /pool/KNOCKO     (${koBoard.length} brackets) top: ${koBoard.slice(0, 3).map((r) => `${r.label} ${r.total}`).join(", ")}`);
-  console.log(`MD3QA   /pool/MDPICK    (${md3Board.length} entries) top: ${md3Board.slice(0, 3).map((r) => `${r.label} ${r.total}`).join(", ")}`);
+  console.log(`MD3QA   /challenge/md3   (${md3Board.length} entries) top: ${md3Board.slice(0, 3).map((r) => `${r.label} ${r.total}`).join(", ")}`);
 }
 
 main()

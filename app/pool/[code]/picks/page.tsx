@@ -76,7 +76,7 @@ export default async function PicksPage({
   }
 
   const entry = selected ? await getUserEntry(pool.id, sessionUser.id, selected.entryId) : null;
-  const label = entry?.label ?? sessionUser.name ?? "Player";
+  const label = entry?.label ?? sessionUser.name ?? "Participant";
   const entryLocked = entry?.locked ?? false;
 
   const header = (
@@ -192,7 +192,7 @@ function KnockoutDeadlineBanner({
   }
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-pitch-tint px-4 py-3">
-      <span className="text-sm font-semibold text-pitch-dark">Picks lock at the Round-of-32 kickoff</span>
+      <span className="text-sm font-semibold text-pitch-dark">Picks lock at the Round of 32 kickoff</span>
       {locksAt ? <Countdown target={locksAt} className="text-sm text-pitch-dark" /> : null}
     </div>
   );

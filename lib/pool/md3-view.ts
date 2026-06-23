@@ -10,7 +10,7 @@ import {
   isMd3MatchLocked,
   scoreMd3,
 } from "@/lib/pool/match-day-3";
-import { getMd3Entry } from "@/lib/pool/md3-picks";
+import { getStandaloneMd3Entry, type Md3Scores } from "@/lib/pool/md3-picks";
 
 export interface Md3FixtureVM {
   matchNo: number;
@@ -34,28 +34,36 @@ export interface Md3View {
   openCount: number;
 }
 
-export async function getMd3View(
+// The viewer's MD3 predictions in the public challenge (standalone entry, no pool).
+export async function getMd3ChallengeView(
   tournamentId: string,
-  poolId: string,
   userId: string | null,
   now: Date = new Date(),
 ): Promise<Md3View> {
+  const entry = userId ? await getStandaloneMd3Entry(tournamentId, userId) : null;
+  return buildMd3View(tournamentId, entry?.scores ?? null, now);
+}
+
+// Build the read model from a set of predictions, decorating the 24 fixtures with
+// live/final results and per-match lock state. Source-agnostic (pool or challenge).
+async function buildMd3View(
+  tournamentId: string,
+  preds: Md3Scores | null,
+  now: Date,
+): Promise<Md3View> {
   const fixtures = md3Fixtures();
 
-  const [resultRows, entry] = await Promise.all([
-    prisma.result.findMany({
-      where: { match: { tournamentId, matchNo: { in: [...MD3_MATCH_NOS] } } },
-      select: {
-        homeTeamCode: true,
-        awayTeamCode: true,
-        homeScore: true,
-        awayScore: true,
-        status: true,
-        match: { select: { matchNo: true } },
-      },
-    }),
-    userId ? getMd3Entry(poolId, userId) : Promise.resolve(null),
-  ]);
+  const resultRows = await prisma.result.findMany({
+    where: { match: { tournamentId, matchNo: { in: [...MD3_MATCH_NOS] } } },
+    select: {
+      homeTeamCode: true,
+      awayTeamCode: true,
+      homeScore: true,
+      awayScore: true,
+      status: true,
+      match: { select: { matchNo: true } },
+    },
+  });
 
   // Map matchNo → { teamCode: goals, final }.
   const byNo = new Map<number, { byTeam: Record<string, number>; final: boolean }>();
@@ -67,7 +75,7 @@ export async function getMd3View(
     });
   }
 
-  const preds = entry?.scores ?? {};
+  const predictions = preds ?? {};
 
   let totalPoints = 0;
   let scoredCount = 0;
@@ -78,7 +86,7 @@ export async function getMd3View(
     const locked = isMd3MatchLocked(f.matchNo, now);
     if (!locked) openCount += 1;
 
-    const pred = preds[f.matchNo] ?? null;
+    const pred = predictions[f.matchNo] ?? null;
     if (pred) pickedCount += 1;
 
     const r = byNo.get(f.matchNo);

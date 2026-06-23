@@ -6,6 +6,7 @@ import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import { formatKickoff, formatMatchDate } from "@/lib/pool/format";
 import { VenueLine } from "./VenueLine";
 import { WinProbBar } from "./WinProbBar";
+import { roundLabel } from "@/lib/pool/rounds";
 
 // code → group letter, for labelling a group match by its actual group (A–L).
 const TEAM_GROUP: Record<string, string> = Object.fromEntries(
@@ -18,7 +19,7 @@ function roundLabelFor(roundCode: string, homeCode: string | null, awayCode: str
     const letter = TEAM_GROUP[homeCode ?? ""] ?? TEAM_GROUP[awayCode ?? ""];
     if (letter) return `Group ${letter}`;
   }
-  return ROUND_LABEL[roundCode] ?? roundCode;
+  return roundLabel(roundCode);
 }
 
 const ROUND_ACCENT: Record<string, string> = {
@@ -29,16 +30,6 @@ const ROUND_ACCENT: Record<string, string> = {
   SF: "var(--round-sf)",
   BRONZE: "var(--gold-dark)",
   FINAL: "var(--round-final)",
-};
-
-const ROUND_LABEL: Record<string, string> = {
-  GROUP: "Group stage",
-  R32: "Round of 32",
-  R16: "Round of 16",
-  QF: "Quarter-final",
-  SF: "Semi-final",
-  BRONZE: "Third place",
-  FINAL: "Final",
 };
 
 const teamName = (code: string | null): string =>

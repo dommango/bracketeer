@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Two-tab switcher between the public challenge boards (Knockout / Match Day 3).
+// Two-tab switcher between the public challenge boards (Knockout / Match Day).
 const TABS = [
   { href: "/challenge", label: "Knockout" },
-  { href: "/challenge/md3", label: "Match Day 3" },
+  { href: "/challenge/md3", label: "Match Day" },
 ];
 
 export function ChallengeTabs() {

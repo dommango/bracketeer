@@ -332,7 +332,7 @@ export function FeedbackWidget() {
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line-soft px-4 py-3">
-          <h3 className="text-sm font-semibold text-ink">Send Feedback</h3>
+          <h3 className="text-sm font-semibold text-ink">Send feedback</h3>
           <button
             onClick={() => {
               setOpen(false);

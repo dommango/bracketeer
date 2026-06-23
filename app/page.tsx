@@ -58,17 +58,18 @@ function FeaturedBanner({ now }: { now: Date }) {
 
   const game = GAME_CATALOG[featured];
   const teaser = prizeTeaser(featured);
-  const createHref =
-    featured === "MATCH_DAY_3_PICKEM"
-      ? "/pool/create?game=md3"
-      : featured === "KNOCKOUT"
-        ? "/pool/create?game=knockout"
-        : "/pool/create";
+
+  // Match Day Pickem is a public challenge — there's no pool to create or join,
+  // you just play (so it shows its challenge name). Pool games (Knockout) keep the
+  // create/join pair and show the pool name.
+  const isMd3 = featured === "MATCH_DAY_3_PICKEM";
+  const bannerName = isMd3 ? game.challengeName : game.poolName;
+  const createHref = featured === "KNOCKOUT" ? "/pool/create?game=knockout" : "/pool/create";
 
   return (
     <div className="mt-4 rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
       <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">
-        Live now · {game.name}
+        Live now · {bannerName}
       </p>
       <h2 className="mt-1 font-display text-xl text-ink">{game.tagline}</h2>
       <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">{gameStateLine(featured, now)}</p>
@@ -76,12 +77,25 @@ function FeaturedBanner({ now }: { now: Date }) {
         <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
       ) : null}
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link href={createHref} className={PRIMARY_BTN}>
-          Create
-        </Link>
-        <Link href="/join" className={SECONDARY_BTN}>
-          Join
-        </Link>
+        {isMd3 ? (
+          <>
+            <Link href="/challenge/md3/play" className={PRIMARY_BTN}>
+              Play
+            </Link>
+            <Link href="/challenge/md3" className={SECONDARY_BTN}>
+              Leaderboard
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link href={createHref} className={PRIMARY_BTN}>
+              Create
+            </Link>
+            <Link href="/join" className={SECONDARY_BTN}>
+              Join
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );
@@ -161,7 +175,7 @@ function SignedInHub({
       </div>
 
       <Link href="/bracket" className={`mt-4 ${pools.length > 0 ? SECONDARY_BTN : PRIMARY_BTN}`}>
-        Build your own bracket →
+        Build your bracket →
       </Link>
 
       <div className="mt-2 grid grid-cols-2 gap-2">
