@@ -20,7 +20,7 @@ export default async function Md3ChallengeLeaderboardPage() {
         <div className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center">
           <p className="text-sm font-semibold text-ink-2">No entries yet</p>
           <p className="mt-1.5 text-sm text-ink-3">
-            Predict all 24 fixtures in a Match Day 3 pool and enter the challenge to appear here.
+            Predict all 24 fixtures to appear here.
           </p>
         </div>
       ) : (
@@ -51,10 +51,10 @@ export default async function Md3ChallengeLeaderboardPage() {
       )}
 
       <Link
-        href="/"
+        href="/challenge/md3/play"
         className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
       >
-        <span className="text-sm font-semibold text-ink">Find a Match Day 3 pool</span>
+        <span className="text-sm font-semibold text-ink">Enter or edit your predictions</span>
         <span className="font-display text-pitch-dark">→</span>
       </Link>
     </section>

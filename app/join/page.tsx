@@ -31,9 +31,10 @@ export default async function JoinPage({
           Enter your join code
         </h1>
         <p className="mt-2 text-[13px] text-ink-3">
-          A code works for any game — full tournament, Knockout Challenge, or Match Day 3 Pickem.
-          Once you&apos;re in, the pool shows which game it plays and its current state (picks open,
-          opens later, or locked). Joining also links any bracket imported under your email.
+          A code works for any pool — full tournament or Knockout Challenge. Once you&apos;re in,
+          the pool shows which game it plays and its current state (picks open, opens later, or
+          locked). Joining also links any bracket imported under your email. (Match Day 3 Pickem is
+          a public challenge — no code needed; just play it.)
         </p>
 
         {user ? (

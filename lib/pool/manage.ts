@@ -5,7 +5,6 @@
 import { prisma } from "@/lib/db";
 import { DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { arePicksLocked } from "@/lib/pool/lock";
-import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import { generateJoinCode, normalizeJoinCode } from "@/lib/pool/join-code";
 import { claimEntriesForUser } from "@/lib/auth/claim";
 import { recomputePool } from "@/lib/pool/scoring";
@@ -61,11 +60,11 @@ export async function createPool(input: CreatePoolInput): Promise<CreatedPool> {
     );
   }
 
-  // Match Day 3 Pickem is only worth creating while at least one MD3 fixture is
-  // still open (every pick locks at its kickoff). The create UI hides it once
-  // closed; this is the server-side backstop.
-  if (format === "MATCH_DAY_3_PICKEM" && !isMd3GameOpen()) {
-    throw new Error("Match Day 3 has finished — that game is closed.");
+  // Match Day 3 Pickem is a public challenge, not a pool — there's no private MD3
+  // pool to create. Entries are made directly at /challenge/md3/play. The create
+  // UI doesn't offer it; this is the server-side backstop.
+  if (format === "MATCH_DAY_3_PICKEM") {
+    throw new Error("Match Day 3 Pickem is a challenge, not a pool — play it at /challenge/md3.");
   }
 
   const joinCode = await allocateJoinCode();

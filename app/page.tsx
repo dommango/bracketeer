@@ -58,12 +58,11 @@ function FeaturedBanner({ now }: { now: Date }) {
 
   const game = GAME_CATALOG[featured];
   const teaser = prizeTeaser(featured);
-  const createHref =
-    featured === "MATCH_DAY_3_PICKEM"
-      ? "/pool/create?game=md3"
-      : featured === "KNOCKOUT"
-        ? "/pool/create?game=knockout"
-        : "/pool/create";
+
+  // Match Day 3 Pickem is a public challenge — there's no pool to create or join,
+  // you just play. Pool games (Knockout) keep the create/join pair.
+  const isMd3 = featured === "MATCH_DAY_3_PICKEM";
+  const createHref = featured === "KNOCKOUT" ? "/pool/create?game=knockout" : "/pool/create";
 
   return (
     <div className="mt-4 rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
@@ -76,12 +75,25 @@ function FeaturedBanner({ now }: { now: Date }) {
         <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
       ) : null}
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link href={createHref} className={PRIMARY_BTN}>
-          Create
-        </Link>
-        <Link href="/join" className={SECONDARY_BTN}>
-          Join
-        </Link>
+        {isMd3 ? (
+          <>
+            <Link href="/challenge/md3/play" className={PRIMARY_BTN}>
+              Play
+            </Link>
+            <Link href="/challenge/md3" className={SECONDARY_BTN}>
+              Leaderboard
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link href={createHref} className={PRIMARY_BTN}>
+              Create
+            </Link>
+            <Link href="/join" className={SECONDARY_BTN}>
+              Join
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

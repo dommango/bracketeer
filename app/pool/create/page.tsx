@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { hasTournamentStarted } from "@/lib/pool/queries";
 import type { PoolFormat } from "@/lib/pool/manage";
-import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import {
   GAME_CATALOG,
   resolveGamePhase,
@@ -15,13 +14,15 @@ import { Hero } from "../../Hero";
 
 export const dynamic = "force-dynamic";
 
-// Display order for the cards, featured game first so the most relevant option
-// leads. featuredGame is null in the lull between games — fall back to the
-// schedule's natural order (MD3 → Knockout → Full).
+// Display order for the creatable pool cards, featured game first so the most
+// relevant option leads. Match Day 3 Pickem is a challenge, not a pool, so it's
+// never offered here. featuredGame is null in the lull between games (and is MD3
+// while that's live) — in either case fall back to the natural Knockout → Full
+// order.
 function orderedFormats(now: Date): PoolFormat[] {
-  const base: PoolFormat[] = ["MATCH_DAY_3_PICKEM", "KNOCKOUT", "FULL_BRACKET"];
+  const base: PoolFormat[] = ["KNOCKOUT", "FULL_BRACKET"];
   const featured = featuredGame(now);
-  if (!featured) return base;
+  if (!featured || !base.includes(featured)) return base;
   return [featured, ...base.filter((f) => f !== featured)];
 }
 
@@ -35,13 +36,11 @@ export default async function CreatePoolPage({
   const now = new Date();
 
   // Full-bracket creatability is the only flag that needs a DB read (whether the
-  // tournament has actually kicked off); MD3/knockout are purely time-derived.
+  // tournament has actually kicked off); knockout is purely time-derived.
   const fullGameAvailable = !(await hasTournamentStarted());
-  const md3Available = isMd3GameOpen(now);
 
   const isCreatable = (f: PoolFormat): boolean => {
     if (f === "FULL_BRACKET") return fullGameAvailable && resolveGamePhase(f, now).creatable;
-    if (f === "MATCH_DAY_3_PICKEM") return md3Available;
     return resolveGamePhase(f, now).creatable;
   };
 
@@ -56,8 +55,7 @@ export default async function CreatePoolPage({
 
   // The requested / default selection: honour ?game= when creatable, else the
   // first creatable card.
-  const requested: PoolFormat | null =
-    game === "md3" ? "MATCH_DAY_3_PICKEM" : game === "knockout" ? "KNOCKOUT" : null;
+  const requested: PoolFormat | null = game === "knockout" ? "KNOCKOUT" : null;
   const defaultFormat: PoolFormat =
     requested && isCreatable(requested)
       ? requested

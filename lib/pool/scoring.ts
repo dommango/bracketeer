@@ -10,7 +10,7 @@ import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
 import { assignRanks } from "@/lib/pool/rank";
-import { scoreMd3Pool } from "@/lib/pool/md3-scoring";
+import { scoreMd3Pool, scoreMd3Entry, scoreStandaloneMd3 } from "@/lib/pool/md3-scoring";
 
 type Db = Prisma.TransactionClient;
 
@@ -110,9 +110,11 @@ export async function recomputeEntry(entryId: string): Promise<void> {
     });
     // Match Day 3 entries score against live Result rows via their own engine; the
     // parity oracle would decode their match_day_3 pick rows as an empty bracket
-    // (0 pts). MD3 is always a pooled format, so rescore the whole MD3 pool.
-    if (entry.format === "MATCH_DAY_3_PICKEM" && entry.poolId) {
-      await scoreMd3Pool(tx, entry.poolId, entry.tournamentId);
+    // (0 pts). A pooled entry rescores its whole MD3 pool; a standalone solo entry
+    // (poolId null) rescores just itself.
+    if (entry.format === "MATCH_DAY_3_PICKEM") {
+      if (entry.poolId) await scoreMd3Pool(tx, entry.poolId, entry.tournamentId);
+      else await scoreMd3Entry(tx, entry.id, entry.tournamentId);
       return;
     }
     const answer = asResults(entry.tournament.officialResults);
@@ -136,7 +138,12 @@ export async function recomputeStandalone(tournamentId: string): Promise<number>
       where: { tournamentId, poolId: null },
       include: { picks: true },
     });
-    await scoreEntryBreakdowns(tx, entries, answer, cfg);
+    // MD3 standalone entries score against live results, not the answer key (the
+    // oracle would read their pick rows as an empty bracket → 0). Split them out.
+    const bracketEntries = entries.filter((e) => e.format !== "MATCH_DAY_3_PICKEM");
+    const hasMd3 = entries.some((e) => e.format === "MATCH_DAY_3_PICKEM");
+    await scoreEntryBreakdowns(tx, bracketEntries, answer, cfg);
+    if (hasMd3) await scoreStandaloneMd3(tx, tournamentId);
     return entries.length;
   });
 }
