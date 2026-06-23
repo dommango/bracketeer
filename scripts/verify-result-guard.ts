@@ -80,6 +80,23 @@ async function main() {
     });
     const rb = await prisma.result.findUniqueOrThrow({ where: { matchId: liveMatch.id } });
     check("LIVE real score not clobbered by null payload", rb.homeScore === 1 && rb.awayScore === 0, `${rb.homeScore}-${rb.awayScore}`);
+
+    // 4) A legitimate later FINAL poll correcting the score must still apply.
+    await upsertGroupMatchResultFromApi(t.id, 71, {
+      homeCode: hcA, awayCode: acA, homeScore: 3, awayScore: 1, live: false, finished: true,
+    });
+    const corrected = await prisma.result.findUniqueOrThrow({ where: { matchId: finalMatch.id } });
+    check("FINAL→FINAL score correction applies", corrected.homeScore === 3 && corrected.awayScore === 1, `${corrected.homeScore}-${corrected.awayScore}`);
+    check("winner recomputed on correction", corrected.winnerCode === hcA, `${corrected.winnerCode}`);
+
+    // 5) A FINAL poll with null goals keeps the stored score AND a consistent winner
+    // (winnerCode derived from the coalesced score, not the raw null input).
+    await upsertGroupMatchResultFromApi(t.id, 71, {
+      homeCode: hcA, awayCode: acA, homeScore: null, awayScore: null, live: false, finished: true,
+    });
+    const awarded = await prisma.result.findUniqueOrThrow({ where: { matchId: finalMatch.id } });
+    check("null-goal FINAL keeps score", awarded.homeScore === 3 && awarded.awayScore === 1, `${awarded.homeScore}-${awarded.awayScore}`);
+    check("null-goal FINAL keeps a consistent winner", awarded.winnerCode === hcA, `${awarded.winnerCode}`);
   } finally {
     await restore(finalMatch.id, snapA);
     await restore(liveMatch.id, snapB);
