@@ -20,6 +20,9 @@ export function Md3Dashboard({
   isMember: boolean;
 }) {
   const hasPicks = view.pickedCount > 0;
+  const prize = prizeTeaser("MATCH_DAY_3_PICKEM");
+  // The teaser may already end in a sentence stop — don't double it up.
+  const prizeLine = prize ? (/[.!?]$/.test(prize) ? prize : `${prize}.`) : null;
 
   return (
     <div className="space-y-5">
@@ -34,9 +37,9 @@ export function Md3Dashboard({
           Exact score 5 pts · right result &amp; goal difference 3 · right result 1. Each pick locks
           at kickoff.
         </p>
-        {prizeTeaser("MATCH_DAY_3_PICKEM") ? (
+        {prizeLine ? (
           <p className="mt-1.5 text-[12px] font-semibold text-gold-dark">
-            🏆 {prizeTeaser("MATCH_DAY_3_PICKEM")} Enter the public challenge from your picks page.
+            🏆 {prizeLine} Enter the public challenge from your picks page.
           </p>
         ) : null}
 

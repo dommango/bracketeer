@@ -85,7 +85,7 @@ export default async function AdminPrizesPage() {
                             : "No winner recorded"}
                       </p>
                       <p className="mt-0.5 text-sm text-black/50">
-                        Prize: {a.description}
+                        Prize — {a.description}
                         {a.amount != null ? ` (${a.amount} ${a.currency})` : ""}
                       </p>
                       {a.sentAt ? (

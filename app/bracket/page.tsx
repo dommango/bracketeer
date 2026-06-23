@@ -162,7 +162,7 @@ function SignInGate() {
   return (
     <section className="space-y-4">
       <Card>
-        <p className="text-sm text-ink-3">Sign in to build your own bracket.</p>
+        <p className="text-sm text-ink-3">Sign in to build your bracket.</p>
         <Link href="/signin" className={PRIMARY_BTN}>
           Sign in →
         </Link>

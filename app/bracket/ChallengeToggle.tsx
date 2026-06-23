@@ -27,7 +27,7 @@ export function ChallengeToggle({ entryId, entered }: { entryId: string; entered
     <div className="rounded-2xl border border-line bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">Bracketeer Knockout Challenge</p>
+          <p className="text-sm font-semibold text-ink">Knockout Challenge</p>
           <p className="mt-0.5 text-xs text-ink-3">
             {on
               ? "Your bracket is on the global leaderboard."

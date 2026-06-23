@@ -31,7 +31,7 @@ export function JoinPoolForm({
             required
             maxLength={6}
             defaultValue={defaultCode}
-            placeholder="FIXTUR"
+            placeholder="ABC123"
             autoCapitalize="characters"
             className="min-w-0 flex-1 bg-transparent text-[15px] uppercase tracking-wide text-ink outline-none placeholder:normal-case"
           />

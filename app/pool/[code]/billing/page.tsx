@@ -56,18 +56,18 @@ export default async function BillingPage({
       {upgraded ? (
         <div className="mt-5 rounded-2xl border border-pitch/30 bg-pitch-tint px-4 py-3 text-sm text-pitch-dark">
           {premium
-            ? "🎉 Premium is active — your pool is now uncapped."
+            ? "Premium is active — your pool now has unlimited participants."
             : "Payment received — Premium is activating. Refresh in a moment."}
         </div>
       ) : null}
 
       {/* Usage */}
       <section className="mt-7">
-        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Members</h2>
+        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Participants</h2>
         <div className="mt-2 rounded-2xl border border-line bg-surface p-4">
           <p className="text-sm text-ink-2">
             <span className="font-semibold text-ink">{memberCount}</span>{" "}
-            {cap === null ? "members (unlimited)" : `of ${cap} members`}
+            {cap === null ? "participants (unlimited)" : `of ${cap} participants`}
           </p>
           {cap !== null && slots !== null ? (
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-sunk">
@@ -79,7 +79,7 @@ export default async function BillingPage({
           ) : null}
           {cap !== null && slots === 0 ? (
             <p className="mt-2 text-sm text-negative">
-              Your pool is full. Upgrade to add more players.
+              Your pool is full. Upgrade to add more participants.
             </p>
           ) : null}
         </div>
@@ -91,22 +91,23 @@ export default async function BillingPage({
         <div className="mt-2 rounded-2xl border border-line bg-surface p-4">
           {premium ? (
             <p className="text-sm text-ink-2">
-              This pool is on <span className="font-semibold text-gold-dark">Premium</span> — no
-              member limit. Manage or cancel your subscription anytime from your Stripe receipt
-              email.
+              This pool is on <span className="font-semibold text-gold-dark">Premium</span> —
+              unlimited participants. Manage or cancel your subscription anytime from your Stripe
+              receipt email.
             </p>
           ) : (
             <>
               <p className="text-sm text-ink-2">
                 <span className="font-semibold text-ink">Premium</span> lifts the{" "}
-                {FREE_MEMBER_CAP}-member limit so your whole crew can join.
+                {FREE_MEMBER_CAP}-participant limit for unlimited participants, so your whole crew
+                can join.
               </p>
               <div className="mt-3">
                 {stripeEnabled ? (
                   <UpgradeButton code={code} />
                 ) : (
                   <p className="rounded-md border border-line bg-surface-sunk px-3 py-2 text-sm text-ink-3">
-                    Online upgrades aren&apos;t available yet — check back soon.
+                    Billing isn&apos;t configured yet — check back soon.
                   </p>
                 )}
               </div>

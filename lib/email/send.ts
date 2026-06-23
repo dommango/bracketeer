@@ -38,7 +38,7 @@ export async function sendPrizeEmail({
   challengeName,
   prizeDescription,
 }: PrizeEmailInput): Promise<void> {
-  const subject = `You won the ${challengeName} on HessFest! 🏆`;
+  const subject = `You won the ${challengeName} on Bracketeer! 🏆`;
   const body = `Congratulations — you finished top of the ${challengeName} and won ${prizeDescription}. We'll be in touch to arrange your prize.`;
 
   if (!emailEnabled) {
@@ -74,9 +74,9 @@ export async function sendInviteEmail({ to, url, poolName }: InviteEmailInput): 
   const result = await transport.sendMail({
     to,
     from: env.EMAIL_FROM,
-    subject: `You're invited to ${poolName} on HessFest`,
-    text: `You've been invited to join ${poolName} on HessFest.\nJoin here:\n${url}\n`,
-    html: `<p>You've been invited to join <b>${escapeHtml(poolName)}</b> on HessFest.</p><p><a href="${url}">Join the pool →</a></p>`,
+    subject: `You're invited to ${poolName} on Bracketeer`,
+    text: `You've been invited to join ${poolName} on Bracketeer.\nJoin here:\n${url}\n`,
+    html: `<p>You've been invited to join <b>${escapeHtml(poolName)}</b> on Bracketeer.</p><p><a href="${url}">Join the pool →</a></p>`,
   });
   const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
   if (failed.length) throw new Error(`Invite email could not be sent to ${failed.join(", ")}`);

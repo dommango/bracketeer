@@ -42,7 +42,7 @@ export function InviteForm({ code }: { code: string }) {
       {state.url ? (
         <div className="rounded-2xl border border-pitch/30 bg-pitch-tint p-3">
           <p className="text-xs font-semibold text-pitch-dark">
-            {state.email ? `Invite emailed to ${state.email}.` : "Invite link ready —"} share this
+            {state.email ? `Invite emailed to ${state.email}.` : "Invite link ready."} Share this
             link:
           </p>
           <div className="mt-1.5 flex items-center gap-2">

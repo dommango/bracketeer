@@ -20,7 +20,7 @@ const schema = z.object({
   // Email magic-link (SMTP). When absent, magic-link sign-in is disabled and
   // links are logged to the server console for local development.
   EMAIL_SERVER: z.string().default(""),
-  EMAIL_FROM: z.string().default("HessFest <no-reply@bracketeer.app>"),
+  EMAIL_FROM: z.string().default("Bracketeer <no-reply@bracketeer.app>"),
   CRON_SECRET: z.string().min(1),
   // Sports data API (optional — manual result entry works without it).
   SPORTS_API_KEY: z.string().default(""),

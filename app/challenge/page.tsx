@@ -10,7 +10,7 @@ export default async function ChallengeLeaderboardPage() {
   return (
     <section className="space-y-5">
       <header className="space-y-1">
-        <h1 className="font-display text-2xl text-ink">Bracketeer Knockout Challenge</h1>
+        <h1 className="font-display text-2xl text-ink">Knockout Challenge</h1>
         <p className="text-sm text-ink-3">
           Every bracket entered into the global knockout challenge, ranked together.
         </p>

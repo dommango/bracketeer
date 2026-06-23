@@ -52,7 +52,7 @@ export async function saveMd3Picks(
   }
 
   const scores = parseScores(formData);
-  const label = (access.user.name ?? access.user.email ?? "Player").trim();
+  const label = (access.user.name ?? access.user.email ?? "Participant").trim();
 
   try {
     await upsertMd3Picks({ poolId: pool.id, userId: access.user.id, label, scores });

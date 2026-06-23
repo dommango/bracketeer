@@ -82,7 +82,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
     title: "Knockout Challenge",
     notes: [
       "Standalone knockout-bracket game: pick winners once the last 32 are set.",
-      "Picks lock at the Round-of-32 kickoff; live leaderboard and bracket views.",
+      "Picks lock at the Round of 32 kickoff; live leaderboard and bracket views.",
     ],
   },
   {

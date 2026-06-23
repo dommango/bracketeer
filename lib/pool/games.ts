@@ -39,7 +39,7 @@ export const GAME_CATALOG: Record<PoolFormat, GameCatalogEntry> = {
     name: "Knockout Challenge",
     tagline: "Create & invite now — picks open when the last 32 are set.",
     blurb:
-      "Predict the knockout bracket against your friends. Create your pool and invite everyone now with the join code — picks open once the group stage wraps and the last 32 are set, then lock at the Round-of-32 kickoff.",
+      "Predict the knockout bracket against your friends. Create your pool and invite everyone now with the join code — picks open once the group stage wraps and the last 32 are set, then lock at the Round of 32 kickoff.",
     scoringSummary: "Round of 32 1 · R16 2 · QF 3 · SF 4 · Final 5.",
   },
   FULL_BRACKET: {
@@ -221,7 +221,7 @@ export function gameStateLine(format: PoolFormat, now: Date = new Date()): strin
           ? `Create & invite now · picks open ${dayLabel(state.deadline)}`
           : "Create & invite now · picks open at the draw";
       case "PICKS_OPEN":
-        return "Picks open now · lock at the Round-of-32 kickoff";
+        return "Picks open now · lock at the Round of 32 kickoff";
       default:
         return "Locked — the Round of 32 has kicked off";
     }

@@ -161,7 +161,7 @@ function SignedInHub({
       </div>
 
       <Link href="/bracket" className={`mt-4 ${pools.length > 0 ? SECONDARY_BTN : PRIMARY_BTN}`}>
-        Build your own bracket →
+        Build your bracket →
       </Link>
 
       <div className="mt-2 grid grid-cols-2 gap-2">
