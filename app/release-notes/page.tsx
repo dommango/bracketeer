@@ -8,6 +8,19 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.10.0",
+    date: "June 23, 2026",
+    title: "Home hub & public challenges",
+    notes: [
+      "The home screen now promotes both public games side by side — Match Day Pickem and the Knockout Challenge — each with its own card, and the Knockout Challenge shows the Round of 32 countdown.",
+      "“Build your bracket” is now clearly the Knockout Challenge entry: build your knockout bracket and top the global leaderboard.",
+      "New here? If you’re not in a pool yet, the home screen walks you through starting your own Knockout Stage Pool to play with friends.",
+      "Group standings no longer show a team as “eliminated” while its group is still being played — your picks stay in contention until the results are final.",
+      "Match Day Pickem now spells out the dates (June 24–27) and that picks close at the start of each match.",
+      "Added Terms of Service and Privacy Policy pages, linked from the footer and the sign-in screen.",
+    ],
+  },
+  {
     version: "0.9.0",
     date: "June 21, 2026",
     title: "Solo brackets & group overlay",

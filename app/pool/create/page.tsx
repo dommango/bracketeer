@@ -7,7 +7,6 @@ import {
   resolveGamePhase,
   featuredGame,
   gameStateLine,
-  prizeTeaser,
 } from "@/lib/pool/games";
 import { CreatePoolForm, type GameCardVM } from "./CreatePoolForm";
 import { Hero } from "../../Hero";
@@ -49,7 +48,6 @@ export default async function CreatePoolPage({
     title: GAME_CATALOG[f].poolName ?? "",
     blurb: GAME_CATALOG[f].blurb,
     stateLine: gameStateLine(f, now),
-    prizeTeaser: prizeTeaser(f),
     disabled: !isCreatable(f),
   }));
 
