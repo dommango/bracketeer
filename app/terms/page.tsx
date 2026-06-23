@@ -86,7 +86,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "13. Governing law",
     body: [
-      "These terms are governed by the laws of the State of [your state], United States, without regard to conflict-of-law rules. Any disputes will be handled in the courts located there.",
+      "These terms are governed by the laws of the State of New Jersey, United States, without regard to conflict-of-law rules. Any disputes will be handled in the state or federal courts located in New Jersey.",
     ],
   },
   {
