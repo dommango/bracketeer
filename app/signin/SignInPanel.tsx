@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signIn } from "@/auth";
 import { googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { kickoffFor } from "@/lib/scoring/schedule";
@@ -142,6 +143,18 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
           ) : null}
         </form>
       </div>
+
+      <p className="mt-4 text-center text-[12px] text-ink-3">
+        By continuing you agree to our{" "}
+        <Link href="/terms" className="font-semibold text-pitch-dark hover:underline">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="font-semibold text-pitch-dark hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </main>
   );
 }
