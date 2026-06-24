@@ -18,6 +18,15 @@ export function Footer() {
           v{APP_VERSION}
         </Link>
       </div>
+      <div className="flex justify-center gap-2">
+        <Link href="/terms" className="text-pitch-dark hover:underline">
+          Terms
+        </Link>
+        <span>·</span>
+        <Link href="/privacy" className="text-pitch-dark hover:underline">
+          Privacy
+        </Link>
+      </div>
     </footer>
   );
 }

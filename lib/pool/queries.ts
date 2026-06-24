@@ -45,7 +45,7 @@ import {
 } from "@/lib/pool/stadium-projection";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { groupOverlayBreakdown, type GroupOverlayBreakdown } from "@/lib/pool/group-overlay";
-import { TEAMS } from "@/lib/scoring/data";
+import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import type { ImpliedProbs } from "@/lib/odds/map";
 import type { H2HSummary } from "@/lib/sports/predictions-parse";
 import type { LineupPlayer } from "@/lib/sports/lineups-parse";
@@ -553,9 +553,14 @@ export async function getGroupOverlay(
 
   const resultRows = await prisma.result.findMany({
     where: { status: { in: ["LIVE", "FINAL"] }, match: { tournamentId: pool.tournament.id, matchNo: { lte: 72 } } },
-    select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+    select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true, status: true },
   });
   const groupRows: GroupResultRow[] = [];
+  // Count FINAL group results per group: only when all 6 are FINAL is a team out of
+  // the spots truly eliminated (a LIVE match can still swing the table).
+  const teamGroup = new Map<string, string>();
+  for (const [g, codes] of Object.entries(GROUPS)) for (const c of codes) teamGroup.set(c, g);
+  const finalByGroup = new Map<string, number>();
   for (const r of resultRows) {
     if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
     groupRows.push({
@@ -564,10 +569,18 @@ export async function getGroupOverlay(
       homeScore: r.homeScore,
       awayScore: r.awayScore,
     });
+    if (r.status === "FINAL") {
+      const g = teamGroup.get(r.homeTeamCode);
+      if (g) finalByGroup.set(g, (finalByGroup.get(g) ?? 0) + 1);
+    }
   }
+  const completedGroups = new Set(
+    Object.keys(GROUPS).filter((g) => (finalByGroup.get(g) ?? 0) >= 6),
+  );
 
   const official = asResults(pool.tournament.officialResults);
-  const overlay = overlayProvisional(official, provisionalStandings(computeGroupTables(groupRows)));
+  const tables = computeGroupTables(groupRows);
+  const overlay = overlayProvisional(official, provisionalStandings(tables));
   const cfg = asScoringConfig(pool.tournament.scoringConfig);
 
   return entries.map((e) => {
@@ -576,7 +589,7 @@ export async function getGroupOverlay(
       entryId: e.id,
       label: e.label,
       thirdAdvance: picks.thirdAdvance ?? [],
-      breakdown: groupOverlayBreakdown(picks, official, overlay, cfg),
+      breakdown: groupOverlayBreakdown(picks, official, overlay, cfg, tables, completedGroups),
     };
   });
 }

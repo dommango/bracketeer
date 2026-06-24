@@ -8,6 +8,7 @@
 import { GROUPS } from "@/lib/scoring/data";
 import type { Picks, Results } from "@/lib/scoring/types";
 import type { ScoringConfig } from "@/lib/scoring/score";
+import type { GroupTableRow } from "@/lib/pool/group-table";
 
 // Two distinct partial-credit cases are kept separate so the UI can explain each:
 // "wrong_slot" = right team in the other top-2 slot; "third" = a top-2 pick that is
@@ -78,11 +79,20 @@ function thirdsPoints(picks: Picks, results: Results, cfg: ScoringConfig): numbe
 // Status of one slot pick against the live overlay standings. "pending" while
 // the group has no provisional standings yet (or its target rank is still tied);
 // "partial" covers right-team-wrong-slot and a correct 3rd-place advancer.
+//
+// "miss" (✗ eliminated) is deliberately conservative: a pick is only eliminated
+// once that's actually settled. Being out of the qualifying spots on the *live*
+// provisional table is NOT elimination — the team can still climb while its group
+// is in progress (a 3rd-place team can even back in as a best-3rd). So we only
+// call it a miss when its group is fully decided, and — because best-3rd is a
+// cross-group race — a 3rd-place team isn't eliminated until the whole group stage
+// has settled. Anything not yet settled stays "pending".
 function cellStatus(
   pick: string | undefined,
   overlay: Results,
   g: string,
   slot: "first" | "second",
+  decided: { groupDecided: boolean; stageComplete: boolean; rank: number | null },
 ): PickStatus {
   if (!pick) return "pending";
   const oFirst = overlay.groupFirst?.[g];
@@ -94,6 +104,10 @@ function cellStatus(
   if (other && pick === other) return "wrong_slot"; // right team, other top-2 slot
   if (new Set(overlay.thirdAdvance || []).has(pick)) return "third"; // advancing as a best-3rd
   if (!target) return "pending"; // this rank is still tied/unresolved
+  // Out of the top-2 and not a current best-3rd. Only eliminated once settled:
+  if (!decided.groupDecided) return "pending"; // group still in progress
+  if (decided.rank != null && decided.rank <= 2) return "pending"; // top-2 but tie-ambiguous
+  if (decided.rank === 3 && !decided.stageComplete) return "pending"; // best-3rd unresolved
   return "miss";
 }
 
@@ -102,6 +116,11 @@ export function groupOverlayBreakdown(
   official: Results,
   overlay: Results,
   cfg: ScoringConfig,
+  // Live group tables (for each pick's current rank) and the set of groups whose
+  // matches have all gone FINAL. Both default empty so a caller with no live data
+  // still gets correct results — every undecided group simply stays "pending".
+  tables: Record<string, GroupTableRow[]> = {},
+  completedGroups: Set<string> = new Set(),
 ): GroupOverlayBreakdown {
   // Per-status live points; the two slot values sum to the group's overlayPoints.
   const slotPoints = (status: PickStatus): number =>
@@ -111,16 +130,38 @@ export function groupOverlayBreakdown(
         ? cfg.groupPartial
         : 0;
 
+  // A group is decided once it's admin-finalized or every match has gone FINAL.
+  const isGroupDecided = (g: string): boolean =>
+    Boolean(official.groupFirst?.[g]) || completedGroups.has(g);
+  // The whole stage is settled once the official thirds are in, or every group is
+  // decided — the point at which a 3rd-place team's best-3rd fate stops changing.
+  const stageComplete =
+    (official.thirdAdvance?.length ?? 0) > 0 ||
+    Object.keys(GROUPS).every((g) => isGroupDecided(g));
+
   const groups: GroupOverlayCell[] = Object.keys(GROUPS).map((g) => {
+    const groupDecided = isGroupDecided(g);
+    const rankOf = (code: string | undefined): number | null =>
+      (code ? tables[g]?.find((r) => r.code === code)?.rank : null) ?? null;
     const officialPoints = groupPositionPoints(picks, official, g, cfg);
     const overlayPoints = groupPositionPoints(picks, overlay, g, cfg);
     const first = ((): GroupPickCell => {
-      const status = cellStatus(picks.groupFirst?.[g], overlay, g, "first");
-      return { code: picks.groupFirst?.[g] ?? null, status, points: slotPoints(status) };
+      const pick = picks.groupFirst?.[g];
+      const status = cellStatus(pick, overlay, g, "first", {
+        groupDecided,
+        stageComplete,
+        rank: rankOf(pick),
+      });
+      return { code: pick ?? null, status, points: slotPoints(status) };
     })();
     const second = ((): GroupPickCell => {
-      const status = cellStatus(picks.groupSecond?.[g], overlay, g, "second");
-      return { code: picks.groupSecond?.[g] ?? null, status, points: slotPoints(status) };
+      const pick = picks.groupSecond?.[g];
+      const status = cellStatus(pick, overlay, g, "second", {
+        groupDecided,
+        stageComplete,
+        rank: rankOf(pick),
+      });
+      return { code: pick ?? null, status, points: slotPoints(status) };
     })();
     return {
       group: g,

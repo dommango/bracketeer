@@ -106,8 +106,8 @@ describe("featuredGame across the Jun 22→28 window", () => {
 
 describe("prizeTeaser", () => {
   it("returns a teaser for challenge formats and null for full bracket", () => {
-    expect(prizeTeaser("KNOCKOUT")).toMatch(/gift card/i);
-    expect(prizeTeaser("MATCH_DAY_3_PICKEM")).toMatch(/gift card/i);
+    expect(prizeTeaser("KNOCKOUT")).toMatch(/top the challenge, win a prize/i);
+    expect(prizeTeaser("MATCH_DAY_3_PICKEM")).toMatch(/top the challenge, win a prize/i);
     expect(prizeTeaser("FULL_BRACKET")).toBeNull();
   });
 });
