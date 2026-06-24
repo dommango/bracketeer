@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState, type MouseEvent } from "react";
 import { saveMd3ChallengeEntry, type SaveMd3ChallengeState } from "./actions";
 import type { Md3FixtureVM } from "@/lib/pool/md3-view";
 import { Flag } from "@/app/pool/[code]/Flag";
@@ -129,14 +129,34 @@ export function Md3ChallengeForm({
   fixtures: Md3FixtureVM[];
   // False when signed out or the game is fully locked (read-only).
   canEdit: boolean;
-  // True when the signed-in user hasn't yet accepted the terms — show the
-  // one-time consent checkbox (this entry carries a prize).
+  // True when the signed-in user hasn't yet accepted the terms — the save button
+  // opens a one-time consent popup (this entry carries a prize) before submitting.
   needsConsent?: boolean;
 }) {
   const [state, action, pending] = useActionState<SaveMd3ChallengeState, FormData>(
     saveMd3ChallengeEntry,
     {},
   );
+  const formRef = useRef<HTMLFormElement>(null);
+  // Consent is captured via a popup rather than an inline checkbox: the sticky
+  // save bar (and the fixed bottom nav) could hide a checkbox placed in the form
+  // flow. Once agreed, the hidden `agreed` input is "on" and we submit the form
+  // programmatically — the server action then records consent.
+  const [agreed, setAgreed] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
+
+  useEffect(() => {
+    if (agreed) formRef.current?.requestSubmit();
+  }, [agreed]);
+
+  // Intercept the first save when consent is still needed: open the popup instead
+  // of submitting. After agreement (or when consent isn't required) submit runs.
+  function handleSave(e: MouseEvent<HTMLButtonElement>) {
+    if (needsConsent && !agreed) {
+      e.preventDefault();
+      setShowConsent(true);
+    }
+  }
 
   const rows = fixtures.map((f, i) => {
     const day = dayLabel(f.kickoffISO);
@@ -145,55 +165,126 @@ export function Md3ChallengeForm({
   });
 
   return (
-    <form action={action} className="space-y-3">
-      <ul className="space-y-2">
-        {rows.map(({ f, day, showDay }) => (
-          <li key={f.matchNo}>
-            {showDay ? (
-              <p className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">
-                {day}
-              </p>
-            ) : null}
-            <FixtureCard f={f} disabled={!canEdit || f.locked} />
-          </li>
-        ))}
-      </ul>
+    <>
+      <form ref={formRef} action={action} className="space-y-3">
+        <ul className="space-y-2">
+          {rows.map(({ f, day, showDay }) => (
+            <li key={f.matchNo}>
+              {showDay ? (
+                <p className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">
+                  {day}
+                </p>
+              ) : null}
+              <FixtureCard f={f} disabled={!canEdit || f.locked} />
+            </li>
+          ))}
+        </ul>
 
-      {state.error ? (
-        <p className="rounded-md border border-negative/40 bg-negative/10 px-3 py-2 text-sm text-negative">
-          {state.error}
+        {state.error ? (
+          <p className="rounded-md border border-negative/40 bg-negative/10 px-3 py-2 text-sm text-negative">
+            {state.error}
+          </p>
+        ) : null}
+        {state.ok ? (
+          <p className="rounded-md border border-pitch/30 bg-pitch/5 px-3 py-2 text-sm text-pitch-dark">
+            Predictions saved — you&apos;re in the challenge.
+          </p>
+        ) : null}
+
+        {canEdit && needsConsent ? (
+          <input type="hidden" name="agreed" value={agreed ? "on" : ""} />
+        ) : null}
+
+        {canEdit ? (
+          <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] pt-1">
+            <button
+              type="submit"
+              onClick={handleSave}
+              disabled={pending}
+              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white shadow-[var(--shadow-md)] transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+            >
+              {pending ? "Saving…" : "Save predictions"}
+            </button>
+          </div>
+        ) : null}
+      </form>
+
+      {showConsent ? (
+        <ConsentPopup
+          pending={pending}
+          onCancel={() => setShowConsent(false)}
+          onAgree={() => {
+            setShowConsent(false);
+            setAgreed(true);
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+// One-time consent popup shown when a signed-in user enters the prize challenge
+// for the first time. Rendered above the fixed bottom nav (z-50 over its z-40) so
+// it can't be hidden the way the old inline checkbox was. Backdrop click or Escape
+// cancels; "Agree & save" records consent and submits.
+function ConsentPopup({
+  onAgree,
+  onCancel,
+  pending,
+}: {
+  onAgree: () => void;
+  onCancel: () => void;
+  pending: boolean;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="md3-consent-title"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-[420px] rounded-3xl border border-line bg-surface p-5 shadow-[var(--shadow-lg)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="md3-consent-title" className="font-display text-lg text-ink">
+          One quick confirm
+        </h2>
+        <p className="mt-2 text-sm text-ink-2">
+          Match Day Pickem carries a real prize. By entering you confirm you&apos;re 18+ and agree
+          to our{" "}
+          <Link href="/terms" className="font-semibold text-pitch hover:underline">Terms</Link>,{" "}
+          <Link href="/privacy" className="font-semibold text-pitch hover:underline">Privacy Policy</Link>{" "}
+          and{" "}
+          <Link href="/rules" className="font-semibold text-pitch hover:underline">Official Rules</Link>.
         </p>
-      ) : null}
-      {state.ok ? (
-        <p className="rounded-md border border-pitch/30 bg-pitch/5 px-3 py-2 text-sm text-pitch-dark">
-          Predictions saved — you&apos;re in the challenge.
-        </p>
-      ) : null}
-
-      {canEdit && needsConsent ? (
-        <label className="flex items-start gap-2 px-1 text-[12px] text-ink-3">
-          <input type="checkbox" name="agreed" required className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            I&apos;m 18+ and agree to the{" "}
-            <Link href="/terms" className="font-semibold text-pitch hover:underline">Terms</Link>,{" "}
-            <Link href="/privacy" className="font-semibold text-pitch hover:underline">Privacy Policy</Link>{" "}
-            and{" "}
-            <Link href="/rules" className="font-semibold text-pitch hover:underline">Official Rules</Link>.
-          </span>
-        </label>
-      ) : null}
-
-      {canEdit ? (
-        <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] pt-1">
+        <div className="mt-5 flex gap-2">
           <button
-            type="submit"
-            disabled={pending}
-            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white shadow-[var(--shadow-md)] transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-line bg-surface px-4 font-semibold text-ink-2 transition-colors hover:bg-surface-sunk"
           >
-            {pending ? "Saving…" : "Save predictions"}
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onAgree}
+            disabled={pending}
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-pitch px-4 font-semibold text-white shadow-[var(--shadow-md)] transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+          >
+            Agree &amp; save
           </button>
         </div>
-      ) : null}
-    </form>
+      </div>
+    </div>
   );
 }
