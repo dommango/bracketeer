@@ -56,7 +56,14 @@ function FixtureRow({ f }: { f: Md3FixtureVM }) {
           <Flag code={f.homeCode} size={22} />
         </span>
         <span className="inline-flex items-center gap-1 rounded-lg bg-surface-sunk px-2.5 py-1 font-mono text-[15px] font-bold tabular-nums text-ink">
-          {f.pred ? (
+          {f.predHidden ? (
+            <span
+              className="text-[11px] font-semibold text-ink-3"
+              title="Predictions reveal once the fixture kicks off"
+            >
+              🔒 kickoff
+            </span>
+          ) : f.pred ? (
             <>
               {f.pred.home}
               <span className="text-ink-4">–</span>

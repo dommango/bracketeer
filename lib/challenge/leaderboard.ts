@@ -12,7 +12,7 @@ import { rankEnteredRows } from "@/lib/challenge/rank-entered";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { decodeMd3Rows } from "@/lib/pool/md3-picks";
-import { isKnockoutEntryComplete, isMd3EntryComplete } from "@/lib/challenge/eligibility";
+import { isKnockoutEntryComplete } from "@/lib/challenge/eligibility";
 
 // Knockout pick rows carry the match id in their CSV-mirrored category ("M73").
 const KNOCKOUT_PICK_SECTIONS = [
@@ -147,10 +147,16 @@ export async function getMd3ChallengeLeaderboard(
     },
   });
 
-  // Same verified-email gate as the knockout board (anti-Sybil): a complete entry
-  // owned by a verified-email account.
+  // Verified-email gate (anti-Sybil), same as the knockout board. An entry shows
+  // as soon as its sheet is saved — it does NOT need all 24 fixtures predicted;
+  // its points reflect whichever fixtures it predicted and that have gone final.
+  // We still require at least one prediction so blank, never-played entries don't
+  // clutter the board.
   const eligible = entries.filter(
-    (e) => Boolean(e.userId) && Boolean(e.user?.emailVerified) && isMd3EntryComplete(decodeMd3Rows(e.picks)),
+    (e) =>
+      Boolean(e.userId) &&
+      Boolean(e.user?.emailVerified) &&
+      Object.keys(decodeMd3Rows(e.picks)).length > 0,
   );
   if (eligible.length === 0) return [];
 

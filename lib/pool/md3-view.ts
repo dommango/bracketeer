@@ -8,6 +8,7 @@ import {
   md3Fixtures,
   MD3_MATCH_NOS,
   isMd3MatchLocked,
+  revealMd3Fixture,
   scoreMd3,
 } from "@/lib/pool/match-day-3";
 import { getStandaloneMd3Entry, decodeMd3Rows, type Md3Scores } from "@/lib/pool/md3-picks";
@@ -22,7 +23,14 @@ export interface Md3FixtureVM {
   awayName: string;
   kickoffISO: string;
   locked: boolean;
+  // The entry's prediction, or null when not predicted OR hidden from this
+  // viewer (see predHidden). Never carries another player's pick before kickoff.
   pred: { home: number; away: number } | null;
+  // True when a prediction is being withheld because the fixture hasn't kicked
+  // off and the viewer doesn't own this entry. Distinguishes "hidden until
+  // kickoff" from a genuine no-pick so the UI can show the right placeholder
+  // without leaking whether the owner predicted this fixture.
+  predHidden: boolean;
   result: { home: number; away: number; final: boolean } | null;
   points: number | null;
   // Pre-match win/draw/win probabilities, oriented to the fixture's home/away
@@ -45,7 +53,8 @@ export async function getMd3ChallengeView(
   now: Date = new Date(),
 ): Promise<Md3View> {
   const entry = userId ? await getStandaloneMd3Entry(tournamentId, userId) : null;
-  return buildMd3View(tournamentId, entry?.scores ?? null, now);
+  // The viewer's own predictions — always fully revealed to them.
+  return buildMd3View(tournamentId, entry?.scores ?? null, now, true);
 }
 
 export interface Md3EntryView {
@@ -57,9 +66,15 @@ export interface Md3EntryView {
 // A single MD3 entry's decorated predictions, for the public per-entry breakdown
 // page. Scoped to the tournament so an entryId from another tournament can't be
 // surfaced here. Returns null when the entry doesn't exist (or isn't MD3).
+//
+// `viewerId` is the signed-in viewer (or null). Another player's predictions are
+// withheld fixture-by-fixture until each fixture kicks off; the owner always sees
+// their own. Points/results are unaffected — they only exist once a fixture is
+// final (i.e. already kicked off), so the public board still shows everyone's total.
 export async function getMd3EntryView(
   tournamentId: string,
   entryId: string,
+  viewerId: string | null = null,
   now: Date = new Date(),
 ): Promise<Md3EntryView | null> {
   const entry = await prisma.entry.findUnique({
@@ -67,6 +82,7 @@ export async function getMd3EntryView(
     select: {
       id: true,
       label: true,
+      userId: true,
       tournamentId: true,
       format: true,
       picks: { select: { category: true, key: true, teamOrValue: true } },
@@ -75,16 +91,20 @@ export async function getMd3EntryView(
   if (!entry || entry.tournamentId !== tournamentId || entry.format !== "MATCH_DAY_3_PICKEM") {
     return null;
   }
-  const view = await buildMd3View(tournamentId, decodeMd3Rows(entry.picks), now);
+  const isOwner = !!viewerId && entry.userId === viewerId;
+  const view = await buildMd3View(tournamentId, decodeMd3Rows(entry.picks), now, isOwner);
   return { entryId: entry.id, label: entry.label, view };
 }
 
 // Build the read model from a set of predictions, decorating the 24 fixtures with
 // live/final results and per-match lock state. Source-agnostic (pool or challenge).
+// `isOwner` controls pick visibility: when false, a fixture's prediction is hidden
+// until that fixture kicks off (see revealMd3Fixture).
 async function buildMd3View(
   tournamentId: string,
   preds: Md3Scores | null,
   now: Date,
+  isOwner: boolean,
 ): Promise<Md3View> {
   const fixtures = md3Fixtures();
 
@@ -141,8 +161,15 @@ async function buildMd3View(
     const locked = isMd3MatchLocked(f.matchNo, now);
     if (!locked) openCount += 1;
 
-    const pred = predictions[f.matchNo] ?? null;
-    if (pred) pickedCount += 1;
+    const rawPred = predictions[f.matchNo] ?? null;
+    if (rawPred) pickedCount += 1;
+
+    // Hide another player's scoreline until this fixture kicks off. Withhold it
+    // uniformly for every not-yet-revealed fixture (regardless of whether they
+    // actually predicted it) so we never leak even *that* they made a pick.
+    const reveal = revealMd3Fixture(f.matchNo, isOwner, now);
+    const pred = reveal ? rawPred : null;
+    const predHidden = !reveal;
 
     const r = byNo.get(f.matchNo);
     let result: Md3FixtureVM["result"] = null;
@@ -155,9 +182,11 @@ async function buildMd3View(
       if (r.final) scoredCount += 1;
     }
 
+    // Points are derived from a final result (so the fixture has kicked off and
+    // is revealed anyway); use the true prediction so totals stay correct.
     let points: number | null = null;
-    if (result?.final && pred) {
-      points = scoreMd3(pred, { home: result.home, away: result.away });
+    if (result?.final && rawPred) {
+      points = scoreMd3(rawPred, { home: result.home, away: result.away });
       totalPoints += points;
     }
 
@@ -171,6 +200,7 @@ async function buildMd3View(
       kickoffISO: f.kickoff.toISOString(),
       locked,
       pred,
+      predHidden,
       result,
       points,
       odds: oddsByNo.get(f.matchNo) ?? null,

@@ -65,6 +65,18 @@ export function isMd3MatchLocked(matchNo: number, now: Date = new Date()): boole
   return now.getTime() >= at.getTime();
 }
 
+// Whether a fixture's prediction may be shown to a given viewer. You always see
+// your own predictions; anyone else only sees a fixture's pick once that fixture
+// has kicked off (its own lock). This keeps other players' Match Day Pickem
+// scorelines hidden until the game starts, while points/results stay public.
+export function revealMd3Fixture(
+  matchNo: number,
+  isOwner: boolean,
+  now: Date = new Date(),
+): boolean {
+  return isOwner || isMd3MatchLocked(matchNo, now);
+}
+
 // The earliest and latest MD3 kickoffs — the game opens for play until the last
 // one (after which every pick is locked and creating a new game is pointless).
 export function firstMd3Kickoff(): Date {
