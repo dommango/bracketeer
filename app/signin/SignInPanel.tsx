@@ -3,6 +3,7 @@ import { signIn } from "@/auth";
 import { googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { R32Countdown } from "@/app/pool/[code]/R32Countdown";
+import { PublicGames } from "@/app/PublicGames";
 
 // Match 73 is the Round-of-32 kickoff — surfaced here as the pre-sign-in hook.
 const R32_KICKOFF = kickoffFor(73);
@@ -43,6 +44,7 @@ async function facebookSignIn(formData: FormData) {
 // account on first sign-in, so this single panel covers both new and returning
 // players. Rendered both at `/` (signed-out) and at `/signin`.
 export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
+  const now = new Date();
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
       <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
@@ -155,6 +157,8 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
         </Link>
         .
       </p>
+
+      <PublicGames now={now} />
     </main>
   );
 }
