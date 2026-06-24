@@ -20,7 +20,7 @@ export async function acceptInviteAction(
   const user = await getSessionUser();
   if (!user) redirect(`/signin?callbackUrl=/invite/${encodeURIComponent(token)}`);
 
-  if (!rateLimit(`accept-invite:${user.id}`, 20, 60_000).ok) {
+  if (!(await rateLimit(`accept-invite:${user.id}`, 20, 60_000)).ok) {
     return { error: "Too many attempts — wait a minute and try again." };
   }
 

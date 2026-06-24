@@ -19,7 +19,7 @@ export async function createPoolAction(
   if (!user) redirect("/signin");
 
   // Cap pool creation so one account can't spawn pools en masse.
-  if (!rateLimit(`pool-create:${user.id}`, 10, 3_600_000).ok) {
+  if (!(await rateLimit(`pool-create:${user.id}`, 10, 3_600_000)).ok) {
     return { error: "You've created a lot of pools — try again later." };
   }
 

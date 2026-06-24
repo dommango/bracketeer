@@ -29,7 +29,7 @@ export async function POST(
   const access = await getPoolAccess(poolId);
   if (!access) return apiError("Pool not found", 404);
 
-  const limited = rateLimit(`react:${access.user.id}`, REACT_LIMIT, REACT_WINDOW_MS);
+  const limited = await rateLimit(`react:${access.user.id}`, REACT_LIMIT, REACT_WINDOW_MS);
   if (!limited.ok) return apiError("Slow down a moment.", 429);
 
   let input: z.infer<typeof reactSchema>;

@@ -90,8 +90,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   events: {
     // Bind any entries imported for this email on every sign-in (idempotent).
-    async signIn({ user }) {
-      if (user?.id) await claimEntriesForUser(user.id, user.email);
+    async signIn({ user, account }) {
+      if (!user?.id) return;
+      await claimEntriesForUser(user.id, user.email);
+      // OAuth providers (Google/Facebook) only ever return a provider-verified
+      // email, but the Prisma adapter doesn't populate emailVerified for them
+      // (only the magic-link does). Stamp it on first OAuth sign-in so the prize
+      // eligibility gate (verified email required) doesn't wrongly exclude the
+      // majority of users. Guarded on null so we never clobber an existing stamp.
+      if (account?.provider === "google" || account?.provider === "facebook") {
+        await prisma.user.updateMany({
+          where: { id: user.id, emailVerified: null },
+          data: { emailVerified: new Date() },
+        });
+      }
     },
   },
 });

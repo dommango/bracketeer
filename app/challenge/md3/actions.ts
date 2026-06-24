@@ -6,6 +6,8 @@ import { saveMyMd3Predictions } from "@/lib/challenge/md3-entry";
 import { MD3_MATCH_NOS } from "@/lib/pool/match-day-3";
 import type { Md3Scores } from "@/lib/pool/md3-picks";
 import { rateLimit } from "@/lib/rate-limit";
+import { ensureChallengeConsent } from "@/lib/account/consent";
+import { publicLabel } from "@/lib/challenge/public-label";
 
 export interface SaveMd3ChallengeState {
   error?: string;
@@ -38,12 +40,23 @@ export async function saveMd3ChallengeEntry(
   const user = await getSessionUser();
   if (!user) return { error: "Sign in to enter Match Day Pickem." };
 
-  if (!rateLimit(`md3-challenge-save:${user.id}`, 30, 60_000).ok) {
+  if (!(await rateLimit(`md3-challenge-save:${user.id}`, 30, 60_000)).ok) {
     return { error: "Too many saves — give it a moment and try again." };
   }
 
+  // Entering is prize-eligible, so it requires consent (18+ / Terms / Privacy /
+  // Official Rules). Recorded once; subsequent saves pass through.
+  const agreed = formData.get("agreed") === "on";
+  if (!(await ensureChallengeConsent(user.id, agreed)).ok) {
+    return {
+      error: "Please confirm you're 18+ and accept the Terms, Privacy Policy and Official Rules to enter.",
+    };
+  }
+
   const scores = parseScores(formData);
-  const label = (user.name ?? user.email ?? "Participant").trim();
+  // Public-board label must never be an email (publicLabel falls back to an
+  // anonymous handle when there's no usable name).
+  const label = publicLabel(user.name, user.id);
 
   try {
     await saveMyMd3Predictions({ userId: user.id, label, scores });

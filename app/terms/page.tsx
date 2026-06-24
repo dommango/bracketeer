@@ -3,9 +3,8 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 // Plain-language Terms of Service. Operator: Dom Mangonon (individual). Governing
-// law: United States — the specific state is the one bracketed value left to fill.
-// Not a substitute for legal review before a public launch (prizes + public data
-// collection carry real exposure).
+// law: United States (New Jersey). Not a substitute for legal review before a
+// public launch (prizes + public data collection carry real exposure).
 const LAST_UPDATED = "June 2026";
 
 const SECTIONS: { heading: string; body: string[] }[] = [
@@ -19,6 +18,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
     heading: "2. Who can use Bracketeer",
     body: [
       "You must be at least 13 years old to use Bracketeer. If you are under 18, you may use it only with the involvement and consent of a parent or guardian. You are responsible for everything that happens under your account.",
+      "Prize challenges have a higher bar: you must be 18 or older to enter a challenge that offers a prize. See the Official Rules for full eligibility.",
     ],
   },
   {
@@ -37,14 +37,14 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "5. Prizes",
     body: [
-      "Some public challenges may offer a prize, such as a gift card. Bracketeer is free to play — no purchase is necessary to enter or win. Any prize, its value, and how a winner is determined are described where that challenge is promoted.",
-      "Prizes are offered as a goodwill gesture and may change or be withdrawn. Prizes are open only to eligible participants where permitted by law and are void where prohibited. You are responsible for any taxes on a prize you receive. We may require reasonable verification before awarding a prize.",
+      "Some public challenges offer a prize, such as a gift card. Bracketeer is free to play — no purchase is necessary to enter or win, and a purchase will not improve your chances. Entry to a prize challenge is open to eligible participants 18 and older where permitted by law, and is void where prohibited.",
+      "The prize, its value, how a winner is determined, and full eligibility are set out in the Official Rules linked below. Prizes are offered as a goodwill gesture and may change or be withdrawn. You are responsible for any taxes on a prize you receive, and we may require reasonable verification before awarding a prize.",
     ],
   },
   {
     heading: "6. Acceptable use",
     body: [
-      "Don’t misuse the service. In particular: no cheating or manipulating results, no automated scraping or bots, no attempts to disrupt or gain unauthorized access to the app, no impersonating others, and no unlawful, abusive, or infringing activity. We may suspend or terminate accounts that break these terms.",
+      "Don’t misuse the service. In particular: no cheating or manipulating results, no creating multiple or duplicate accounts to gain an advantage in a prize challenge, no automated scraping or bots, no attempts to disrupt or gain unauthorized access to the app, no impersonating others, and no unlawful, abusive, or infringing activity. We may suspend or terminate accounts that break these terms.",
     ],
   },
   {
@@ -56,7 +56,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "8. Not affiliated with FIFA",
     body: [
-      "Bracketeer is an independent fan project. It is not affiliated with, endorsed by, or sponsored by FIFA, any football association, or any team. Tournament names, team names, and related data are used for identification and commentary only, and remain the property of their respective owners.",
+      "Bracketeer is an independent fan project. It is not affiliated with, endorsed by, or sponsored by FIFA, any football association, any team, or any platform (including Apple or Google). Tournament names, team names, and related data are used for identification and commentary only, and remain the property of their respective owners.",
     ],
   },
   {
@@ -127,6 +127,10 @@ export default function TermsPage() {
           See also our{" "}
           <Link href="/privacy" className="font-semibold text-pitch-dark hover:underline">
             Privacy Policy
+          </Link>{" "}
+          and the{" "}
+          <Link href="/rules" className="font-semibold text-pitch-dark hover:underline">
+            Official Prize Rules
           </Link>
           .
         </p>

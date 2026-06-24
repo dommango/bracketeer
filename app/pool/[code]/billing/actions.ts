@@ -25,7 +25,7 @@ export async function upgradePoolAction(
   if (!access?.isOwner) return { error: "Only the pool owner can upgrade." };
   if (!stripeEnabled) return { error: "Billing isn't configured yet — check back soon." };
 
-  if (!rateLimit(`upgrade:${access.user.id}`, 10, 60_000).ok) {
+  if (!(await rateLimit(`upgrade:${access.user.id}`, 10, 60_000)).ok) {
     return { error: "Too many attempts — try again shortly." };
   }
 

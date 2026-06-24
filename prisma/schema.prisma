@@ -18,12 +18,17 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
+  id              String    @id @default(cuid())
+  name            String?
+  email           String?   @unique
+  emailVerified   DateTime?
+  image           String?
+  createdAt       DateTime  @default(now())
+  // Prize-challenge consent: stamped once when the user first accepts the Terms /
+  // Privacy / Official Rules and self-attests 18+ at challenge entry. Presence =
+  // accepted; we keep timestamps (not a bool) for an auditable consent record.
+  termsAcceptedAt DateTime?
+  ageConfirmedAt  DateTime?
 
   accounts    Account[]
   sessions    Session[]
@@ -670,7 +675,7 @@ model PrizeAward {
   status       PrizeStatus   @default(PENDING)
   description  String
   amount       Int?
-  currency     String        @default("GBP")
+  currency     String        @default("USD")
   createdAt    DateTime      @default(now())
   sentAt       DateTime?
   // The admin email that marked the card sent.
@@ -679,4 +684,16 @@ model PrizeAward {
   // One award per challenge per tournament — makes the resolver idempotent.
   @@unique([challenge, tournamentId])
   @@index([status])
+}
+
+// Shared (cross-instance) fixed-window rate-limit counter. Replaces the in-process
+// Map in lib/rate-limit.ts so per-key limits hold across horizontally-scaled web
+// replicas. One row per (key, window); `expiresAt` bounds the window and lets a
+// cheap sweep prune stale rows. Keyed by an arbitrary string (e.g. "chat:<userId>").
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }

@@ -43,7 +43,7 @@ export async function POST(
   if (!canManagePool(access)) return apiError("Forbidden: owner or admin only", 403);
 
   // Imports are heavy (parse + persist + full recompute); cap per manager.
-  if (!rateLimit(`import:${access.user.id}`, 10, 60_000).ok) {
+  if (!(await rateLimit(`import:${access.user.id}`, 10, 60_000)).ok) {
     return apiError("Too many imports — wait a minute and try again.", 429);
   }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
+import { hasAcceptedTerms } from "@/lib/account/consent";
 import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
 
@@ -12,6 +13,7 @@ export default async function Md3ChallengePlayPage() {
   const user = await getSessionUser();
   const { view, standing, cards } = await getMd3ChallengeHome(user?.id ?? null);
   const gameOpen = isMd3GameOpen();
+  const needsConsent = user ? !(await hasAcceptedTerms(user.id)) : false;
 
   return (
     <section className="space-y-4">
@@ -58,7 +60,11 @@ export default async function Md3ChallengePlayPage() {
         hrefForMatch={() => "/challenge/md3/matches"}
       />
 
-      <Md3ChallengeForm fixtures={view.fixtures} canEdit={Boolean(user) && gameOpen} />
+      <Md3ChallengeForm
+        fixtures={view.fixtures}
+        canEdit={Boolean(user) && gameOpen}
+        needsConsent={needsConsent}
+      />
     </section>
   );
 }

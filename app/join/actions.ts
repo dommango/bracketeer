@@ -19,7 +19,7 @@ export async function joinPoolAction(
   if (!user) redirect("/signin");
 
   // Cap join attempts so a stolen session can't brute-force join codes.
-  if (!rateLimit(`join:${user.id}`, 30, 60_000).ok) {
+  if (!(await rateLimit(`join:${user.id}`, 30, 60_000)).ok) {
     return { error: "Too many attempts — wait a minute and try again." };
   }
 

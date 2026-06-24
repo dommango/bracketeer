@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/pool/access";
 import { getKnockoutState, getTournamentIdBySlug } from "@/lib/pool/queries";
 import { getUserBrackets, type BracketSummary } from "@/lib/bracket/gallery";
 import { isKnockoutLocked } from "@/lib/pool/knockout";
+import { hasAcceptedTerms } from "@/lib/account/consent";
 import { Countdown } from "@/app/pool/[code]/Countdown";
 import { ChallengeToggle } from "./ChallengeToggle";
 import { AttachToPoolForm } from "./AttachToPoolForm";
@@ -14,11 +15,13 @@ export default async function BracketsPage() {
   if (!user) return <SignInGate />;
 
   const tournamentId = await getTournamentIdBySlug();
-  const [{ open, opensAt, locksAt }, brackets] = await Promise.all([
+  const [{ open, opensAt, locksAt }, brackets, accepted] = await Promise.all([
     getKnockoutState(tournamentId),
     getUserBrackets(user.id, tournamentId),
+    hasAcceptedTerms(user.id),
   ]);
   const knockoutLocked = isKnockoutLocked(locksAt);
+  const needsConsent = !accepted;
 
   return (
     <section className="space-y-5">
@@ -54,7 +57,12 @@ export default async function BracketsPage() {
       ) : (
         <div className="space-y-4">
           {brackets.map((b) => (
-            <BracketCard key={b.entryId} bracket={b} knockoutLocked={knockoutLocked} />
+            <BracketCard
+              key={b.entryId}
+              bracket={b}
+              knockoutLocked={knockoutLocked}
+              needsConsent={needsConsent}
+            />
           ))}
           {!knockoutLocked ? (
             <Link
@@ -81,9 +89,11 @@ export default async function BracketsPage() {
 function BracketCard({
   bracket,
   knockoutLocked,
+  needsConsent,
 }: {
   bracket: BracketSummary;
   knockoutLocked: boolean;
+  needsConsent: boolean;
 }) {
   const isKnockout = bracket.format === "KNOCKOUT";
   const pooled = bracket.placement.kind === "pool";
@@ -151,7 +161,11 @@ function BracketCard({
 
       {isKnockout ? (
         <div className="mt-3">
-          <ChallengeToggle entryId={bracket.entryId} entered={bracket.enteredChallenge} />
+          <ChallengeToggle
+            entryId={bracket.entryId}
+            entered={bracket.enteredChallenge}
+            needsConsent={needsConsent}
+          />
         </div>
       ) : null}
     </Card>

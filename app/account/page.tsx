@@ -2,7 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
-import { updateDisplayNameAction } from "./actions";
+import { getAccountDeletionSummary } from "@/lib/account/delete";
+import { updateDisplayNameAction, deleteMyAccountAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,16 +32,19 @@ export default async function AccountPage() {
     );
   }
 
-  const memberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    orderBy: { joinedAt: "asc" },
-    select: {
-      id: true,
-      role: true,
-      displayName: true,
-      pool: { select: { name: true, joinCode: true } },
-    },
-  });
+  const [memberships, deletion] = await Promise.all([
+    prisma.membership.findMany({
+      where: { userId: user.id },
+      orderBy: { joinedAt: "asc" },
+      select: {
+        id: true,
+        role: true,
+        displayName: true,
+        pool: { select: { name: true, joinCode: true } },
+      },
+    }),
+    getAccountDeletionSummary(user.id),
+  ]);
 
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-16 pt-12">
@@ -122,6 +126,61 @@ export default async function AccountPage() {
           ))}
         </ul>
       )}
+
+      <h2 className="mt-7 px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+        Your data
+      </h2>
+      <div className="mt-2 rounded-2xl border border-line bg-surface p-4">
+        <p className="text-sm text-ink-2">Download a copy of your data</p>
+        <p className="mt-0.5 text-[13px] text-ink-3">
+          Everything we hold about you — account, pools, brackets, picks and messages — as a JSON file.
+        </p>
+        <a
+          href="/api/account/export"
+          className="mt-3 inline-flex h-10 items-center justify-center rounded-full border border-line bg-surface px-4 text-sm font-semibold text-pitch-dark hover:bg-surface-sunk"
+        >
+          Export my data
+        </a>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-negative/30 bg-negative/5 p-4">
+        <p className="text-sm font-semibold text-negative">Delete my account</p>
+        <p className="mt-0.5 text-[13px] text-ink-3">
+          This permanently deletes your account, brackets, picks and messages and can&apos;t be undone.
+          {deletion.ownedPoolCount > 0 ? (
+            <>
+              {" "}
+              It will also delete{" "}
+              <strong>
+                {deletion.ownedPoolCount} pool{deletion.ownedPoolCount === 1 ? "" : "s"} you own
+              </strong>{" "}
+              and all of their members&apos; data.
+            </>
+          ) : null}
+        </p>
+        {deletion.pendingPrizeCount > 0 ? (
+          <p className="mt-3 rounded-md border border-negative/40 bg-surface px-3 py-2 text-[13px] text-ink-2">
+            You have a prize that hasn&apos;t been sent yet, so account deletion is paused. Email{" "}
+            <a href="mailto:dommango@gmail.com" className="font-semibold text-pitch-dark hover:underline">
+              dommango@gmail.com
+            </a>{" "}
+            to sort out your prize first.
+          </p>
+        ) : (
+          <form action={deleteMyAccountAction} className="mt-3 flex gap-2">
+            <input
+              name="confirm"
+              placeholder="Type DELETE to confirm"
+              aria-label="Type DELETE to confirm account deletion"
+              autoComplete="off"
+              className="h-10 min-w-0 flex-1 rounded-md border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-negative"
+            />
+            <button className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-negative px-4 text-sm font-semibold text-white hover:opacity-90">
+              Delete
+            </button>
+          </form>
+        )}
+      </div>
     </main>
   );
 }

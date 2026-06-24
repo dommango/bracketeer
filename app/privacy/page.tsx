@@ -19,7 +19,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
     heading: "Information we collect",
     body: [
       "Account information: your email address and the display name you choose. You sign in with Google, Facebook, or an email magic link; we receive your email (and, for social sign-in, basic profile info) from those providers.",
-      "Your gameplay: the picks and brackets you submit, the pools you create or join, and the chat messages you post.",
+      "Your gameplay: the picks and brackets you submit, the pools you create or join, and the chat messages you post. If you enter a prize challenge, we also record that you accepted the Terms, Privacy Policy, and Official Rules and confirmed you are 18 or older.",
       "Feedback you send: the text of your report, the page you were on, and any screenshots you choose to attach.",
       "Technical data: standard log and device information, plus the essential cookies needed to keep you signed in and operate the app securely.",
     ],
@@ -28,8 +28,8 @@ const SECTIONS: { heading: string; body: string[] }[] = [
     heading: "How we use it",
     body: [
       "To run the games — score your picks, build leaderboards, and resolve brackets.",
-      "To show your display name and standings to other members of games and pools you join, and your messages in those pools’ chat.",
-      "To send account and game-related messages you’ve enabled, such as result and reminder notifications.",
+      "To show your display name and standings to other members of games and pools you join, and your messages in those pools’ chat. Public challenge leaderboards display your chosen name (never your email) to anyone who views them.",
+      "To send account and game-related messages you’ve enabled, such as result and reminder notifications, and to contact a prize winner.",
       "To process payments if you choose a premium pool.",
       "To diagnose bugs and improve the app, using feedback and aggregate usage.",
     ],
@@ -51,19 +51,20 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "Your choices and rights",
     body: [
-      "You can update your display name, control your notification settings, and request access to or deletion of your account and associated data by emailing dommango@gmail.com. Depending on where you live, you may have additional rights over your personal data (for example, under GDPR or CCPA); we’ll honor those requests as required by law.",
+      "You can update your display name and control your notification settings at any time. From your Account page you can download a copy of your data (“Export my data”) and permanently delete your account and associated data (“Delete my account”). You can also email dommango@gmail.com for help with any request.",
+      "Depending on where you live, you may have additional rights over your personal data (for example, under GDPR or CCPA); we’ll honor those requests as required by law.",
     ],
   },
   {
     heading: "Data retention",
     body: [
-      "We keep your information for as long as your account is active or as needed to run the games, and then delete or anonymize it. Some records may be retained longer where required by law.",
+      "We keep your information for as long as your account is active or as needed to run the games, and then delete or anonymize it. If you delete your account, we remove your personal data and the pools you own; some minimal records may be retained where required by law.",
     ],
   },
   {
     heading: "Children",
     body: [
-      "Bracketeer is intended for people 13 and older and is not directed at children under 13. If you are under 18, please use it with a parent or guardian’s involvement. If you believe a child under 13 has given us personal information, contact us and we’ll delete it.",
+      "Bracketeer is intended for people 13 and older and is not directed at children under 13; prize challenges are restricted to those 18 and older. If you are under 18, please use it with a parent or guardian’s involvement. If you believe a child under 13 has given us personal information, contact us and we’ll delete it.",
     ],
   },
   {

@@ -57,7 +57,7 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
   if (!user) return { ok: false, error: "Sign in to submit your picks." };
 
   // Each save rewrites the entry + recomputes the pool, so cap how often.
-  if (!rateLimit(`picks:${user.id}`, 20, 60_000).ok) {
+  if (!(await rateLimit(`picks:${user.id}`, 20, 60_000)).ok) {
     return { ok: false, error: "You're saving too often — wait a moment and try again." };
   }
 

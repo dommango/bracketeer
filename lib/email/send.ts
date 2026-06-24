@@ -71,12 +71,14 @@ export async function sendInviteEmail({ to, url, poolName }: InviteEmailInput): 
   }
 
   const transport = createTransport(env.EMAIL_SERVER);
+  const footer =
+    "You received this because someone invited you to a pool on Bracketeer. If you weren't expecting it, you can ignore this email — no account is created until you join.";
   const result = await transport.sendMail({
     to,
     from: env.EMAIL_FROM,
     subject: `You're invited to ${poolName} on Bracketeer`,
-    text: `You've been invited to join ${poolName} on Bracketeer.\nJoin here:\n${url}\n`,
-    html: `<p>You've been invited to join <b>${escapeHtml(poolName)}</b> on Bracketeer.</p><p><a href="${url}">Join the pool →</a></p>`,
+    text: `You've been invited to join ${poolName} on Bracketeer.\nJoin here:\n${url}\n\n—\n${footer}\n`,
+    html: `<p>You've been invited to join <b>${escapeHtml(poolName)}</b> on Bracketeer.</p><p><a href="${url}">Join the pool →</a></p><hr><p style="font-size:12px;color:#666">${escapeHtml(footer)}</p>`,
   });
   const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
   if (failed.length) throw new Error(`Invite email could not be sent to ${failed.join(", ")}`);

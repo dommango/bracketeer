@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
   const key = user ? `feedback:${user.id}` : `feedback:ip:${ip}`;
-  const rl = rateLimit(key, 10, 5 * 60_000);
+  const rl = await rateLimit(key, 10, 5 * 60_000);
   if (!rl.ok) return apiError("rate limited", 429);
 
   let parsed;

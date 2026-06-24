@@ -37,11 +37,14 @@ export async function getChallengeLeaderboard(
       tiebreak: true,
       breakdown: { select: { totalPoints: true, byCategory: true } },
       picks: { select: { section: true, category: true, key: true, code: true, teamOrValue: true } },
+      user: { select: { emailVerified: true } },
     },
   });
-  // Prize/board eligibility: only complete & valid brackets count (Part C). An
-  // incomplete bracket is never materialized onto the public board.
+  // Prize/board eligibility: a complete & valid bracket owned by a verified-email
+  // account. The verified-email gate (anti-Sybil) governs both the public board
+  // and prize selection — an incomplete or unverified entry is never materialized.
   const eligible = entries.filter((e) => {
+    if (!e.userId || !e.user?.emailVerified) return false;
     try {
       return isKnockoutEntryComplete(pickRowsToSubmission(e.picks).picks);
     } catch {
@@ -140,10 +143,15 @@ export async function getMd3ChallengeLeaderboard(
       tiebreak: true,
       breakdown: { select: { totalPoints: true, byCategory: true } },
       picks: { select: { category: true, key: true, teamOrValue: true } },
+      user: { select: { emailVerified: true } },
     },
   });
 
-  const eligible = entries.filter((e) => isMd3EntryComplete(decodeMd3Rows(e.picks)));
+  // Same verified-email gate as the knockout board (anti-Sybil): a complete entry
+  // owned by a verified-email account.
+  const eligible = entries.filter(
+    (e) => Boolean(e.userId) && Boolean(e.user?.emailVerified) && isMd3EntryComplete(decodeMd3Rows(e.picks)),
+  );
   if (eligible.length === 0) return [];
 
   const rows: LeaderboardRow[] = eligible.map((e) => ({
