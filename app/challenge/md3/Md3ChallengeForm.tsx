@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { saveMd3ChallengeEntry, type SaveMd3ChallengeState } from "./actions";
 import type { Md3FixtureVM } from "@/lib/pool/md3-view";
+import { Flag } from "@/app/pool/[code]/Flag";
+import { WinProbBar } from "@/app/pool/[code]/WinProbBar";
 
 // Group fixtures by kickoff day for light visual chunking.
 function dayLabel(iso: string): string {
@@ -20,6 +22,104 @@ function kickoffLabel(iso: string): string {
 
 const SCORE_BOX =
   "h-11 w-12 rounded-lg border border-line bg-surface text-center text-[17px] font-semibold text-ink outline-none focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)] disabled:bg-surface-sunk disabled:text-ink-3";
+
+// Group-stage accent — matches the ScoreCards / MatchCenter round accent so the
+// pickem cards read as the same family of fixtures.
+const GROUP_ACCENT = "var(--pitch)";
+
+function LiveBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
+      <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
+      Live
+    </span>
+  );
+}
+
+function FixtureCard({ f, disabled }: { f: Md3FixtureVM; disabled: boolean }) {
+  const final = f.result?.final ?? false;
+  return (
+    <div
+      className="rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]"
+      style={{ borderLeft: `4px solid ${GROUP_ACCENT}` }}
+    >
+      {/* Header: group label (with accent dot) + status — mirrors the ScoreCards header. */}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: GROUP_ACCENT }} />
+          Group {f.group}
+        </span>
+        {f.result && !final ? (
+          <LiveBadge />
+        ) : final ? (
+          <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
+            Final
+          </span>
+        ) : (
+          <span className="font-mono text-[11px] text-ink-3">
+            {f.locked ? "Locked · " : ""}
+            {kickoffLabel(f.kickoffISO)}
+          </span>
+        )}
+      </div>
+
+      {/* Horizontal head-to-head: home (name · flag) — score inputs — away (flag · name). */}
+      <div className="flex items-center gap-2">
+        <span className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <span className="truncate text-[15px] font-semibold text-ink">{f.homeName}</span>
+          <Flag code={f.homeCode} size={22} />
+        </span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={99}
+          name={`home_${f.matchNo}`}
+          defaultValue={f.pred ? f.pred.home : ""}
+          disabled={disabled}
+          aria-label={`${f.homeName} goals`}
+          className={SCORE_BOX}
+        />
+        <span className="text-ink-4">–</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={99}
+          name={`away_${f.matchNo}`}
+          defaultValue={f.pred ? f.pred.away : ""}
+          disabled={disabled}
+          aria-label={`${f.awayName} goals`}
+          className={SCORE_BOX}
+        />
+        <span className="flex min-w-0 flex-1 items-center justify-start gap-2">
+          <Flag code={f.awayCode} size={22} />
+          <span className="truncate text-[15px] font-semibold text-ink">{f.awayName}</span>
+        </span>
+      </div>
+
+      {/* Pre-match win/draw/win bar — dropped once final (stale), like ScoreCards. */}
+      {!final ? <WinProbBar odds={f.odds} homeCode={f.homeCode} awayCode={f.awayCode} /> : null}
+
+      {f.result ? (
+        <div className="mt-2 flex items-center justify-center gap-2 text-[12px]">
+          <span className="font-semibold text-ink-2">
+            {final ? "Final" : "Live"} {f.result.home}–{f.result.away}
+          </span>
+          {f.points !== null ? (
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                f.points > 0 ? "bg-pitch-tint text-pitch-dark" : "bg-surface-sunk text-ink-3"
+              }`}
+            >
+              +{f.points}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function Md3ChallengeForm({
   fixtures,
@@ -47,75 +147,16 @@ export function Md3ChallengeForm({
   return (
     <form action={action} className="space-y-3">
       <ul className="space-y-2">
-        {rows.map(({ f, day, showDay }) => {
-          const disabled = !canEdit || f.locked;
-          return (
-            <li key={f.matchNo}>
-              {showDay ? (
-                <p className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">
-                  {day}
-                </p>
-              ) : null}
-              <div className="rounded-2xl border border-line bg-surface p-3">
-                <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">
-                  <span>Group {f.group}</span>
-                  <span>
-                    {f.locked ? "Locked · " : ""}
-                    {kickoffLabel(f.kickoffISO)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-right text-[15px] font-semibold text-ink">
-                    {f.homeName}
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={99}
-                    name={`home_${f.matchNo}`}
-                    defaultValue={f.pred ? f.pred.home : ""}
-                    disabled={disabled}
-                    aria-label={`${f.homeName} goals`}
-                    className={SCORE_BOX}
-                  />
-                  <span className="text-ink-4">–</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={99}
-                    name={`away_${f.matchNo}`}
-                    defaultValue={f.pred ? f.pred.away : ""}
-                    disabled={disabled}
-                    aria-label={`${f.awayName} goals`}
-                    className={SCORE_BOX}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-left text-[15px] font-semibold text-ink">
-                    {f.awayName}
-                  </span>
-                </div>
-
-                {f.result ? (
-                  <div className="mt-2 flex items-center justify-center gap-2 text-[12px] text-ink-3">
-                    <span className="font-semibold text-ink-2">
-                      {f.result.final ? "Final" : "Live"} {f.result.home}–{f.result.away}
-                    </span>
-                    {f.points !== null ? (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                          f.points > 0 ? "bg-pitch-tint text-pitch-dark" : "bg-surface-sunk text-ink-3"
-                        }`}
-                      >
-                        +{f.points}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
+        {rows.map(({ f, day, showDay }) => (
+          <li key={f.matchNo}>
+            {showDay ? (
+              <p className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">
+                {day}
+              </p>
+            ) : null}
+            <FixtureCard f={f} disabled={!canEdit || f.locked} />
+          </li>
+        ))}
       </ul>
 
       {state.error ? (

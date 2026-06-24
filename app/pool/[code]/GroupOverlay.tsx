@@ -25,8 +25,8 @@ const PRED_STYLE: Record<PredKind, { cls: string; title: string }> = {
   exact: { cls: "font-bold text-pitch", title: "correct group position (1st/2nd)" },
   wrong_slot: { cls: "font-semibold text-gold-dark", title: "right team, wrong position — partial" },
   third: { cls: "font-semibold text-gold-dark", title: "advancing as a best-3rd team — partial" },
-  miss: { cls: "text-red-500", title: "currently eliminated / out of the spots" },
-  pending: { cls: "text-ink-3", title: "group not decided yet" },
+  miss: { cls: "text-red-500", title: "eliminated — can't reach a qualifying spot" },
+  pending: { cls: "text-ink-3", title: "not decided yet — still in contention" },
   rest: { cls: "text-ink-4", title: "you didn't pick this team to go through" },
 };
 

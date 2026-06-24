@@ -61,7 +61,8 @@ export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResul
       picks: parsed.data.picks as Picks,
     });
     revalidatePath("/bracket");
-    revalidatePath("/challenge");
+    revalidatePath("/challenge/knockout");
+    revalidatePath("/challenge/knockout/leaderboard");
     return { ok: true, replaced: res.replaced, entryId: res.entryId };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
@@ -140,7 +141,8 @@ export async function toggleChallengeAction(
       return { ok: false, error: "Build your knockout bracket before entering the Challenge." };
     }
     revalidatePath("/bracket");
-    revalidatePath("/challenge");
+    revalidatePath("/challenge/knockout");
+    revalidatePath("/challenge/knockout/leaderboard");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };

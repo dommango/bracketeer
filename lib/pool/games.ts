@@ -37,7 +37,7 @@ export interface GameCatalogEntry {
 export const GAME_CATALOG: Record<PoolFormat, GameCatalogEntry> = {
   MATCH_DAY_3_PICKEM: {
     challengeName: "Match Day Pickem",
-    tagline: "The live game — predict the final group-stage scores.",
+    tagline: "Predict the score lines for the Match Day 3 games (June 24–27).",
     blurb:
       "Predict the exact scoreline of every final group-stage match. Each pick locks at its own kickoff, so later fixtures stay open after earlier ones start.",
     scoringSummary: "Exact score 5 · right result & goal difference 3 · right result 1.",
@@ -187,8 +187,8 @@ export function featuredGame(now: Date = new Date()): PoolFormat | null {
   return null;
 }
 
-// The headline prize teaser for a challenge format, sourced from PRIZES so copy
-// stays consistent with the recorded award. Null for formats without a prize.
+// The headline prize teaser for a challenge format. Null for formats without a
+// prize (the amount/award itself lives in PRIZES; copy stays deliberately generic).
 export function prizeTeaser(format: PoolFormat): string | null {
   if (!isChallengeFormat(format)) return null;
   const prize = PRIZES[format];
@@ -220,9 +220,9 @@ export function gameStateLine(format: PoolFormat, now: Date = new Date()): strin
   if (format === "MATCH_DAY_3_PICKEM") {
     switch (state.phase) {
       case "PICKS_OPEN":
-        return state.deadline ? `Open now · first pick locks ${dayLabel(state.deadline)}` : "Open now";
+        return "Open now · picks close at the start of each match";
       case "PICKS_CLOSING":
-        return "Open now · some fixtures already locked";
+        return "Open now · picks close at the start of each match";
       default:
         return "Closed — Match Day Pickem has finished";
     }

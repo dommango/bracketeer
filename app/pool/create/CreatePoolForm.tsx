@@ -17,8 +17,6 @@ export interface GameCardVM {
   blurb: string;
   // Short state line, e.g. "Open now · first pick locks 24 Jun".
   stateLine: string;
-  // Prize teaser for challenge games, or null.
-  prizeTeaser: string | null;
   // True when this format can't be created right now (shown disabled).
   disabled: boolean;
 }
@@ -80,11 +78,6 @@ export function CreatePoolForm({
                   >
                     {c.stateLine}
                   </span>
-                  {!c.disabled && c.prizeTeaser ? (
-                    <span className="mt-1 block text-[12px] font-semibold text-gold-dark">
-                      🏆 {c.prizeTeaser}
-                    </span>
-                  ) : null}
                 </span>
               </label>
             );

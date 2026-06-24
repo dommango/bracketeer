@@ -48,13 +48,18 @@ export function Leaderboard({
   rows,
   youUserId,
   code,
+  linkBase,
   showMedals = false,
   compact = false,
 }: {
   rows: LeaderboardRow[];
   youUserId?: string | null;
-  // When provided, each row links to that entry's player profile.
+  // When provided, each row links to that entry's player profile under this pool.
   code?: string;
+  // An explicit link base for the per-entry detail page (e.g. "/challenge/md3/u").
+  // Each row links to `${linkBase}/${entryId}`. Takes precedence over `code`; lets
+  // the challenge boards reuse this component while pointing at their own routes.
+  linkBase?: string;
   // Medals only make sense once standings settle — shown after the group stage.
   showMedals?: boolean;
   // Tighter rows with the per-category point badges hidden — for the Home preview.
@@ -147,9 +152,9 @@ export function Leaderboard({
                 : "border-line shadow-[var(--shadow-xs)]"
             }`}
           >
-            {code ? (
+            {linkBase || code ? (
               <Link
-                href={`/pool/${code}/u/${row.entryId}`}
+                href={linkBase ? `${linkBase}/${row.entryId}` : `/pool/${code}/u/${row.entryId}`}
                 className={`block rounded-2xl transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch ${
                   compact ? "p-3" : "p-4"
                 }`}

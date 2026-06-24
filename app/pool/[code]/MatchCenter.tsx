@@ -73,11 +73,19 @@ function PickChip({ pick }: { pick: NonNullable<MatchCenterRow["yourPick"]> }) {
   );
 }
 
-function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; accent: string }) {
+function MatchRow({
+  row,
+  hrefForMatch,
+  accent,
+}: {
+  row: MatchCenterRow;
+  hrefForMatch: (matchNo: number) => string;
+  accent: string;
+}) {
   const decided = row.status === "FINAL" && Boolean(row.winnerCode);
   return (
     <Link
-      href={`/pool/${code}/matches/${row.matchNo}`}
+      href={hrefForMatch(row.matchNo)}
       className="block rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
       style={{ borderLeft: `4px solid ${accent}` }}
     >
@@ -116,17 +124,38 @@ function MatchRow({ row, code, accent }: { row: MatchCenterRow; code: string; ac
   );
 }
 
-function SectionCards({ matches, code, accent }: { matches: MatchCenterRow[]; code: string; accent: string }) {
+function SectionCards({
+  matches,
+  hrefForMatch,
+  accent,
+}: {
+  matches: MatchCenterRow[];
+  hrefForMatch: (matchNo: number) => string;
+  accent: string;
+}) {
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {matches.map((row) => (
-        <MatchRow key={row.matchNo} row={row} code={code} accent={accent} />
+        <MatchRow key={row.matchNo} row={row} hrefForMatch={hrefForMatch} accent={accent} />
       ))}
     </div>
   );
 }
 
-export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]; code: string }) {
+export function MatchCenter({
+  sections,
+  code,
+  hrefForMatch,
+}: {
+  sections: MatchCenterSection[];
+  // Pool callers pass the pool code; the default href targets the pool match
+  // route. Challenge callers pass `hrefForMatch` instead (and may omit `code`).
+  code?: string;
+  // Where each match card links. Defaults to the pool match detail page so
+  // existing pool call sites are unaffected.
+  hrefForMatch?: (matchNo: number) => string;
+}) {
+  const linkFor = hrefForMatch ?? ((matchNo: number) => `/pool/${code}/matches/${matchNo}`);
   if (sections.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
@@ -168,7 +197,7 @@ export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]
                 </h4>
                 <SectionCards
                   matches={section.matches}
-                  code={code}
+                  hrefForMatch={linkFor}
                   accent={ROUND_ACCENT[section.roundCode] ?? "var(--line)"}
                 />
               </div>
@@ -189,7 +218,7 @@ export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
                 {section.label}
               </h3>
-              <SectionCards matches={section.matches} code={code} accent={accent} />
+              <SectionCards matches={section.matches} hrefForMatch={linkFor} accent={accent} />
             </div>
           );
         }
@@ -204,7 +233,7 @@ export function MatchCenter({ sections, code }: { sections: MatchCenterSection[]
                 {section.label}
               </h3>
             ) : null}
-            <SectionCards matches={section.matches} code={code} accent={accent} />
+            <SectionCards matches={section.matches} hrefForMatch={linkFor} accent={accent} />
           </div>
         );
       })}

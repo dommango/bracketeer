@@ -76,10 +76,10 @@ export default async function BracketsPage() {
       )}
 
       <Link
-        href="/challenge"
+        href="/challenge/knockout"
         className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
       >
-        <span className="text-sm font-semibold text-ink">Knockout Challenge leaderboard</span>
+        <span className="text-sm font-semibold text-ink">Knockout Challenge</span>
         <span className="font-display text-pitch-dark">→</span>
       </Link>
     </section>
