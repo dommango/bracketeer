@@ -20,6 +20,10 @@ export default async function Md3ChallengeHomePage() {
     .map((f) => f.kickoffISO)
     .sort()[0];
 
+  // The board is participants-only — you must have made at least one prediction
+  // to see where you (and everyone else) stand.
+  const isParticipant = view.pickedCount > 0;
+
   // Top of the board plus the viewer's row when it sits outside the preview.
   const top = board.slice(0, 5);
   const mine = user?.id ? board.find((r) => r.userId === user.id) : null;
@@ -69,7 +73,7 @@ export default async function Md3ChallengeHomePage() {
         hrefForMatch={() => "/challenge/md3/matches"}
       />
 
-      {preview.length > 0 ? (
+      {isParticipant && preview.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Leaderboard</h2>
