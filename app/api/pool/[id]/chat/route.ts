@@ -68,7 +68,7 @@ export async function POST(
   const access = await getPoolAccess(poolId);
   if (!access) return apiError("Pool not found", 404);
 
-  const limited = rateLimit(`chat:${access.user.id}`, CHAT_LIMIT, CHAT_WINDOW_MS);
+  const limited = await rateLimit(`chat:${access.user.id}`, CHAT_LIMIT, CHAT_WINDOW_MS);
   if (!limited.ok) {
     return apiError("You're sending messages too fast — slow down a moment.", 429);
   }

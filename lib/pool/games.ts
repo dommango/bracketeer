@@ -12,6 +12,7 @@ import { KNOCKOUT_PICKS_OPEN_UTC } from "@/lib/pool/knockout";
 import { firstMd3Kickoff, lastMd3Kickoff } from "@/lib/pool/match-day-3";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { PRIZES, isChallengeFormat } from "@/lib/challenge/prizes-config";
+import { formatPrize } from "@/lib/challenge/format-prize";
 
 export interface GameCatalogEntry {
   // The game's display name as a closed/private pool (e.g. "Knockout Stage Pool").
@@ -190,7 +191,13 @@ export function featuredGame(now: Date = new Date()): PoolFormat | null {
 // stays consistent with the recorded award. Null for formats without a prize.
 export function prizeTeaser(format: PoolFormat): string | null {
   if (!isChallengeFormat(format)) return null;
-  return `Win ${PRIZES[format].description} — top the challenge.`;
+  const prize = PRIZES[format];
+  // Scaled prizes advertise the guaranteed floor ("$50+") so we never over-promise
+  // a value that depends on the final entrant count; fixed prizes show their figure.
+  if (prize.kind === "scaled") {
+    return `Win a ${formatPrize(prize.min, prize.currency)}+ gift card (grows with entries) — top the challenge.`;
+  }
+  return `Win ${prize.description} — top the challenge.`;
 }
 
 const MONTH_DAY = new Intl.DateTimeFormat("en-GB", {

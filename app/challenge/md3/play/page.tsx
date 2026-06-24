@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/pool/access";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { getMd3ChallengeView } from "@/lib/pool/md3-view";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
+import { hasAcceptedTerms } from "@/lib/account/consent";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
 
 // Predictions, locks, and results change at request time.
@@ -13,6 +14,7 @@ export default async function Md3ChallengePlayPage() {
   const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
   const view = await getMd3ChallengeView(tournamentId, user?.id ?? null);
   const gameOpen = isMd3GameOpen();
+  const needsConsent = user ? !(await hasAcceptedTerms(user.id)) : false;
 
   return (
     <section className="space-y-4">
@@ -47,7 +49,11 @@ export default async function Md3ChallengePlayPage() {
         </p>
       )}
 
-      <Md3ChallengeForm fixtures={view.fixtures} canEdit={Boolean(user) && gameOpen} />
+      <Md3ChallengeForm
+        fixtures={view.fixtures}
+        canEdit={Boolean(user) && gameOpen}
+        needsConsent={needsConsent}
+      />
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { getTournamentAdmin } from "@/lib/pool/access";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
 import { prisma } from "@/lib/db";
 import { GAME_CATALOG } from "@/lib/pool/games";
+import { formatPrize } from "@/lib/challenge/format-prize";
 import type { PoolFormat } from "@/lib/pool/manage";
 import { markPrizeSentAction } from "../actions";
 
@@ -87,7 +88,7 @@ export default async function AdminPrizesPage() {
                       </p>
                       <p className="mt-0.5 text-sm text-black/50">
                         Prize — {a.description}
-                        {a.amount != null ? ` (${a.amount} ${a.currency})` : ""}
+                        {a.amount != null ? ` (${formatPrize(a.amount, a.currency)})` : ""}
                       </p>
                       {a.sentAt ? (
                         <p className="mt-0.5 text-xs text-black/40">
@@ -107,6 +108,10 @@ export default async function AdminPrizesPage() {
                   {a.status === "PENDING" || a.status === "REVIEW" ? (
                     <form action={markPrizeSentAction} className="mt-3">
                       <input type="hidden" name="id" value={a.id} />
+                      <p className="mb-2 text-xs text-black/45">
+                        Before sending: confirm the winner is a single, genuine
+                        participant (not a duplicate/alias account).
+                      </p>
                       <button className="rounded-full bg-pitch px-4 py-2 text-sm font-medium text-white hover:bg-pitch-dark">
                         Mark gift card sent
                       </button>

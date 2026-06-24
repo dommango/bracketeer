@@ -9,7 +9,8 @@ import { prisma } from "@/lib/db";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { getChallengeLeaderboard, getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { MD3_MATCH_NOS } from "@/lib/pool/match-day-3";
-import { PRIZES, type ChallengeFormat } from "@/lib/challenge/prizes-config";
+import { PRIZES, computePrizeAmount, type ChallengeFormat } from "@/lib/challenge/prizes-config";
+import { formatPrize } from "@/lib/challenge/format-prize";
 import { GAME_CATALOG } from "@/lib/pool/games";
 import { selectPrizeWinner } from "@/lib/challenge/prizes-select";
 import { sendPrizeEmail } from "@/lib/email/send";
@@ -61,6 +62,12 @@ async function resolveOne(
   const outcome = selectPrizeWinner(rows);
   if (outcome.kind === "none") return { challenge, outcome: "no-entries" };
 
+  // The prize amount is resolved from the final eligible-entrant count (rows is
+  // already filtered to complete + verified entries by the leaderboard queries),
+  // so a scaled challenge locks its value at resolution time.
+  const amount = computePrizeAmount(prize, rows.length);
+  const prizePhrase = `a ${formatPrize(amount, prize.currency)} gift card`;
+
   // Create wrapped against the unique constraint so a concurrent run can't
   // double-award (the loser of the race hits P2002 and treats it as already done).
   try {
@@ -70,8 +77,8 @@ async function resolveOne(
           challenge,
           tournamentId,
           status: "REVIEW",
-          description: prize.description,
-          amount: prize.amount,
+          description: prizePhrase,
+          amount,
           currency: prize.currency,
         },
       });
@@ -87,12 +94,12 @@ async function resolveOne(
         userId: winner.userId ?? null,
         rank: 1,
         status: "PENDING",
-        description: prize.description,
-        amount: prize.amount,
+        description: prizePhrase,
+        amount,
         currency: prize.currency,
       },
     });
-    await notifyWinner(challenge, winner);
+    await notifyWinner(challenge, winner, prizePhrase);
     return { challenge, outcome: "recorded" };
   } catch (err) {
     // Unique-constraint race: another run already recorded it.
@@ -105,9 +112,12 @@ async function resolveOne(
 
 // Best-effort winner notification (email + push). Never throws — a notify failure
 // must not undo the recorded award.
-async function notifyWinner(challenge: ChallengeFormat, winner: LeaderboardRow): Promise<void> {
+async function notifyWinner(
+  challenge: ChallengeFormat,
+  winner: LeaderboardRow,
+  prizePhrase: string,
+): Promise<void> {
   const name = GAME_CATALOG[challenge].challengeName ?? "the challenge";
-  const prize = PRIZES[challenge];
 
   if (winner.userId) {
     const user = await prisma.user.findUnique({
@@ -119,7 +129,7 @@ async function notifyWinner(challenge: ChallengeFormat, winner: LeaderboardRow):
         await sendPrizeEmail({
           to: user.email,
           challengeName: name,
-          prizeDescription: prize.description,
+          prizeDescription: prizePhrase,
         });
       } catch (err) {
         console.error(`prize email failed for ${challenge}:`, err);
@@ -127,7 +137,7 @@ async function notifyWinner(challenge: ChallengeFormat, winner: LeaderboardRow):
     }
     await sendPushToUser(winner.userId, {
       title: `You won the ${name}! 🏆`,
-      body: `You topped the board and won ${prize.description}.`,
+      body: `You topped the board and won ${prizePhrase}.`,
     });
   }
 }

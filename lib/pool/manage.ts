@@ -119,25 +119,25 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
   const displayName =
     (input.displayName ?? "").trim() || user?.name?.trim() || "Player";
 
-  // Enforce the tier's member cap, but only for genuinely new members — an
-  // existing member re-joining (idempotent) must never be turned away even at cap.
-  // The count→insert isn't atomic: two simultaneous joins at the cap boundary
-  // could both pass. Acceptable for the single-instance MVP (same assumption the
-  // in-process rate limiter makes); a scaled deploy would enforce this in a
-  // serializable transaction or a DB constraint.
-  const existing = await prisma.membership.findUnique({
-    where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
-    select: { id: true },
-  });
-  if (!existing) {
-    const memberCount = await prisma.membership.count({ where: { poolId: pool.id } });
-    if (!canAddMember(pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
-  }
-
-  await prisma.membership.upsert({
-    where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
-    update: {},
-    create: { poolId: pool.id, userId: input.userId, role: "MEMBER", displayName },
+  // Enforce the tier's member cap atomically. A per-pool advisory lock (same
+  // pattern as recomputePool) serializes concurrent joins so the count→insert
+  // can't overshoot the cap at the boundary. Only new members are capped — an
+  // existing member re-joining is idempotent and never turned away, even at cap.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pool.id}))`;
+    const existing = await tx.membership.findUnique({
+      where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
+      select: { id: true },
+    });
+    if (!existing) {
+      const memberCount = await tx.membership.count({ where: { poolId: pool.id } });
+      if (!canAddMember(pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
+    }
+    await tx.membership.upsert({
+      where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
+      update: {},
+      create: { poolId: pool.id, userId: input.userId, role: "MEMBER", displayName },
+    });
   });
 
   // Bind any imported entries matching this account's email (also enrolls the
@@ -203,19 +203,20 @@ export async function attachEntryToPool(input: AttachEntryInput): Promise<Attach
   });
   const displayName = (input.displayName ?? "").trim() || user?.name?.trim() || "Player";
 
-  // Enforce the member cap only for a genuinely new member (same non-atomic
-  // count→insert assumption joinPool documents — acceptable for the MVP).
-  const existingMembership = await prisma.membership.findUnique({
-    where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
-    select: { id: true },
-  });
-  if (!existingMembership) {
-    const memberCount = await prisma.membership.count({ where: { poolId: pool.id } });
-    if (!canAddMember(pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
-  }
-
+  // Enforce the member cap atomically inside the same transaction that attaches
+  // the bracket, serialized by a per-pool advisory lock so concurrent attaches
+  // can't overshoot the cap. Only a genuinely new member is capped.
   try {
     await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pool.id}))`;
+      const existingMembership = await tx.membership.findUnique({
+        where: { poolId_userId: { poolId: pool.id, userId: input.userId } },
+        select: { id: true },
+      });
+      if (!existingMembership) {
+        const memberCount = await tx.membership.count({ where: { poolId: pool.id } });
+        if (!canAddMember(pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
+      }
       await tx.entry.update({ where: { id: entry.id }, data: { poolId: pool.id } });
       await tx.membership.upsert({
         where: { poolId_userId: { poolId: pool.id, userId: input.userId } },

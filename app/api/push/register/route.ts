@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return apiError("unauthorized", 401);
 
-  const rl = rateLimit(`push-register:${user.id}`, 30, 60_000);
+  const rl = await rateLimit(`push-register:${user.id}`, 30, 60_000);
   if (!rl.ok) return apiError("rate limited", 429);
 
   let parsed;
@@ -45,7 +45,7 @@ export async function DELETE(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return apiError("unauthorized", 401);
 
-  const rl = rateLimit(`push-unregister:${user.id}`, 30, 60_000);
+  const rl = await rateLimit(`push-unregister:${user.id}`, 30, 60_000);
   if (!rl.ok) return apiError("rate limited", 429);
 
   let parsed;

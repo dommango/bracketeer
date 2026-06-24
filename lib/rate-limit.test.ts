@@ -1,36 +1,40 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { rateLimit, __resetRateLimitForTests } from "./rate-limit";
+import { describe, it, expect } from "vitest";
+import { decideRateLimit } from "./rate-limit-core";
 
-beforeEach(() => __resetRateLimitForTests());
-
-describe("rateLimit", () => {
+// The window math is the pure, unit-tested core; the async rateLimit wrapper just
+// persists `next` and returns `result` under an advisory lock.
+describe("decideRateLimit", () => {
   it("allows requests up to the limit within a window", () => {
     const t = 1_000_000;
-    expect(rateLimit("k", 3, 1000, t).ok).toBe(true);
-    expect(rateLimit("k", 3, 1000, t).ok).toBe(true);
-    expect(rateLimit("k", 3, 1000, t).ok).toBe(true);
+    let bucket = null as { count: number; resetAt: number } | null;
+    for (let i = 0; i < 3; i++) {
+      const { result, next } = decideRateLimit(bucket, 3, 1000, t);
+      expect(result.ok).toBe(true);
+      bucket = next;
+    }
+    expect(bucket).toEqual({ count: 3, resetAt: t + 1000 });
   });
 
   it("blocks once the limit is exceeded, with a retry hint", () => {
     const t = 1_000_000;
-    rateLimit("k", 2, 1000, t);
-    rateLimit("k", 2, 1000, t);
-    const res = rateLimit("k", 2, 1000, t + 100);
-    expect(res.ok).toBe(false);
-    expect(res.retryAfterMs).toBe(900);
+    let { next } = decideRateLimit(null, 2, 1000, t);
+    ({ next } = decideRateLimit(next, 2, 1000, t));
+    const { result } = decideRateLimit(next, 2, 1000, t + 100);
+    expect(result.ok).toBe(false);
+    expect(result.retryAfterMs).toBe(900);
   });
 
   it("resets after the window elapses", () => {
     const t = 1_000_000;
-    rateLimit("k", 1, 1000, t);
-    expect(rateLimit("k", 1, 1000, t + 500).ok).toBe(false);
-    expect(rateLimit("k", 1, 1000, t + 1000).ok).toBe(true);
+    const { next } = decideRateLimit(null, 1, 1000, t);
+    expect(decideRateLimit(next, 1, 1000, t + 500).result.ok).toBe(false);
+    expect(decideRateLimit(next, 1, 1000, t + 1000).result.ok).toBe(true);
   });
 
-  it("tracks keys independently", () => {
+  it("does not advance the bucket when blocked", () => {
     const t = 1_000_000;
-    rateLimit("a", 1, 1000, t);
-    expect(rateLimit("a", 1, 1000, t).ok).toBe(false);
-    expect(rateLimit("b", 1, 1000, t).ok).toBe(true);
+    const { next } = decideRateLimit(null, 1, 1000, t);
+    const blocked = decideRateLimit(next, 1, 1000, t + 500);
+    expect(blocked.next).toEqual(next); // unchanged while blocked
   });
 });

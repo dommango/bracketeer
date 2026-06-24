@@ -123,11 +123,20 @@ export async function createInviteAction(
   const code = String(formData.get("code") || "");
   const { poolId, access } = await requireManage(code);
 
-  if (!rateLimit(`invite:${access.user.id}`, 30, 60_000).ok) {
+  if (!(await rateLimit(`invite:${access.user.id}`, 30, 60_000)).ok) {
     return { error: "Too many invites — wait a minute and try again." };
   }
 
   const email = String(formData.get("email") || "").trim().toLowerCase() || null;
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "That doesn't look like a valid email address." };
+  }
+  // Per-recipient throttle (anti-spam / deliverability): a manager can't blast
+  // invite mail to one address. The shareable link is the real grant — the email
+  // is only a convenience delivery, so capping it doesn't block legitimate invites.
+  if (email && !(await rateLimit(`invite-to:${email}`, 3, 24 * 60 * 60_000)).ok) {
+    return { error: "That address has had several invites recently — share the link directly instead." };
+  }
   const { token } = await createInvite({ poolId, createdById: access.user.id, email });
   const url = inviteUrl(env.APP_BASE_URL, token);
 
@@ -169,7 +178,7 @@ export async function importCsvAction(
   const code = String(formData.get("code") || "");
   const { poolId, access } = await requireManage(code);
 
-  if (!rateLimit(`import:${access.user.id}`, 10, 60_000).ok) {
+  if (!(await rateLimit(`import:${access.user.id}`, 10, 60_000)).ok) {
     return { error: "Too many imports — wait a minute and try again." };
   }
 

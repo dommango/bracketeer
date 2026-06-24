@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { saveMd3ChallengeEntry, type SaveMd3ChallengeState } from "./actions";
 import type { Md3FixtureVM } from "@/lib/pool/md3-view";
@@ -23,10 +24,14 @@ const SCORE_BOX =
 export function Md3ChallengeForm({
   fixtures,
   canEdit,
+  needsConsent = false,
 }: {
   fixtures: Md3FixtureVM[];
   // False when signed out or the game is fully locked (read-only).
   canEdit: boolean;
+  // True when the signed-in user hasn't yet accepted the terms — show the
+  // one-time consent checkbox (this entry carries a prize).
+  needsConsent?: boolean;
 }) {
   const [state, action, pending] = useActionState<SaveMd3ChallengeState, FormData>(
     saveMd3ChallengeEntry,
@@ -122,6 +127,19 @@ export function Md3ChallengeForm({
         <p className="rounded-md border border-pitch/30 bg-pitch/5 px-3 py-2 text-sm text-pitch-dark">
           Predictions saved — you&apos;re in the challenge.
         </p>
+      ) : null}
+
+      {canEdit && needsConsent ? (
+        <label className="flex items-start gap-2 px-1 text-[12px] text-ink-3">
+          <input type="checkbox" name="agreed" required className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            I&apos;m 18+ and agree to the{" "}
+            <Link href="/terms" className="font-semibold text-pitch hover:underline">Terms</Link>,{" "}
+            <Link href="/privacy" className="font-semibold text-pitch hover:underline">Privacy Policy</Link>{" "}
+            and{" "}
+            <Link href="/rules" className="font-semibold text-pitch hover:underline">Official Rules</Link>.
+          </span>
+        </label>
       ) : null}
 
       {canEdit ? (

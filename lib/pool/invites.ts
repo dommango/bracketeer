@@ -83,19 +83,22 @@ export async function acceptInvite(input: {
     select: { email: true, name: true },
   });
 
-  const existing = await prisma.membership.findUnique({
-    where: { poolId_userId: { poolId: invite.poolId, userId: input.userId } },
-    select: { id: true },
-  });
-  if (!existing) {
-    const memberCount = await prisma.membership.count({ where: { poolId: invite.poolId } });
-    if (!canAddMember(invite.pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
-  }
-
   const displayName =
     (input.displayName ?? "").trim() || user?.name?.trim() || "Player";
 
+  // Enforce the member cap atomically inside the accept transaction, serialized
+  // by a per-pool advisory lock so concurrent invite accepts can't overshoot the
+  // cap. Only a genuinely new member is capped.
   await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${invite.poolId}))`;
+    const existing = await tx.membership.findUnique({
+      where: { poolId_userId: { poolId: invite.poolId, userId: input.userId } },
+      select: { id: true },
+    });
+    if (!existing) {
+      const memberCount = await tx.membership.count({ where: { poolId: invite.poolId } });
+      if (!canAddMember(invite.pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
+    }
     await tx.membership.upsert({
       where: { poolId_userId: { poolId: invite.poolId, userId: input.userId } },
       update: {},

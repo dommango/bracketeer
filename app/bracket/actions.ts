@@ -7,6 +7,7 @@ import { saveSoloBracket, setEnteredChallenge } from "@/lib/challenge/solo";
 import { CHALLENGE_ENTRY_CAP } from "@/lib/challenge/eligibility";
 import { attachEntryToPool } from "@/lib/pool/manage";
 import { rateLimit } from "@/lib/rate-limit";
+import { ensureChallengeConsent } from "@/lib/account/consent";
 import type { Picks } from "@/lib/scoring/types";
 
 // Mirrors the pool picks schema; identity comes from the session, not the client.
@@ -47,7 +48,7 @@ export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResul
   if (!user) return { ok: false, error: "Sign in to save your bracket." };
 
   // Each save rewrites the entry + rescores it, so cap how often.
-  if (!rateLimit(`solo:${user.id}`, 20, 60_000).ok) {
+  if (!(await rateLimit(`solo:${user.id}`, 20, 60_000)).ok) {
     return { ok: false, error: "You're saving too often — wait a moment and try again." };
   }
 
@@ -87,7 +88,7 @@ export async function attachEntryToPoolAction(raw: unknown): Promise<AttachResul
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Sign in first." };
 
-  if (!rateLimit(`attach:${user.id}`, 20, 60_000).ok) {
+  if (!(await rateLimit(`attach:${user.id}`, 20, 60_000)).ok) {
     return { ok: false, error: "Too many attempts — wait a moment and try again." };
   }
 
@@ -109,12 +110,22 @@ export async function attachEntryToPoolAction(raw: unknown): Promise<AttachResul
 export async function toggleChallengeAction(
   entryId: string,
   entered: boolean,
+  agreed: boolean = false,
 ): Promise<SoloSaveResult> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Sign in first." };
 
-  if (!rateLimit(`solo-toggle:${user.id}`, 20, 60_000).ok) {
+  if (!(await rateLimit(`solo-toggle:${user.id}`, 20, 60_000)).ok) {
     return { ok: false, error: "Too many changes — wait a moment and try again." };
+  }
+
+  // Entering the prize challenge requires consent (18+ / Terms / Privacy / Rules).
+  // Only gate on entry; leaving is always allowed.
+  if (entered && !(await ensureChallengeConsent(user.id, agreed)).ok) {
+    return {
+      ok: false,
+      error: "Please confirm you're 18+ and accept the Terms, Privacy Policy and Official Rules to enter.",
+    };
   }
 
   try {
