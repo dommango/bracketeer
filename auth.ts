@@ -19,6 +19,47 @@ import { prisma } from "@/lib/db";
 import { env, googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { claimEntriesForUser } from "@/lib/auth/claim";
 
+// Magic-link email body. A well-formed multipart message (greeting, a single
+// clear CTA, an expiry/ignore note, sender identity) scores far better with spam
+// filters than a bare one-line link — relevant because the friend-group launch
+// sends from a cold Gmail account. `url` is an Auth.js-generated callback, so it
+// needs no escaping.
+function emailText(url: string): string {
+  return [
+    "Here's your sign-in link for Bracketeer.",
+    "",
+    "It's good for a single sign-in and expires shortly:",
+    url,
+    "",
+    "If you didn't request this, you can safely ignore this email — no one can",
+    "sign in without this link.",
+    "",
+    "— Bracketeer · World Cup 2026",
+  ].join("\n");
+}
+
+function emailHtml(url: string): string {
+  return `<!doctype html>
+<html><body style="margin:0;padding:24px;background:#f4f5f3;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1d1a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e3e6e2;">
+    <tr><td style="background:#0b6b3a;padding:18px 24px;">
+      <span style="color:#f4c430;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Bracketeer &middot; World Cup 2026</span>
+    </td></tr>
+    <tr><td style="padding:24px;">
+      <h1 style="margin:0 0 8px;font-size:20px;color:#1a1d1a;">Sign in to Bracketeer</h1>
+      <p style="margin:0 0 20px;font-size:14px;line-height:1.5;color:#4a4f49;">Tap the button below to finish signing in. This link is good for a single sign-in and expires shortly.</p>
+      <a href="${url}" style="display:inline-block;background:#0b6b3a;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 28px;border-radius:999px;">Sign in</a>
+      <p style="margin:22px 0 4px;font-size:12px;color:#8a8f88;">Or paste this link into your browser:</p>
+      <p style="margin:0;font-size:12px;word-break:break-all;"><a href="${url}" style="color:#0b6b3a;">${url}</a></p>
+      <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#8a8f88;">If you didn't request this, you can safely ignore this email — no one can sign in without this link.</p>
+    </td></tr>
+    <tr><td style="padding:14px 24px;border-top:1px solid #e3e6e2;">
+      <span style="font-size:11px;color:#8a8f88;">Bracketeer &middot; World Cup 2026 bracket pools</span>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
 const providers: NextAuthConfig["providers"] = [];
 
 if (googleEnabled) {
@@ -63,9 +104,9 @@ providers.push(
       const result = await transport.sendMail({
         to: identifier,
         from: provider.from,
-        subject: "Sign in to Bracketeer",
-        text: `Sign in to Bracketeer:\n${url}\n`,
-        html: `<p>Sign in to <b>Bracketeer</b>:</p><p><a href="${url}">${url}</a></p>`,
+        subject: "Your Bracketeer sign-in link",
+        text: emailText(url),
+        html: emailHtml(url),
       });
       const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
       if (failed.length) throw new Error(`Magic-link email could not be sent to ${failed.join(", ")}`);
