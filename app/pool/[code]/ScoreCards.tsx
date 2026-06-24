@@ -81,13 +81,13 @@ function TeamRow({
   );
 }
 
-function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
+function LiveOrFinalCard({ row, href }: { row: MatchCenterRow; href: string }) {
   const accent = ROUND_ACCENT[row.roundCode] ?? "var(--line)";
   const decided = row.status === "FINAL" && Boolean(row.winnerCode);
   const homeWins = decided ? row.winnerCode === row.home.code : (row.home.score ?? 0) >= (row.away.score ?? 0);
   const awayWins = decided ? row.winnerCode === row.away.code : (row.away.score ?? 0) > (row.home.score ?? 0);
   return (
-    <Link href={`/pool/${code}/matches/${row.matchNo}`} className={CARD_CLASS} style={{ borderLeft: `4px solid ${accent}` }}>
+    <Link href={href} className={CARD_CLASS} style={{ borderLeft: `4px solid ${accent}` }}>
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
@@ -130,7 +130,7 @@ function LiveOrFinalCard({ row, code }: { row: MatchCenterRow; code: string }) {
   );
 }
 
-function NextMatchCard({ match, code }: { match: HomeNextMatch; code: string }) {
+function NextMatchCard({ match, href }: { match: HomeNextMatch; href: string }) {
   const accent = ROUND_ACCENT[match.roundCode] ?? "var(--line)";
   // Once today's slate is done this card surfaces a later day — tag it so it
   // doesn't read as imminent. "Tomorrow" for the next matchday, the date itself
@@ -144,7 +144,7 @@ function NextMatchCard({ match, code }: { match: HomeNextMatch; code: string }) 
           ? formatMatchDate(match.scheduledAt)
           : null;
   return (
-    <Link href={`/pool/${code}/matches/${match.matchNo}`} className={CARD_CLASS} style={{ borderLeft: `4px solid ${accent}` }}>
+    <Link href={href} className={CARD_CLASS} style={{ borderLeft: `4px solid ${accent}` }}>
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
@@ -189,25 +189,32 @@ export function ScoreCards({
   last,
   next,
   code,
+  hrefForMatch,
 }: {
   live: MatchCenterRow[];
   last: MatchCenterRow | null;
   next: HomeNextMatch | null;
-  code: string;
+  // Pool callers pass the pool code; the default href targets the pool match
+  // route. Challenge callers pass `hrefForMatch` instead (and may omit `code`).
+  code?: string;
+  // Where each card links. Defaults to the pool match detail page so existing
+  // pool call sites are unaffected.
+  hrefForMatch?: (matchNo: number) => string;
 }) {
+  const linkFor = hrefForMatch ?? ((matchNo: number) => `/pool/${code}/matches/${matchNo}`);
   type Card = { key: string; node: React.ReactNode };
   const cards: Card[] = [];
 
   if (live.length >= 2) {
     for (const row of live) {
-      cards.push({ key: `live-${row.matchNo}`, node: <LiveOrFinalCard row={row} code={code} /> });
+      cards.push({ key: `live-${row.matchNo}`, node: <LiveOrFinalCard row={row} href={linkFor(row.matchNo)} /> });
     }
   } else if (live.length === 1) {
-    cards.push({ key: `live-${live[0].matchNo}`, node: <LiveOrFinalCard row={live[0]} code={code} /> });
-    if (next) cards.push({ key: `next-${next.matchNo}`, node: <NextMatchCard match={next} code={code} /> });
+    cards.push({ key: `live-${live[0].matchNo}`, node: <LiveOrFinalCard row={live[0]} href={linkFor(live[0].matchNo)} /> });
+    if (next) cards.push({ key: `next-${next.matchNo}`, node: <NextMatchCard match={next} href={linkFor(next.matchNo)} /> });
   } else {
-    if (last) cards.push({ key: `last-${last.matchNo}`, node: <LiveOrFinalCard row={last} code={code} /> });
-    if (next) cards.push({ key: `next-${next.matchNo}`, node: <NextMatchCard match={next} code={code} /> });
+    if (last) cards.push({ key: `last-${last.matchNo}`, node: <LiveOrFinalCard row={last} href={linkFor(last.matchNo)} /> });
+    if (next) cards.push({ key: `next-${next.matchNo}`, node: <NextMatchCard match={next} href={linkFor(next.matchNo)} /> });
   }
 
   if (cards.length === 0) return null;

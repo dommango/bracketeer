@@ -10,7 +10,8 @@ import {
   isMd3MatchLocked,
   scoreMd3,
 } from "@/lib/pool/match-day-3";
-import { getStandaloneMd3Entry, type Md3Scores } from "@/lib/pool/md3-picks";
+import { getStandaloneMd3Entry, decodeMd3Rows, type Md3Scores } from "@/lib/pool/md3-picks";
+import type { ImpliedProbs } from "@/lib/odds/map";
 
 export interface Md3FixtureVM {
   matchNo: number;
@@ -24,6 +25,9 @@ export interface Md3FixtureVM {
   pred: { home: number; away: number } | null;
   result: { home: number; away: number; final: boolean } | null;
   points: number | null;
+  // Pre-match win/draw/win probabilities, oriented to the fixture's home/away
+  // (the draw orientation the odds are stored in). Null when not priced.
+  odds: ImpliedProbs | null;
 }
 
 export interface Md3View {
@@ -42,6 +46,37 @@ export async function getMd3ChallengeView(
 ): Promise<Md3View> {
   const entry = userId ? await getStandaloneMd3Entry(tournamentId, userId) : null;
   return buildMd3View(tournamentId, entry?.scores ?? null, now);
+}
+
+export interface Md3EntryView {
+  entryId: string;
+  label: string;
+  view: Md3View;
+}
+
+// A single MD3 entry's decorated predictions, for the public per-entry breakdown
+// page. Scoped to the tournament so an entryId from another tournament can't be
+// surfaced here. Returns null when the entry doesn't exist (or isn't MD3).
+export async function getMd3EntryView(
+  tournamentId: string,
+  entryId: string,
+  now: Date = new Date(),
+): Promise<Md3EntryView | null> {
+  const entry = await prisma.entry.findUnique({
+    where: { id: entryId },
+    select: {
+      id: true,
+      label: true,
+      tournamentId: true,
+      format: true,
+      picks: { select: { category: true, key: true, teamOrValue: true } },
+    },
+  });
+  if (!entry || entry.tournamentId !== tournamentId || entry.format !== "MATCH_DAY_3_PICKEM") {
+    return null;
+  }
+  const view = await buildMd3View(tournamentId, decodeMd3Rows(entry.picks), now);
+  return { entryId: entry.id, label: entry.label, view };
 }
 
 // Build the read model from a set of predictions, decorating the 24 fixtures with
@@ -72,6 +107,26 @@ async function buildMd3View(
     byNo.set(r.match.matchNo, {
       byTeam: { [r.homeTeamCode]: r.homeScore, [r.awayTeamCode]: r.awayScore },
       final: r.status === "FINAL",
+    });
+  }
+
+  // Pre-match odds per MD3 match, oriented to the match's home slot (== the
+  // fixture's canonical home), keyed by matchNo for the win-probability bar.
+  const oddsRows = await prisma.matchOdds.findMany({
+    where: { match: { tournamentId, matchNo: { in: [...MD3_MATCH_NOS] } } },
+    select: {
+      homeWinProb: true,
+      drawProb: true,
+      awayWinProb: true,
+      match: { select: { matchNo: true } },
+    },
+  });
+  const oddsByNo = new Map<number, ImpliedProbs>();
+  for (const o of oddsRows) {
+    oddsByNo.set(o.match.matchNo, {
+      homeWinProb: o.homeWinProb,
+      drawProb: o.drawProb,
+      awayWinProb: o.awayWinProb,
     });
   }
 
@@ -118,6 +173,7 @@ async function buildMd3View(
       pred,
       result,
       points,
+      odds: oddsByNo.get(f.matchNo) ?? null,
     };
   });
 

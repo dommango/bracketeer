@@ -164,6 +164,57 @@ function toMatchInput(m: ResolvableMatch, resolved: ReturnType<typeof resolveBra
   };
 }
 
+// The shared match select for the match-center selectors — kept in one place so
+// the field set can't drift across the pool and challenge read paths.
+const MATCH_CENTER_SELECT = {
+  matchNo: true,
+  roundCode: true,
+  scheduledAt: true,
+  venue: true,
+  city: true,
+  homeSlotRef: true,
+  awaySlotRef: true,
+  odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
+  result: {
+    select: {
+      homeTeamCode: true,
+      awayTeamCode: true,
+      homeScore: true,
+      awayScore: true,
+      winnerCode: true,
+      status: true,
+      elapsed: true,
+      homePens: true,
+      awayPens: true,
+    },
+  },
+} as const;
+
+// Resolved MatchInput[] for a tournament, optionally scoped to a set of match
+// numbers, reusing the same slot resolution as the pool match center. Shared by
+// getMatchCenter (whole tournament) and the public challenge boards (MD3 → the 24
+// final group matches; Knockout → matches 73+), which have no pool to key on.
+export async function getTournamentMatchInputs(
+  tournamentId: string,
+  matchNos?: readonly number[],
+): Promise<MatchInput[]> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { officialResults: true },
+  });
+  if (!tournament) return [];
+
+  const resolved = resolveBracket(asResults(tournament.officialResults));
+  const matches = await prisma.match.findMany({
+    where: {
+      tournamentId,
+      ...(matchNos ? { matchNo: { in: [...matchNos] } } : {}),
+    },
+    select: MATCH_CENTER_SELECT,
+  });
+  return matches.map((m) => toMatchInput(m, resolved));
+}
+
 // Tournament status is derived, not stored: UPCOMING before kickoff, COMPLETE
 // once the final (match 104) is decided, LIVE in between. (The old stored
 // Tournament.status was never transitioned off UPCOMING, so the header badge
@@ -691,42 +742,14 @@ export async function getMatchCenter(
 ): Promise<MatchCenterSection[]> {
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
-    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+    select: { tournamentId: true },
   });
   if (!pool) return [];
 
-  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
-
-  const matches = await prisma.match.findMany({
-    where: { tournamentId: pool.tournamentId },
-    select: {
-      matchNo: true,
-      roundCode: true,
-      scheduledAt: true,
-      venue: true,
-      city: true,
-      homeSlotRef: true,
-      awaySlotRef: true,
-      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
-      result: {
-        select: {
-          homeTeamCode: true,
-          awayTeamCode: true,
-          homeScore: true,
-          awayScore: true,
-          winnerCode: true,
-          status: true,
-          elapsed: true,
-          homePens: true,
-          awayPens: true,
-        },
-      },
-    },
-  });
-
-  const yourPicks = await getEntryKnockoutPicks(poolId, userId);
-
-  const inputs = matches.map((m) => toMatchInput(m, resolved));
+  const [inputs, yourPicks] = await Promise.all([
+    getTournamentMatchInputs(pool.tournamentId),
+    getEntryKnockoutPicks(poolId, userId),
+  ]);
 
   return buildMatchCenter(inputs, yourPicks);
 }

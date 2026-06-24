@@ -96,7 +96,7 @@ function Md3PromoCard({ now }: { now: Date }) {
         <Link href="/challenge/md3/play" className={PRIMARY_BTN}>
           Play
         </Link>
-        <Link href="/challenge/md3" className={SECONDARY_BTN}>
+        <Link href="/challenge/md3/leaderboard" className={SECONDARY_BTN}>
           Leaderboard
         </Link>
       </div>
