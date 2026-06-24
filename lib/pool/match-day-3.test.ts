@@ -5,6 +5,7 @@ import {
   md3Fixtures,
   md3LockAt,
   isMd3MatchLocked,
+  revealMd3Fixture,
   isMd3GameOpen,
   lastMd3Kickoff,
   scoreMd3,
@@ -79,6 +80,32 @@ describe("per-match lock", () => {
     const last = lastMd3Kickoff();
     expect(isMd3GameOpen(new Date(last.getTime() - 1000))).toBe(true);
     expect(isMd3GameOpen(new Date(last.getTime() + 1000))).toBe(false);
+  });
+});
+
+describe("revealMd3Fixture (hide others' picks until kickoff)", () => {
+  const at = md3LockAt(9)!; // 2026-06-24T19:00:00Z
+  const before = new Date(at.getTime() - 1000);
+  const after = new Date(at.getTime() + 1000);
+
+  it("always reveals the owner's own prediction, before or after kickoff", () => {
+    expect(revealMd3Fixture(9, true, before)).toBe(true);
+    expect(revealMd3Fixture(9, true, after)).toBe(true);
+  });
+
+  it("hides another player's prediction until the fixture kicks off", () => {
+    expect(revealMd3Fixture(9, false, before)).toBe(false);
+    expect(revealMd3Fixture(9, false, at)).toBe(true);
+    expect(revealMd3Fixture(9, false, after)).toBe(true);
+  });
+
+  it("is independent per fixture — a later fixture stays hidden while an earlier one opens", () => {
+    // Match 9 has kicked off; match 70 (last MD3) has not.
+    const last = lastMd3Kickoff();
+    const between = new Date(at.getTime() + 1000);
+    expect(between.getTime()).toBeLessThan(last.getTime());
+    expect(revealMd3Fixture(9, false, between)).toBe(true);
+    expect(revealMd3Fixture(70, false, between)).toBe(false);
   });
 });
 
