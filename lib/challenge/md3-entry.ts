@@ -51,6 +51,18 @@ export async function getMyMd3Entry(
   };
 }
 
+// Whether a user has skin in the game — at least one saved Match Day Pickem
+// prediction. The leaderboard is gated to participants, so a non-player can't
+// scout the field without entering. False for signed-out viewers.
+export async function isMd3Participant(
+  userId: string | null,
+  tournamentSlug: string = DEFAULT_TOURNAMENT_SLUG,
+): Promise<boolean> {
+  if (!userId) return false;
+  const entry = await getMyMd3Entry(userId, tournamentSlug);
+  return !!entry && Object.keys(entry.scores).length > 0;
+}
+
 export interface SaveMd3PredictionsInput {
   userId: string;
   label: string;
