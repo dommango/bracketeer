@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { GAME_CATALOG } from "@/lib/pool/games";
+import { Md3Realtime } from "./Md3Realtime";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function Md3ChallengeLeaderboardPage() {
 
   return (
     <section className="space-y-5">
+      <Md3Realtime />
       <header className="space-y-1">
         <h1 className="font-display text-2xl text-ink">{GAME_CATALOG.MATCH_DAY_3_PICKEM.challengeName}</h1>
         <p className="text-sm text-ink-3">

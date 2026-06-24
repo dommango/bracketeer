@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { asResults, recomputePool, recomputeStandalone } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
+import { standaloneChannelId } from "@/lib/realtime/events";
 import { sendPushToPool } from "@/lib/push/send";
 import type { ApnsPayload } from "@/lib/push/apns";
 import { resolveBracket, validateKnockoutWinner } from "@/lib/pool/bracket";
@@ -430,6 +431,10 @@ export async function recomputeTournamentPools(
   // Best-effort and isolated: a failure here must not undo the pool recomputes.
   try {
     await recomputeStandalone(tournamentId);
+    // Fan out to the public challenge boards (Match Day Pickem), which have no
+    // pool id to ride on. notifyPool swallows its own errors, but keep it inside
+    // the try so a recompute failure skips the now-stale signal.
+    await notifyPool(standaloneChannelId(tournamentId), "result");
   } catch (err) {
     console.error(`recomputeStandalone failed for tournament ${tournamentId}:`, err);
   }

@@ -11,3 +11,13 @@ export interface PoolEvent {
   type: PoolEventType;
   at: string;
 }
+
+// Standalone challenge entries (poolId == null — e.g. the public Match Day Pickem
+// board) live outside any pool, so they have no pool id to broadcast on. They
+// share one tournament-scoped channel instead: the producer notifies this key
+// when standalone entries rescore, and the public challenge stream subscribes to
+// it. Reuses the PoolEvent.poolId field as an opaque routing key, so the hub and
+// notify path stay unchanged.
+export function standaloneChannelId(tournamentId: string): string {
+  return `standalone:${tournamentId}`;
+}

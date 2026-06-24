@@ -4,6 +4,7 @@ import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queri
 import { getMd3ChallengeView } from "@/lib/pool/md3-view";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
+import { Md3Realtime } from "../Md3Realtime";
 
 // Predictions, locks, and results change at request time.
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default async function Md3ChallengePlayPage() {
 
   return (
     <section className="space-y-4">
+      <Md3Realtime />
       <div className="flex items-end justify-between px-1">
         <div>
           <h1 className="font-display text-lg text-ink">Your predictions</h1>
