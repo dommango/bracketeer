@@ -80,7 +80,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: env.AUTH_SECRET,
   session: { strategy: "database" },
-  pages: { signIn: "/signin" },
+  // A custom verify-request page is required, not just nice-to-have: with a custom
+  // signIn page set, Auth.js v5 otherwise throws UnknownAction ("Cannot handle
+  // action: verify-request") when it tries to render the built-in one after a
+  // magic-link send. Pointing it at our own page (app/verify-request) fixes it.
+  pages: { signIn: "/signin", verifyRequest: "/verify-request" },
   callbacks: {
     // Database sessions: surface the user id so route handlers can authorize.
     session({ session, user }) {
