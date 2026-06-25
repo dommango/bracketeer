@@ -5,6 +5,7 @@ import { getSessionUser, getPoolAccess, canManagePool } from "@/lib/pool/access"
 import { signOutAction } from "@/lib/auth/actions";
 import { PoolRealtime } from "./PoolRealtime";
 import { BottomNav } from "./BottomNav";
+import { Md3PoolBanner } from "./Md3PoolBanner";
 import { Footer } from "../../Footer";
 
 // Hero reflects request-time session + entry count.
@@ -127,6 +128,8 @@ export default async function PoolLayout({
             ) : null}
           </div>
         </header>
+
+        <Md3PoolBanner now={new Date()} />
 
         <div className="mt-6">{children}</div>
 

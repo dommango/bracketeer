@@ -54,6 +54,15 @@ export interface YourPick {
   correct: boolean | null; // null until the match is decided
 }
 
+// A scoreline prediction (Match Day Pickem), oriented to the row's home/away.
+// `points` is null until the fixture is final; once scored it carries the points
+// that prediction earned (0 = missed) so the UI can colour the chip.
+export interface YourScore {
+  home: number;
+  away: number;
+  points: number | null;
+}
+
 export interface MatchCenterRow {
   matchNo: number;
   roundCode: string;
@@ -66,6 +75,9 @@ export interface MatchCenterRow {
   away: MatchCenterSide;
   winnerCode: string | null;
   yourPick: YourPick | null;
+  // The viewer's scoreline prediction for this fixture (Match Day Pickem only;
+  // null elsewhere or when they didn't predict it).
+  yourScore: YourScore | null;
   venue: string | null;
   city: string | null;
   cityToken: string | null;
@@ -88,7 +100,11 @@ function statusOf(m: MatchInput): MatchStatus {
   return m.winnerCode ? "FINAL" : "SCHEDULED";
 }
 
-function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): MatchCenterRow {
+function buildRow(
+  m: MatchInput,
+  yourKnockoutPicks: Record<number, string>,
+  scorePicks: Record<number, YourScore>,
+): MatchCenterRow {
   const status = statusOf(m);
 
   let yourPick: YourPick | null = null;
@@ -117,6 +133,7 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
     away: { code: m.awayCode, name: sideName(m.awayCode, m.awayRef), score: m.awayScore },
     winnerCode: m.winnerCode,
     yourPick,
+    yourScore: scorePicks[m.matchNo] ?? null,
     venue: m.venue ?? null,
     city: m.city ?? null,
     cityToken: m.cityToken ?? null,
@@ -130,10 +147,11 @@ function buildRow(m: MatchInput, yourKnockoutPicks: Record<number, string>): Mat
 export function buildMatchCenter(
   matches: MatchInput[],
   yourKnockoutPicks: Record<number, string> = {},
+  scorePicks: Record<number, YourScore> = {},
 ): MatchCenterSection[] {
   const byRound = new Map<string, MatchCenterRow[]>();
   for (const m of matches) {
-    const row = buildRow(m, yourKnockoutPicks);
+    const row = buildRow(m, yourKnockoutPicks, scorePicks);
     const list = byRound.get(m.roundCode);
     if (list) list.push(row);
     else byRound.set(m.roundCode, [row]);
@@ -155,6 +173,7 @@ export function buildMatchCenter(
 export function buildGroupCenterSections(
   matches: MatchInput[],
   yourKnockoutPicks: Record<number, string> = {},
+  scorePicks: Record<number, YourScore> = {},
 ): MatchCenterSection[] {
   const teamToGroup = new Map<string, string>();
   for (const [letter, teams] of Object.entries(GROUPS)) {
@@ -170,7 +189,7 @@ export function buildGroupCenterSections(
 
   const byGroup = new Map<string, MatchCenterRow[]>();
   for (const m of groupMatches) {
-    const row = buildRow(m, yourKnockoutPicks);
+    const row = buildRow(m, yourKnockoutPicks, scorePicks);
     const letter =
       teamToGroup.get(m.homeCode ?? "") ??
       teamToGroup.get(m.awayCode ?? "") ??
@@ -188,7 +207,7 @@ export function buildGroupCenterSections(
     sections.push({ roundCode: "GROUP", label: `Group ${letter}`, matches: rows });
   }
 
-  return [...sections, ...buildMatchCenter(knockoutMatches, yourKnockoutPicks)];
+  return [...sections, ...buildMatchCenter(knockoutMatches, yourKnockoutPicks, scorePicks)];
 }
 
 // Re-exported for the selector layer.

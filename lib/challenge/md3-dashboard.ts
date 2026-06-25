@@ -12,7 +12,11 @@ import {
 import { getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { getMd3ChallengeView, type Md3View } from "@/lib/pool/md3-view";
 import { buildStanding, type Standing } from "@/lib/pool/home";
-import { buildGroupCenterSections, type MatchCenterSection } from "@/lib/pool/match-center";
+import {
+  buildGroupCenterSections,
+  type MatchCenterSection,
+  type YourScore,
+} from "@/lib/pool/match-center";
 import { buildScoreCardInputs, type ScoreCardInputs } from "@/lib/challenge/match-cards";
 import { MD3_MATCH_NOS } from "@/lib/pool/match-day-3";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
@@ -35,18 +39,39 @@ export async function getMd3ChallengeHome(
     getMd3ChallengeView(tournamentId, userId, now),
     getTournamentMatchInputs(tournamentId, MD3_MATCH_NOS),
   ]);
+  // The viewer's own scoreline predictions (and points once final), so the live /
+  // last cards on Home show "your pick" beside the score like the Matches tab.
+  const scorePicks: Record<number, YourScore> = {};
+  for (const f of view.fixtures) {
+    if (f.pred) scorePicks[f.matchNo] = { home: f.pred.home, away: f.pred.away, points: f.points };
+  }
+
   return {
     standing: buildStanding(board, userId),
     board,
     view,
-    cards: buildScoreCardInputs(inputs, {}, now),
+    cards: buildScoreCardInputs(inputs, {}, now, scorePicks),
   };
 }
 
-// The 24 final group-stage fixtures as a by-group match center (MD3 has no
-// per-match winner pick, so no picks are threaded in).
-export async function getMd3MatchCenter(): Promise<MatchCenterSection[]> {
+// The 24 final group-stage fixtures as a by-group match center, decorated with
+// the viewer's own scoreline predictions (and points once final) so the Matches
+// tab shows "your pick" beside every live/final score. MD3 has no per-match
+// winner pick, so only the scoreline map is threaded in.
+export async function getMd3MatchCenter(
+  userId: string | null,
+): Promise<MatchCenterSection[]> {
   const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
-  const inputs = await getTournamentMatchInputs(tournamentId, MD3_MATCH_NOS);
-  return buildGroupCenterSections(inputs);
+  const [inputs, view] = await Promise.all([
+    getTournamentMatchInputs(tournamentId, MD3_MATCH_NOS),
+    getMd3ChallengeView(tournamentId, userId),
+  ]);
+
+  const scorePicks: Record<number, YourScore> = {};
+  for (const f of view.fixtures) {
+    // The viewer always sees their own picks fully revealed, so f.pred is safe.
+    if (f.pred) scorePicks[f.matchNo] = { home: f.pred.home, away: f.pred.away, points: f.points };
+  }
+
+  return buildGroupCenterSections(inputs, {}, scorePicks);
 }

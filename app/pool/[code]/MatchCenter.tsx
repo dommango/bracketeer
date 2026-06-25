@@ -73,6 +73,23 @@ function PickChip({ pick }: { pick: NonNullable<MatchCenterRow["yourPick"]> }) {
   );
 }
 
+// Scoreline prediction chip (Match Day Pickem). Neutral until the fixture is
+// final, then green when the prediction scored, muted when it missed.
+function ScoreChip({ pick }: { pick: NonNullable<MatchCenterRow["yourScore"]> }) {
+  const scored = pick.points !== null;
+  const earned = scored && pick.points! > 0;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] ${
+        earned ? "bg-pitch-tint text-pitch-dark" : "bg-surface-sunk text-ink-2"
+      }`}
+    >
+      Your pick: {pick.home}–{pick.away}
+      {scored ? <span className="font-mono">+{pick.points}</span> : null}
+    </span>
+  );
+}
+
 function MatchRow({
   row,
   hrefForMatch,
@@ -102,6 +119,10 @@ function MatchRow({
       {row.yourPick ? (
         <div className="mt-1.5">
           <PickChip pick={row.yourPick} />
+        </div>
+      ) : row.yourScore ? (
+        <div className="mt-1.5">
+          <ScoreChip pick={row.yourScore} />
         </div>
       ) : null}
       <div className="mt-1.5">

@@ -66,7 +66,9 @@ export default async function KnockoutChallengeHomePage() {
         live={cards.live}
         last={cards.last}
         next={cards.next}
-        hrefForMatch={() => "/challenge/knockout/matches"}
+        hrefForMatch={(no) =>
+          no >= 73 ? `/challenge/knockout/matches/${no}` : "/challenge/knockout/matches"
+        }
       />
 
       {preview.length > 0 ? (

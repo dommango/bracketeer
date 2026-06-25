@@ -976,22 +976,24 @@ export interface MatchDetail {
   injuries: InjuryItem[];
 }
 
-// One match's detail view: resolved teams, live status, the pool's pick-split
-// (scored knockout matches only), and the viewer's own pick. Returns null when
-// the match number doesn't exist in this pool's tournament.
-export async function getMatchDetail(
-  poolId: string,
+// Tournament-scoped match detail — the generic, pool-agnostic content for one
+// match (resolved teams, live status, timeline, stats, odds, prediction, lineups,
+// injuries, venue). Shared by the public challenges (which use it as-is) and the
+// pool match page (getMatchDetail, which augments it with the pool's pick-split +
+// the viewer's own pick). pickSplit/yourPick are always null here. Returns null
+// when the match number doesn't exist in this tournament.
+export async function getChallengeMatchDetail(
+  tournamentId: string,
   matchNo: number,
-  userId: string | null,
 ): Promise<MatchDetail | null> {
-  const pool = await prisma.pool.findUnique({
-    where: { id: poolId },
-    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { officialResults: true },
   });
-  if (!pool) return null;
+  if (!tournament) return null;
 
   const match = await prisma.match.findUnique({
-    where: { tournamentId_matchNo: { tournamentId: pool.tournamentId, matchNo } },
+    where: { tournamentId_matchNo: { tournamentId, matchNo } },
     select: {
       id: true,
       matchNo: true,
@@ -1044,7 +1046,7 @@ export async function getMatchDetail(
   });
   if (!match) return null;
 
-  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const resolved = resolveBracket(asResults(tournament.officialResults));
   const r = resolved[matchNo];
   const isGroup = match.roundCode === "GROUP";
   const homeCode = isGroup
@@ -1057,23 +1059,6 @@ export async function getMatchDetail(
   const status: MatchStatus =
     (match.result?.status as MatchStatus | undefined) ?? (winnerCode ? "FINAL" : "SCHEDULED");
   const scored = isScoredKnockout(matchNo);
-
-  // Pick-split + your-pick only carry meaning for scored knockout matches.
-  let pickSplit: PickSplit | null = null;
-  let yourPick: MatchDetail["yourPick"] = null;
-  if (scored) {
-    const entries = await getEntriesWithPicks(poolId);
-    pickSplit = buildPickSplit(
-      homeCode,
-      awayCode,
-      entries.map((e) => e.picks.knockout?.[matchNo]),
-    );
-    const mine = await getEntryKnockoutPicks(poolId, userId);
-    const code = mine[matchNo];
-    if (code) {
-      yourPick = { code, name: teamName(code), correct: winnerCode ? code === winnerCode : null };
-    }
-  }
 
   // Live/finished match enrichment: the goal/card timeline + team stats the
   // poller already persists. Skip the queries entirely for not-yet-played matches.
@@ -1108,8 +1093,8 @@ export async function getMatchDetail(
     winnerCode,
     isKnockout: !isGroup,
     scored,
-    pickSplit,
-    yourPick,
+    pickSplit: null,
+    yourPick: null,
     timeline,
     stats,
     odds: match.odds ?? null,
@@ -1145,6 +1130,39 @@ export async function getMatchDetail(
       : null,
     injuries: (match.injuries?.players as unknown as InjuryItem[] | undefined) ?? [],
   };
+}
+
+// One match's detail view for a POOL: the tournament-generic detail (above) plus
+// the pool's pick-split (scored knockout matches only) and the viewer's own pick.
+// Returns null when the match number doesn't exist in this pool's tournament.
+export async function getMatchDetail(
+  poolId: string,
+  matchNo: number,
+  userId: string | null,
+): Promise<MatchDetail | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true },
+  });
+  if (!pool) return null;
+
+  const detail = await getChallengeMatchDetail(pool.tournamentId, matchNo);
+  if (!detail || !detail.scored) return detail;
+
+  // Pick-split + your-pick only carry meaning for scored knockout matches.
+  const entries = await getEntriesWithPicks(poolId);
+  const pickSplit = buildPickSplit(
+    detail.home.code,
+    detail.away.code,
+    entries.map((e) => e.picks.knockout?.[matchNo]),
+  );
+  const mine = await getEntryKnockoutPicks(poolId, userId);
+  const code = mine[matchNo];
+  const yourPick = code
+    ? { code, name: teamName(code), correct: detail.winnerCode ? code === detail.winnerCode : null }
+    : null;
+
+  return { ...detail, pickSplit, yourPick };
 }
 
 export interface ChampionshipOdd {
