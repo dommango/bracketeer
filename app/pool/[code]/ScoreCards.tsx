@@ -110,6 +110,21 @@ function LiveOrFinalCard({ row, href }: { row: MatchCenterRow; href: string }) {
             Your pick: {row.yourPick.name}
           </span>
         </div>
+      ) : row.yourScore ? (
+        <div className="mt-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] ${
+              row.yourScore.points && row.yourScore.points > 0
+                ? "bg-pitch-tint text-pitch-dark"
+                : "bg-surface-sunk text-ink-2"
+            }`}
+          >
+            Your pick: {row.yourScore.home}–{row.yourScore.away}
+            {row.yourScore.points !== null ? (
+              <span className="font-mono">+{row.yourScore.points}</span>
+            ) : null}
+          </span>
+        </div>
       ) : null}
       <div className="mt-auto pt-2">
         <VenueLine venue={row.venue} city={row.city} cityToken={row.cityToken} />

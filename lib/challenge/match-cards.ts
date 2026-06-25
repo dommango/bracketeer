@@ -8,6 +8,7 @@ import {
   buildMatchCenter,
   type MatchInput,
   type MatchCenterRow,
+  type YourScore,
 } from "@/lib/pool/match-center";
 import { selectNextMatch, type HomeNextMatch } from "@/lib/pool/home";
 import { matchdaysAhead } from "@/lib/tz";
@@ -32,8 +33,9 @@ export function buildScoreCardInputs(
   inputs: MatchInput[],
   yourKnockoutPicks: Record<number, string> = {},
   now: Date = new Date(),
+  scorePicks: Record<number, YourScore> = {},
 ): ScoreCardInputs {
-  const rows = buildMatchCenter(inputs, yourKnockoutPicks).flatMap((s) => s.matches);
+  const rows = buildMatchCenter(inputs, yourKnockoutPicks, scorePicks).flatMap((s) => s.matches);
 
   const live = rows.filter((r) => r.status === "LIVE");
 

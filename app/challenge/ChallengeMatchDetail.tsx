@@ -73,15 +73,51 @@ function TotalsLine({ totals }: { totals: MatchDetail["totals"] }) {
   );
 }
 
+// The viewer's Match Day Pickem scoreline for this fixture, shown beside the live
+// or final score. `points` is null until the match is final, then green when the
+// prediction scored, muted when it missed.
+function YourPrediction({
+  pick,
+}: {
+  pick: { home: number; away: number; points: number | null };
+}) {
+  const scored = pick.points !== null;
+  const earned = scored && pick.points! > 0;
+  return (
+    <div className="mt-3 flex items-center justify-between rounded-xl border border-line bg-surface-sunk/50 px-3 py-2">
+      <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+        Your prediction
+      </span>
+      <span className="flex items-center gap-2">
+        <span className="font-display text-lg tabular-nums text-ink">
+          {pick.home}–{pick.away}
+        </span>
+        {scored ? (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              earned ? "bg-pitch-tint text-pitch-dark" : "bg-surface-sunk text-ink-3"
+            }`}
+          >
+            +{pick.points}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 export function ChallengeMatchDetail({
   detail,
   backHref,
   basePath,
+  yourScore = null,
 }: {
   detail: MatchDetail;
   backHref: string;
   // The challenge root for drill-down links — "/challenge/md3" | "/challenge/knockout".
   basePath: string;
+  // The viewer's MD3 scoreline prediction for this fixture, if any (MD3 only).
+  yourScore?: { home: number; away: number; points: number | null } | null;
 }) {
   const decided = detail.status === "FINAL" && Boolean(detail.winnerCode);
 
@@ -149,6 +185,7 @@ export function ChallengeMatchDetail({
         </div>
         <WinProbBar odds={detail.odds} homeCode={detail.home.code} awayCode={detail.away.code} />
         <TotalsLine totals={detail.totals} />
+        {yourScore ? <YourPrediction pick={yourScore} /> : null}
       </div>
 
       <MatchInsights prediction={detail.prediction} home={detail.home} away={detail.away} />

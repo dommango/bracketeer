@@ -14,6 +14,7 @@ function row(over: Partial<MatchCenterRow> & { matchNo: number }): MatchCenterRo
     away: { code: "BBB", name: "Team B", score: null },
     winnerCode: null,
     yourPick: null,
+    yourScore: null,
     venue: null,
     city: null,
     cityToken: null,

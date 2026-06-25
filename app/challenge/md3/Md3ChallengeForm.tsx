@@ -121,6 +121,30 @@ function FixtureCard({ f, disabled }: { f: Md3FixtureVM; disabled: boolean }) {
   );
 }
 
+// A day-chunked list of fixture cards. Day headers are computed within the list
+// it's given, so it reads correctly whether it holds the open or closed segment.
+function FixtureList({ fixtures, canEdit }: { fixtures: Md3FixtureVM[]; canEdit: boolean }) {
+  const rows = fixtures.map((f, i) => {
+    const day = dayLabel(f.kickoffISO);
+    const showDay = i === 0 || day !== dayLabel(fixtures[i - 1].kickoffISO);
+    return { f, day, showDay };
+  });
+  return (
+    <ul className="space-y-2">
+      {rows.map(({ f, day, showDay }) => (
+        <li key={f.matchNo}>
+          {showDay ? (
+            <p className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">
+              {day}
+            </p>
+          ) : null}
+          <FixtureCard f={f} disabled={!canEdit || f.locked} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function Md3ChallengeForm({
   fixtures,
   canEdit,
@@ -158,27 +182,23 @@ export function Md3ChallengeForm({
     }
   }
 
-  const rows = fixtures.map((f, i) => {
-    const day = dayLabel(f.kickoffISO);
-    const showDay = i === 0 || day !== dayLabel(fixtures[i - 1].kickoffISO);
-    return { f, day, showDay };
-  });
+  // Frontload the fixtures you can still pick — split open (not yet kicked off)
+  // from closed (locked/final). Open ones lead the form; closed ones drop into a
+  // collapsed section below so the pickable games aren't buried under scores you
+  // can no longer change.
+  const open = fixtures.filter((f) => !f.locked);
+  const closed = fixtures.filter((f) => f.locked);
 
   return (
     <>
       <form ref={formRef} action={action} className="space-y-3">
-        <ul className="space-y-2">
-          {rows.map(({ f, day, showDay }) => (
-            <li key={f.matchNo}>
-              {showDay ? (
-                <p className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">
-                  {day}
-                </p>
-              ) : null}
-              <FixtureCard f={f} disabled={!canEdit || f.locked} />
-            </li>
-          ))}
-        </ul>
+        {open.length > 0 ? (
+          <FixtureList fixtures={open} canEdit={canEdit} />
+        ) : (
+          <p className="rounded-2xl border border-dashed border-line bg-surface-sunk p-4 text-center text-sm text-ink-3">
+            No fixtures open right now — every remaining match has kicked off.
+          </p>
+        )}
 
         {state.error ? (
           <p className="rounded-md border border-negative/40 bg-negative/10 px-3 py-2 text-sm text-negative">
@@ -195,7 +215,7 @@ export function Md3ChallengeForm({
           <input type="hidden" name="agreed" value={agreed ? "on" : ""} />
         ) : null}
 
-        {canEdit ? (
+        {canEdit && open.length > 0 ? (
           <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] pt-1">
             <button
               type="submit"
@@ -208,6 +228,21 @@ export function Md3ChallengeForm({
           </div>
         ) : null}
       </form>
+
+      {/* Closed fixtures — kicked off, so read-only. Collapsed by default and shown
+          below the pickable games; each still surfaces your prediction next to the
+          live/final score. */}
+      {closed.length > 0 ? (
+        <details className="mt-2 overflow-hidden rounded-2xl border border-line bg-surface-sunk/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[13px] font-semibold text-ink-2 [&::-webkit-details-marker]:hidden">
+            <span>Closed fixtures</span>
+            <span className="text-[12px] font-normal text-ink-3">{closed.length} kicked off ›</span>
+          </summary>
+          <div className="px-3 pb-3">
+            <FixtureList fixtures={closed} canEdit={false} />
+          </div>
+        </details>
+      ) : null}
 
       {showConsent ? (
         <ConsentPopup

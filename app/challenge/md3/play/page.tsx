@@ -2,9 +2,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
-import { md3DateRange } from "@/lib/pool/games";
 import { hasAcceptedTerms } from "@/lib/account/consent";
-import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
 
 // Predictions, locks, and results change at request time.
@@ -12,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Md3ChallengePlayPage() {
   const user = await getSessionUser();
-  const { view, standing, cards } = await getMd3ChallengeHome(user?.id ?? null);
+  const { view, standing } = await getMd3ChallengeHome(user?.id ?? null);
   const gameOpen = isMd3GameOpen();
   const needsConsent = user ? !(await hasAcceptedTerms(user.id)) : false;
 
@@ -47,19 +45,10 @@ export default async function Md3ChallengePlayPage() {
           Match Day Pickem is locked — every fixture has kicked off.
         </p>
       ) : (
-        <p className="rounded-2xl border border-line bg-surface px-4 py-3 text-[13px] text-ink-3">
-          Predict the exact score of all 24 final group-stage matches ({md3DateRange()}). Each pick
-          locks at its own kickoff, and you&apos;re on the public board once all 24 are in.
+        <p className="px-1 text-[13px] text-ink-3">
+          Pick the exact scoreline for each open match below — each locks at its own kickoff.
         </p>
       )}
-
-      {/* Live context while you decide — the same score cards as Home. */}
-      <ScoreCards
-        live={cards.live}
-        last={cards.last}
-        next={cards.next}
-        hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
-      />
 
       <Md3ChallengeForm
         fixtures={view.fixtures}

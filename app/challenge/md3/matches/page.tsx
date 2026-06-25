@@ -4,6 +4,7 @@ import {
   DEFAULT_TOURNAMENT_SLUG,
   getTopScorers,
 } from "@/lib/pool/queries";
+import { getSessionUser } from "@/lib/pool/access";
 import { MatchCenter } from "@/app/pool/[code]/MatchCenter";
 import { Scorers } from "@/app/pool/[code]/Scorers";
 
@@ -11,9 +12,10 @@ import { Scorers } from "@/app/pool/[code]/Scorers";
 export const dynamic = "force-dynamic";
 
 export default async function Md3ChallengeMatchesPage() {
+  const user = await getSessionUser();
   const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
   const [sections, scorers] = await Promise.all([
-    getMd3MatchCenter(),
+    getMd3MatchCenter(user?.id ?? null),
     getTopScorers(tournamentId),
   ]);
 
