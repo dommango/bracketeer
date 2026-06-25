@@ -29,6 +29,12 @@ export function ChallengeBottomNav() {
   // No bottom nav on the bare /challenge index (it redirects); render nothing.
   if (!base) return null;
 
+  // Where "make/edit your picks" lives differs by game: MD3 has its own /play
+  // form inside the challenge tree, while the Knockout Challenge is built at
+  // /bracket (outside /challenge), so that link leaves the challenge shell.
+  const isMd3 = base === "/challenge/md3";
+  const picksHref = isMd3 ? `${base}/play` : "/bracket";
+
   const tabs: Tab[] = [
     {
       key: "home",
@@ -36,6 +42,15 @@ export function ChallengeBottomNav() {
       href: base,
       isActive: (p) => p === base,
       icon: <HomeGlyph />,
+    },
+    {
+      key: "picks",
+      label: "Picks",
+      href: picksHref,
+      // Active only for MD3's in-tree /play route; /bracket is outside the
+      // challenge shell, so the Knockout picks tab is a link-out (never active).
+      isActive: (p) => isMd3 && p === `${base}/play`,
+      icon: <PicksGlyph />,
     },
     {
       key: "leaderboard",
@@ -132,6 +147,16 @@ function HomeGlyph() {
       <path d="M4 10.5 12 4l8 6.5" />
       <path d="M5.5 9.5V20h13V9.5" />
       <path d="M10 20v-5h4v5" />
+    </svg>
+  );
+}
+
+function PicksGlyph() {
+  // Pencil — make / edit your picks.
+  return (
+    <svg {...svgProps}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
     </svg>
   );
 }
