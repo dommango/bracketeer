@@ -118,6 +118,9 @@ function SignedInHub({
   pools: { name: string; joinCode: string; format: PoolFormat }[];
 }) {
   const now = new Date();
+  // Once Match Day Pickem locks it drops out of the FeaturedBanner, so surface a
+  // standing link to its board — entrants still want to watch their live/final score.
+  const md3Locked = resolveGamePhase("MATCH_DAY_3_PICKEM", now).phase === "LOCKED_LIVE";
   return (
     <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
       <div className="flex items-center justify-between">
@@ -139,6 +142,18 @@ function SignedInHub({
       </div>
 
       <FeaturedBanner now={now} />
+
+      {md3Locked ? (
+        <Link
+          href="/challenge/md3"
+          className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-surface p-4 transition-colors hover:bg-surface-sunk"
+        >
+          <span className="text-sm font-semibold text-ink">
+            {GAME_CATALOG.MATCH_DAY_3_PICKEM.challengeName} leaderboard
+          </span>
+          <span className="font-display text-pitch-dark">→</span>
+        </Link>
+      ) : null}
 
       <div className="mt-4 rounded-3xl border border-line bg-surface p-[22px]">
         <h2 className="font-display text-lg text-ink">

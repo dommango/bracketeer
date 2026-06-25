@@ -11,10 +11,15 @@ const TABS = [
 
 export function ChallengeTabs() {
   const pathname = usePathname();
+  // Most-specific match wins so the Match Day tab stays highlighted on its nested
+  // /challenge/md3/play form — a plain `pathname === href` leaves both tabs inactive there.
+  const activeHref = TABS.filter(
+    (t) => pathname === t.href || pathname.startsWith(`${t.href}/`),
+  ).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <nav className="mb-5 flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
       {TABS.map((t) => {
-        const active = pathname === t.href;
+        const active = t.href === activeHref;
         return (
           <Link
             key={t.href}
