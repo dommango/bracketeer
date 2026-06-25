@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
+import { md3DateRange } from "@/lib/pool/games";
 import { hasAcceptedTerms } from "@/lib/account/consent";
 import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
@@ -47,8 +48,8 @@ export default async function Md3ChallengePlayPage() {
         </p>
       ) : (
         <p className="rounded-2xl border border-line bg-surface px-4 py-3 text-[13px] text-ink-3">
-          Predict the exact score of all 24 final group-stage matches. Each pick locks at its own
-          kickoff, and you&apos;re on the public board once all 24 are in.
+          Predict the exact score of all 24 final group-stage matches ({md3DateRange()}). Each pick
+          locks at its own kickoff, and you&apos;re on the public board once all 24 are in.
         </p>
       )}
 
