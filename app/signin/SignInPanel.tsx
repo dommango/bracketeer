@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { signIn } from "@/auth";
 import { googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
-import { kickoffFor } from "@/lib/scoring/schedule";
-import { R32Countdown } from "@/app/pool/[code]/R32Countdown";
 import { PublicGames } from "@/app/PublicGames";
-
-// Match 73 is the Round-of-32 kickoff — surfaced here as the pre-sign-in hook.
-const R32_KICKOFF = kickoffFor(73);
 
 // Only same-origin relative paths are honored as a post-sign-in destination, so
 // a crafted ?callbackUrl can't turn sign-in into an open redirect. Reject
@@ -82,12 +77,6 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
           </div>
         </div>
       </div>
-
-      {R32_KICKOFF ? (
-        <div className="mt-4">
-          <R32Countdown target={R32_KICKOFF.toISOString()} label="Round of 32 kicks off in" />
-        </div>
-      ) : null}
 
       {error ? (
         <p className="mt-4 rounded-xl border border-[var(--negative)]/25 bg-[var(--negative-tint)] px-4 py-3 text-sm text-[var(--negative)]">

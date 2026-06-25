@@ -47,6 +47,7 @@ export default async function Md3ChallengeLeaderboardPage() {
           youUserId={user?.id}
           linkBase="/challenge/md3/u"
           showMedals={!isMd3GameOpen()}
+          showLiveNote={false}
         />
       )}
     </section>
