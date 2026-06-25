@@ -210,6 +210,15 @@ function dayLabel(d: Date): string {
   return MONTH_DAY.format(d); // e.g. "24 Jun"
 }
 
+// The calendar span of the Match Day Pickem fixtures (first → last kickoff), for
+// copy that tells players which games they're predicting and when. UTC-framed to
+// match the rest of this module's date labels (gameStateLine). e.g. "24 – 28 Jun".
+export function md3DateRange(): string {
+  const first = dayLabel(firstMd3Kickoff());
+  const last = dayLabel(lastMd3Kickoff());
+  return first === last ? first : `${first} – ${last}`;
+}
+
 // A short, friendly state line for a game card / badge, derived from the phase.
 // Single source so the create card, create-success copy and the pool notice can't
 // drift. Examples: "Open now · first pick locks 24 Jun",

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GAME_CATALOG, resolveGamePhase, gameStateLine, prizeTeaser } from "@/lib/pool/games";
+import { GAME_CATALOG, resolveGamePhase, gameStateLine, prizeTeaser, md3DateRange } from "@/lib/pool/games";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { R32Countdown } from "./pool/[code]/R32Countdown";
 
@@ -55,6 +55,9 @@ function Md3PromoCard({ now }: { now: Date }) {
       <h2 className="mt-1 font-display text-xl text-ink">
         {GAME_CATALOG.MATCH_DAY_3_PICKEM.tagline}
       </h2>
+      <p className="mt-1 text-[13px] text-ink-3">
+        Predict the score lines for the final group-stage games · {md3DateRange()}
+      </p>
       <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">
         {gameStateLine("MATCH_DAY_3_PICKEM", now)}
       </p>
