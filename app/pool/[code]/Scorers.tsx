@@ -6,9 +6,20 @@ import { PlayerLink } from "./PlayerLink";
 // Golden Boot leaderboard (actual goals). Presentational only — data is fetched
 // by the caller (the Matches "scorers" sub-view and the legacy redirect both
 // reuse this). Betting markets live under the Odds sub-view, not here.
+//
+// Team/player rows drill down via `code` (pool path) or `basePath` (non-pool
+// callers — the public challenges); with neither, rows render unlinked.
 type Scorer = Awaited<ReturnType<typeof getTopScorers>>[number];
 
-export function Scorers({ scorers, code }: { scorers: Scorer[]; code: string }) {
+export function Scorers({
+  scorers,
+  code,
+  basePath,
+}: {
+  scorers: Scorer[];
+  code?: string;
+  basePath?: string;
+}) {
   return (
     <section>
       <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
@@ -26,14 +37,14 @@ export function Scorers({ scorers, code }: { scorers: Scorer[]; code: string }) 
               <span className="w-5 shrink-0 text-center font-mono text-xs font-semibold text-ink-3">
                 {s.rank}
               </span>
-              <TeamLink poolCode={code} code={s.teamCode}>
+              <TeamLink poolCode={code} basePath={basePath} code={s.teamCode}>
                 <Flag code={s.teamCode} size={18} />
               </TeamLink>
               <span className="min-w-0 flex-1">
-                <PlayerLink poolCode={code} name={s.playerName} className="block truncate text-sm font-semibold text-ink underline-offset-2 hover:underline">
+                <PlayerLink poolCode={code} basePath={basePath} name={s.playerName} className="block truncate text-sm font-semibold text-ink underline-offset-2 hover:underline">
                   {s.playerName}
                 </PlayerLink>
-                <TeamLink poolCode={code} code={s.teamCode} className="block truncate text-[11px] text-ink-3 underline-offset-2 hover:underline">
+                <TeamLink poolCode={code} basePath={basePath} code={s.teamCode} className="block truncate text-[11px] text-ink-3 underline-offset-2 hover:underline">
                   {s.teamName}
                 </TeamLink>
               </span>

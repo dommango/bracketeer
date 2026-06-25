@@ -70,7 +70,7 @@ export default async function Md3ChallengeHomePage() {
         live={cards.live}
         last={cards.last}
         next={cards.next}
-        hrefForMatch={() => "/challenge/md3/matches"}
+        hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
       />
 
       {isParticipant && preview.length > 0 ? (

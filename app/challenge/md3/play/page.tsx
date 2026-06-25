@@ -58,7 +58,7 @@ export default async function Md3ChallengePlayPage() {
         live={cards.live}
         last={cards.last}
         next={cards.next}
-        hrefForMatch={() => "/challenge/md3/matches"}
+        hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
       />
 
       <Md3ChallengeForm

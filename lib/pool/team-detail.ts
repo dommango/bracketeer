@@ -6,8 +6,8 @@
 
 import { prisma } from "@/lib/db";
 import { computeGroupTables, type GroupResultRow, type GroupTableRow } from "@/lib/pool/group-table";
-import { type MatchCenterRow } from "@/lib/pool/match-center";
-import { getMatchCenter, getEntriesWithPicks } from "@/lib/pool/queries";
+import { buildMatchCenter, type MatchCenterRow } from "@/lib/pool/match-center";
+import { getMatchCenter, getEntriesWithPicks, getTournamentMatchInputs } from "@/lib/pool/queries";
 import { teamBackers, type TeamBacker } from "@/lib/pool/team-backers";
 import { GROUPS, TEAMS } from "@/lib/scoring/data";
 import type { GroupLetter } from "@/lib/scoring/types";
@@ -83,6 +83,70 @@ export async function getTeamDetail(
     table,
     fixtures,
     backers: teamBackers(entries, code),
+    odds: oddsRow ?? null,
+  };
+}
+
+// The team's real group table from live/final group results — shared by the pool
+// and challenge drill-downs.
+async function teamGroupTable(
+  tournamentId: string,
+  group: GroupLetter | null,
+): Promise<GroupTableRow[]> {
+  if (!group) return [];
+  const resultRows = await prisma.result.findMany({
+    where: {
+      status: { in: ["LIVE", "FINAL"] },
+      match: { tournamentId, roundCode: "GROUP" },
+    },
+    select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+  });
+  const groupRows: GroupResultRow[] = [];
+  for (const r of resultRows) {
+    if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
+    groupRows.push({
+      homeCode: r.homeTeamCode,
+      awayCode: r.awayTeamCode,
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+    });
+  }
+  return computeGroupTables(groupRows)[group];
+}
+
+// Tournament-scoped team drill-down for the public challenges: the same group
+// table, fixtures, and title odds as getTeamDetail, but with no pool context —
+// so no "backed by" (which counts a pool's entries). `backers` is always empty.
+export async function getChallengeTeamDetail(
+  tournamentId: string,
+  code: string,
+): Promise<TeamDetail | null> {
+  const name = TEAMS[code];
+  if (!name) return null;
+
+  const group = teamGroupOf(code);
+
+  const [table, inputs, oddsRow] = await Promise.all([
+    teamGroupTable(tournamentId, group),
+    getTournamentMatchInputs(tournamentId),
+    prisma.teamOutright.findUnique({
+      where: { tournamentId_teamCode: { tournamentId, teamCode: code } },
+      select: { winProb: true, decimal: true },
+    }),
+  ]);
+
+  const fixtures = buildMatchCenter(inputs, {})
+    .flatMap((s) => s.matches)
+    .filter((m) => m.home.code === code || m.away.code === code)
+    .sort((a, b) => a.matchNo - b.matchNo);
+
+  return {
+    code,
+    name,
+    group,
+    table,
+    fixtures,
+    backers: [],
     odds: oddsRow ?? null,
   };
 }
