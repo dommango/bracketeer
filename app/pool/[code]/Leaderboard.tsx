@@ -51,6 +51,7 @@ export function Leaderboard({
   linkBase,
   showMedals = false,
   compact = false,
+  showLiveNote = true,
 }: {
   rows: LeaderboardRow[];
   youUserId?: string | null;
@@ -64,6 +65,10 @@ export function Leaderboard({
   showMedals?: boolean;
   // Tighter rows with the per-category point badges hidden — for the Home preview.
   compact?: boolean;
+  // The "live points stay dynamic until the group stage settles" note is about
+  // full-bracket projected knockout points. Boards where it doesn't apply (e.g.
+  // the Match Day Pickem scoreline game) opt out.
+  showLiveNote?: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -73,7 +78,7 @@ export function Leaderboard({
     );
   }
 
-  const hasLive = rows.some((r) => r.projected);
+  const hasLive = showLiveNote && rows.some((r) => r.projected);
 
   return (
     <>

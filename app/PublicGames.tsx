@@ -32,7 +32,7 @@ export function PublicGames({ now }: { now: Date }) {
   return (
     <section className="mt-4 space-y-2">
       <p className="px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">
-        Play the public games
+        Available Games
       </p>
       {md3Show ? <Md3PromoCard now={now} /> : null}
       {koShow ? <KnockoutChallengeCard now={now} /> : null}
