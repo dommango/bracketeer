@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import { hasAcceptedTerms } from "@/lib/account/consent";
-import { GAME_CATALOG } from "@/lib/pool/games";
+import { GAME_CATALOG, md3DateRange } from "@/lib/pool/games";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
 
 // Predictions, locks, and results change at request time.
@@ -45,17 +45,13 @@ export default async function Md3ChallengePlayPage() {
         <p className="rounded-2xl border border-dashed border-line bg-surface-sunk p-4 text-center text-sm text-ink-3">
           Match Day Pickem is locked — every fixture has kicked off.
         </p>
-      ) : (
-        <p className="px-1 text-[13px] text-ink-3">
-          Pick the exact scoreline for each open match below — each locks at its own kickoff.
-        </p>
-      )}
+      ) : null}
 
-      {/* How points are calculated — straight from the game catalog so it can't
-          drift from the hero/rules copy. */}
-      <p className="rounded-2xl border border-line bg-surface-sunk/40 px-4 py-3 text-[13px] text-ink-2">
-        <span className="font-semibold text-ink">How points work:</span>{" "}
-        {GAME_CATALOG.MATCH_DAY_3_PICKEM.scoringSummary}
+      {/* One tight line: the date range + per-match lock, then how points are
+          scored (straight from the game catalog so it can't drift from the rules). */}
+      <p className="px-1 text-[13px] text-ink-3">
+        Predict the exact score lines for Match Day 3 ({md3DateRange()}) — each locks at kickoff.
+        Scoring: {GAME_CATALOG.MATCH_DAY_3_PICKEM.scoringSummary}
       </p>
 
       <Md3ChallengeForm

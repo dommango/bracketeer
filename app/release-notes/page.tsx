@@ -8,6 +8,17 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.13.0",
+    date: "June 26, 2026",
+    title: "Match Day Pickem home & leaderboard polish",
+    notes: [
+      "Your Match Day Pickem home now leads with the live scores, then a match-updates feed (goals, red cards and full-times), with your standing below — so the action comes first.",
+      "The pick page header is tighter: a single line with the Match Day 3 dates and how points are scored.",
+      "You can now set a Leaderboard display name in account settings to choose how you appear on the Match Day Pickem leaderboard.",
+      "Renamed the remaining “Board” labels to “Leaderboard” across the challenge screens.",
+    ],
+  },
+  {
     version: "0.12.0",
     date: "June 26, 2026",
     title: "Build your knockout bracket — desktop tree & early picks",

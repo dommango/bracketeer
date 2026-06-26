@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
 import { getAccountDeletionSummary } from "@/lib/account/delete";
-import { updateDisplayNameAction, deleteMyAccountAction } from "./actions";
+import {
+  updateDisplayNameAction,
+  updateChallengeDisplayNameAction,
+  deleteMyAccountAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +36,7 @@ export default async function AccountPage() {
     );
   }
 
-  const [memberships, deletion] = await Promise.all([
+  const [memberships, account, deletion] = await Promise.all([
     prisma.membership.findMany({
       where: { userId: user.id },
       orderBy: { joinedAt: "asc" },
@@ -42,6 +46,10 @@ export default async function AccountPage() {
         displayName: true,
         pool: { select: { name: true, joinCode: true } },
       },
+    }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { challengeDisplayName: true },
     }),
     getAccountDeletionSummary(user.id),
   ]);
@@ -83,6 +91,28 @@ export default async function AccountPage() {
             Join a pool
           </Link>
         </div>
+      </div>
+
+      <h2 className="mt-7 px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+        Leaderboard display name
+      </h2>
+      <div className="mt-2 rounded-2xl border border-line bg-surface p-4">
+        <p className="text-[13px] text-ink-3">
+          How you appear on the Match Day Pickem leaderboard. Leave blank to use your account name.
+        </p>
+        <form action={updateChallengeDisplayNameAction} className="mt-3 flex gap-2">
+          <input
+            name="challengeDisplayName"
+            defaultValue={account?.challengeDisplayName ?? ""}
+            placeholder={user.name ?? "Your name"}
+            maxLength={40}
+            aria-label="Leaderboard display name"
+            className="h-10 min-w-0 flex-1 rounded-md border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-pitch"
+          />
+          <button className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-surface-sunk px-4 text-sm font-semibold text-pitch-dark hover:bg-line-soft">
+            Save
+          </button>
+        </form>
       </div>
 
       <h2 className="mt-7 px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">

@@ -27,8 +27,8 @@ export default async function Md3ChallengeLeaderboardPage() {
         <div className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center">
           <p className="text-sm font-semibold text-ink-2">Make a pick to see the leaderboard</p>
           <p className="mx-auto mt-1.5 max-w-[34ch] text-sm text-ink-3">
-            The board is for players only. Predict at least one fixture to take your place and see
-            how you stack up.
+            The leaderboard is for players only. Predict at least one fixture to take your place and
+            see how you stack up.
           </p>
           <Link
             href="/challenge/md3/play"
@@ -39,7 +39,7 @@ export default async function Md3ChallengeLeaderboardPage() {
         </div>
       ) : rows.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
-          No entries yet — you&apos;re first on the board.
+          No entries yet — you&apos;re first on the leaderboard.
         </p>
       ) : (
         <Leaderboard
