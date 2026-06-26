@@ -51,6 +51,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
     heading: "How winners are determined",
     body: [
       "When a challenge completes, the single entry ranked first on that challenge’s public leaderboard wins, using the scoring and tie-break rules shown in the app. If two or more eligible entries are tied for first after tie-breaks, the Promoter will resolve the tie fairly (for example, by an additional tie-break or by dividing the prize) before awarding.",
+      "For Match Day Pickem, entries tied on points are separated automatically by prediction accuracy, in order: most exact scorelines, then most correct result-and-goal-difference picks, then most correct results, and finally the smallest difference between an entry’s predicted total goals and the actual total goals.",
       "Scoring is deterministic and based solely on official match results. The Promoter may correct results or standings to reflect the official outcome.",
     ],
   },

@@ -42,13 +42,22 @@ export default async function Md3ChallengeLeaderboardPage() {
           No entries yet — you&apos;re first on the leaderboard.
         </p>
       ) : (
-        <Leaderboard
-          rows={rows}
-          youUserId={user?.id}
-          linkBase="/challenge/md3/u"
-          showMedals={!isMd3GameOpen()}
-          showLiveNote={false}
-        />
+        <>
+          <Leaderboard
+            rows={rows}
+            youUserId={user?.id}
+            linkBase="/challenge/md3/u"
+            showMedals={!isMd3GameOpen()}
+            showLiveNote={false}
+          />
+          {/* Tiebreak order — mirrors the quality cascade in
+              lib/challenge/md3-tiebreak.ts and the /rules copy. */}
+          <p className="rounded-2xl border border-line bg-surface-sunk/40 px-4 py-3 text-[13px] leading-relaxed text-ink-3">
+            <span className="font-semibold text-ink">Tied on points?</span> Whoever nailed more
+            exact scorelines ranks first — then more right result &amp; goal difference, then more
+            correct results, then whoever&apos;s total goals land closest to the real total.
+          </p>
+        </>
       )}
     </section>
   );
