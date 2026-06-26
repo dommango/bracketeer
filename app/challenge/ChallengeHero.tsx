@@ -36,11 +36,19 @@ export function ChallengeHero({ format }: { format: PoolFormat }) {
         >
           <span aria-hidden="true">←</span> Bracketeer
         </Link>
-        <div className="mt-3 min-w-0">
+        <div
+          className="mt-3 inline-block min-w-0 max-w-full rounded-2xl px-4 py-3"
+          style={{
+            background: "rgba(0,0,0,0.42)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
+          }}
+        >
           <h1 className="break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
             {name}
           </h1>
-          <p className="mt-1.5 text-sm text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]">
+          <p className="mt-1.5 text-sm text-white/90">
             {game.tagline}
           </p>
         </div>
