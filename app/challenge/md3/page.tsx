@@ -36,14 +36,14 @@ export default async function Md3ChallengeHomePage() {
 
   return (
     <section className="space-y-5">
+      <MatchUpdates updates={updates} />
+
       <ScoreCards
         live={cards.live}
         last={cards.last}
         next={cards.next}
         hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
       />
-
-      <MatchUpdates updates={updates} />
 
       <ChallengeStanding
         standing={standing}
