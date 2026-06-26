@@ -69,7 +69,7 @@ export default async function KnockoutChallengeHomePage() {
         <span className="min-w-0">
           <span className="block text-sm font-semibold text-ink">How scoring works</span>
           <span className="mt-0.5 block text-[13px] text-ink-3">
-            Points per round, plus the final-goals tiebreaker.
+            Per-round points (no awards), plus the final-goals tiebreaker.
           </span>
         </span>
         <span className="shrink-0 font-display text-pitch-dark">→</span>

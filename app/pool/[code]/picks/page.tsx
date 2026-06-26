@@ -119,8 +119,8 @@ export default async function PicksPage({
           <Gate>
             <p className="text-sm font-semibold text-ink-2">Knockout picks open at the draw</p>
             <p className="mt-1.5 text-sm text-ink-3">
-              Once the group stage wraps and the last 32 are set, fill out your bracket here. We’ll
-              notify the pool when it unlocks.
+              Once the group stage decides the final 32, fill out your bracket here. We’ll notify the
+              pool when it unlocks.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
               <span className="text-sm font-semibold text-pitch-dark">Picks open in</span>

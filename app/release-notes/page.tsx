@@ -38,7 +38,7 @@ const RELEASES: { version: string; date: string; title: string; notes: string[] 
       "The Match Day Pickem Matches tab now covers the whole tournament — group standings on top, then every group and knockout fixture (browse by group, day, or city), plus Scorers and odds — not just the 24 pickem games.",
       "Your Match Day Pickem home now leads with live scores and group-standings cards, matching the pool home layout.",
       "Fixed: your predicted scoreline now reads in the same home–away order as the match, so a correct pick no longer looks wrong against the result.",
-      "Win-probability bars now show the real favourite — corrected a home/away mix-up that flipped the odds on neutral-venue matches.",
+      "Win-probability bars now show the real favorite — corrected a home/away mix-up that flipped the odds on neutral-venue matches.",
       "Group-stage form now reads in true kickoff order across every standings table.",
       "Challenge polish: the “Board” tab is now “Leaderboard”, the pick page leads with the prize and a “how points work” note, and closed fixtures sit collapsed at the top so the games you can still pick lead.",
     ],

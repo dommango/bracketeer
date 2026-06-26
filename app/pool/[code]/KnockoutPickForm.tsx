@@ -63,7 +63,7 @@ export function KnockoutPickForm({
   early?: boolean;
   // Per-R32-match projection (label + ranked candidates), keyed by match number.
   projections?: Record<number, StadiumProjection>;
-  // Championship odds, for the one-tap "fill favourites".
+  // Championship odds, for the one-tap "fill favorites".
   outrights?: OutrightProb[];
   saveAction?: SaveBracket;
 }) {
@@ -170,7 +170,7 @@ export function KnockoutPickForm({
                 onClick={fillFavorites}
                 className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-pitch hover:bg-surface-sunk active:scale-[0.98]"
               >
-                Fill favourites
+                Fill favorites
               </button>
             ) : null}
             <span className="font-mono text-xs tabular-nums text-ink-3">
@@ -181,10 +181,10 @@ export function KnockoutPickForm({
         {early && !locked ? (
           <p className="rounded-xl border border-gold-dark/40 bg-gold-tint/40 px-3 py-2 text-[12px] leading-snug text-ink-2">
             <span className="font-semibold text-gold-dark">Get a head start.</span>{" "}
-            The field isn&apos;t set yet, so Round-of-32 slots show their position (e.g.{" "}
+            The field isn&apos;t set yet, so Round of 32 slots show their position (e.g.{" "}
             <span className="font-medium">Group A Winner</span>) with the most likely teams. Pick the
             path you fancy — each slot fills in with the real team as its group finishes, and your
-            picks carry over. <span className="font-medium">Fill favourites</span> drafts the whole
+            picks carry over. <span className="font-medium">Fill favorites</span> drafts the whole
             bracket from the odds in one tap.
           </p>
         ) : provisional && !locked ? (
