@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode, getKnockoutState } from "@/lib/pool/queries";
+import { getPoolByCode, getKnockoutState, getKnockoutBuilderProjections } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { getUserEntry, getUserEntries } from "@/lib/pool/submit-picks";
 import { arePicksLocked } from "@/lib/pool/lock";
@@ -109,8 +109,10 @@ export default async function PicksPage({
   // Round-of-32 kickoff (not the long-past tournament start). Until the field is
   // set there's nothing to pick, so show a clear "opens at the draw" gate.
   if (pool.format === "KNOCKOUT") {
-    const { open, provisional, opensAt, locksAt, seed } = await getKnockoutState(pool.tournament.id);
-    if (!open) {
+    const { open, provisional, earlyOpen, opensAt, locksAt, seed, projectedSeed } =
+      await getKnockoutState(pool.tournament.id);
+    const early = !open && earlyOpen;
+    if (!open && !earlyOpen) {
       return (
         <section className="space-y-4">
           {header}
@@ -129,6 +131,7 @@ export default async function PicksPage({
       );
     }
     const locked = isKnockoutLocked(locksAt, entryLocked);
+    const builder = early ? await getKnockoutBuilderProjections(pool.tournament.id) : null;
     return (
       <section className="space-y-4">
         {header}
@@ -145,8 +148,11 @@ export default async function PicksPage({
           initialTiebreak={entry?.tiebreak ?? ""}
           label={label}
           locked={locked}
-          seed={seed}
+          seed={early ? projectedSeed : seed}
           provisional={provisional}
+          early={early}
+          projections={builder?.projections}
+          outrights={builder?.outrights}
         />
       </section>
     );

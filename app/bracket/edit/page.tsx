@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
-import { getKnockoutState, getTournamentIdBySlug } from "@/lib/pool/queries";
+import {
+  getKnockoutState,
+  getKnockoutBuilderProjections,
+  getTournamentIdBySlug,
+} from "@/lib/pool/queries";
 import { getStandaloneEntry } from "@/lib/pool/submit-picks";
 import { isKnockoutLocked } from "@/lib/pool/knockout";
 import { emptyPicks } from "@/lib/scoring/types";
@@ -22,7 +26,9 @@ export default async function SoloBracketEditPage({
   const entryId = Array.isArray(entryIdParam) ? entryIdParam[0] : entryIdParam;
 
   const tournamentId = await getTournamentIdBySlug();
-  const { open, provisional, opensAt, locksAt, seed } = await getKnockoutState(tournamentId);
+  const { open, provisional, earlyOpen, opensAt, locksAt, seed, projectedSeed } =
+    await getKnockoutState(tournamentId);
+  const early = !open && earlyOpen;
 
   const header = (
     <div className="flex items-center justify-between">
@@ -38,7 +44,7 @@ export default async function SoloBracketEditPage({
     </div>
   );
 
-  if (!open) {
+  if (!open && !earlyOpen) {
     return (
       <section className="space-y-4">
         {header}
@@ -57,10 +63,12 @@ export default async function SoloBracketEditPage({
   }
 
   // With an entryId we edit that standalone bracket; without one this is a fresh
-  // bracket (the first save creates it).
-  const bracket = entryId
-    ? await getStandaloneEntry(tournamentId, user.id, "KNOCKOUT", entryId)
-    : null;
+  // bracket (the first save creates it). In early mode we seed from projections and
+  // surface the position labels + candidate odds for the not-yet-decided slots.
+  const [bracket, builder] = await Promise.all([
+    entryId ? getStandaloneEntry(tournamentId, user.id, "KNOCKOUT", entryId) : Promise.resolve(null),
+    early ? getKnockoutBuilderProjections(tournamentId) : Promise.resolve(null),
+  ]);
   const locked = isKnockoutLocked(locksAt, bracket?.locked ?? false);
 
   return (
@@ -77,8 +85,11 @@ export default async function SoloBracketEditPage({
         initialTiebreak={bracket?.tiebreak ?? ""}
         label={bracket?.label ?? user.name ?? "Player"}
         locked={locked}
-        seed={seed}
+        seed={early ? projectedSeed : seed}
         provisional={provisional}
+        early={early}
+        projections={builder?.projections}
+        outrights={builder?.outrights}
         saveAction={saveSoloBracketAction}
       />
     </section>

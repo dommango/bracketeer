@@ -51,6 +51,7 @@ export interface KnockoutChallengeHome {
   cards: ScoreCardInputs; // live / last / next, scoped to the knockout matches
   myBrackets: BracketSummary[]; // the viewer's knockout brackets (for the "your bracket" CTA)
   open: boolean; // picks open (the field is set)
+  earlyOpen: boolean; // early projected-fill available before the field is set
   opensAt: Date;
   locksAt: Date | null;
 }
@@ -74,6 +75,7 @@ export async function getKnockoutChallengeHome(
     cards: buildScoreCardInputs(inputs, picks, now),
     myBrackets: myBrackets.filter((b) => b.format === "KNOCKOUT"),
     open: knockoutState.open,
+    earlyOpen: knockoutState.earlyOpen,
     opensAt: knockoutState.opensAt,
     locksAt: knockoutState.locksAt,
   };

@@ -10,11 +10,15 @@
 // single-tap KnockoutMatch card in every cell.
 
 import type { KnockoutModel, KnockoutSlot } from "@/lib/pool/pick-form";
+import type { StadiumProjection } from "@/lib/pool/stadium-projection";
 import { ROUND_ACCENT, sortByTree } from "@/lib/pool/bracket-tree";
 import { roundLabel } from "@/lib/pool/rounds";
 import { KnockoutMatch, KO_STAGES } from "./pick-ui";
 
 type OnPick = (matchNo: number, code: string) => void;
+// Per-R32-match projection (position label + ranked candidates), keyed by matchNo.
+// Present only in early/projected mode; undefined otherwise.
+type Projections = Record<number, StadiumProjection> | undefined;
 
 const TREE_COLUMNS: { code: string; key: keyof KnockoutModel }[] = [
   { code: "R32", key: "r32" },
@@ -39,10 +43,12 @@ function BracketTreeBuilder({
   ko,
   disabled,
   onPick,
+  projections,
 }: {
   ko: KnockoutModel;
   disabled: boolean;
   onPick: OnPick;
+  projections: Projections;
 }) {
   const slotsFor = (key: keyof KnockoutModel): KnockoutSlot[] =>
     key === "final" ? [ko.final] : (ko[key] as KnockoutSlot[]);
@@ -64,7 +70,12 @@ function BracketTreeBuilder({
               {sortByTree(slotsFor(c.key)).map((slot) => (
                 <div key={slot.matchNo} className="bkt-cell flex items-center px-5">
                   <div className="w-full">
-                    <KnockoutMatch slot={slot} disabled={disabled} onPick={onPick} />
+                    <KnockoutMatch
+                      slot={slot}
+                      disabled={disabled}
+                      onPick={onPick}
+                      projection={projections?.[slot.matchNo]}
+                    />
                   </div>
                 </div>
               ))}
@@ -80,10 +91,12 @@ export function KnockoutCascade({
   ko,
   disabled,
   onPick,
+  projections,
 }: {
   ko: KnockoutModel;
   disabled: boolean;
   onPick: OnPick;
+  projections?: Projections;
 }) {
   return (
     <>
@@ -98,7 +111,13 @@ export function KnockoutCascade({
               </p>
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {slots.map((slot) => (
-                  <KnockoutMatch key={slot.matchNo} slot={slot} disabled={disabled} onPick={onPick} />
+                  <KnockoutMatch
+                    key={slot.matchNo}
+                    slot={slot}
+                    disabled={disabled}
+                    onPick={onPick}
+                    projection={projections?.[slot.matchNo]}
+                  />
                 ))}
               </div>
             </div>
@@ -116,7 +135,7 @@ export function KnockoutCascade({
 
       {/* Desktop: the interactive bracket tree. */}
       <div className="hidden lg:block">
-        <BracketTreeBuilder ko={ko} disabled={disabled} onPick={onPick} />
+        <BracketTreeBuilder ko={ko} disabled={disabled} onPick={onPick} projections={projections} />
       </div>
     </>
   );

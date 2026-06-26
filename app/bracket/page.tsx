@@ -15,12 +15,15 @@ export default async function BracketsPage() {
   if (!user) return <SignInGate />;
 
   const tournamentId = await getTournamentIdBySlug();
-  const [{ open, opensAt, locksAt }, brackets, accepted] = await Promise.all([
+  const [{ open, earlyOpen, opensAt, locksAt }, brackets, accepted] = await Promise.all([
     getKnockoutState(tournamentId),
     getUserBrackets(user.id, tournamentId),
     hasAcceptedTerms(user.id),
   ]);
   const knockoutLocked = isKnockoutLocked(locksAt);
+  // The builder is reachable once picks are open OR early projected-fill is live.
+  const buildable = open || earlyOpen;
+  const early = !open && earlyOpen;
   const needsConsent = !accepted;
 
   return (
@@ -39,7 +42,7 @@ export default async function BracketsPage() {
         </Link>
       </header>
 
-      {!open ? (
+      {!buildable ? (
         <Card>
           <p className="text-sm font-semibold text-ink-2">Knockout picks open at the draw</p>
           <p className="mt-1.5 text-sm text-ink-3">
@@ -54,7 +57,9 @@ export default async function BracketsPage() {
         <Card>
           <p className="text-sm font-semibold text-ink-2">You haven&apos;t built a bracket yet</p>
           <p className="mt-1.5 text-sm text-ink-3">
-            Pick a winner for every knockout match, from the Round of 32 to the final.
+            {early
+              ? "Get a head start — build now against the projected seeds, and your picks update to the real teams as the groups finish."
+              : "Pick a winner for every knockout match, from the Round of 32 to the final."}
           </p>
           <Link href="/bracket/edit" className={PRIMARY_BTN}>
             Build your bracket →

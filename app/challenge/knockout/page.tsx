@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function KnockoutChallengeHomePage() {
   const user = await getSessionUser();
-  const { standing, board, cards, myBrackets, open, opensAt } = await getKnockoutChallengeHome(
-    user?.id ?? null,
-  );
+  const { standing, board, cards, myBrackets, open, earlyOpen, opensAt } =
+    await getKnockoutChallengeHome(user?.id ?? null);
 
+  const buildable = open || earlyOpen;
   const hasBracket = myBrackets.length > 0;
   const entered = myBrackets.some((b) => b.enteredChallenge);
 
@@ -30,7 +30,7 @@ export default async function KnockoutChallengeHomePage() {
         cta={{ href: "/bracket", label: hasBracket ? "Finish your bracket" : "Build your bracket" }}
       />
 
-      {!open ? (
+      {!buildable ? (
         <div className="rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]">
           <p className="text-sm font-semibold text-ink-2">Picks open at the draw</p>
           <p className="mt-1 text-sm text-ink-3">

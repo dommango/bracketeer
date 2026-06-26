@@ -6,7 +6,10 @@
 
 import { resolveKnockout, type KnockoutSlot } from "@/lib/pool/pick-form";
 import type { Picks } from "@/lib/scoring/types";
+import type { StadiumProjection, R32SlotProjection } from "@/lib/pool/stadium-projection";
 import { ROUND_ACCENT, roundCodeForMatch } from "@/lib/pool/bracket-tree";
+import { kickoffFor, venueFor } from "@/lib/scoring/schedule";
+import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
 
 export const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
@@ -39,26 +42,45 @@ export function Bar({ done, total }: { done: number; total: number }) {
   );
 }
 
+// A side's ranked candidates as "MEX 78% · USA 15%" (top few), for projected R32
+// slots whose occupant isn't decided yet.
+function candidateLine(proj: R32SlotProjection): string {
+  return proj.candidates
+    .slice(0, 3)
+    .map((c) => `${c.code} ${Math.round(c.prob * 100)}%`)
+    .join(" · ");
+}
+
 // Single-tap winner selection that mirrors the read-only matches-tab bracket card
 // (Bracket.tsx's MatchCard/Side): the same card chrome — accent left border, the
 // M-tag header, two stacked team rows (flag, name, code) split by a hairline — but
 // each row is a button. Tapping a row picks that team as the winner; the picked
 // row reads bold (like a decided match's winner) and the other dims.
+//
+// In early/projected mode the card also gets a `projection`: a side whose group
+// hasn't decided shows its POSITION ("Group A Winner") with the likely teams under
+// it instead of a concrete team — tapping still advances that side (storing the
+// current projected occupant), and it swaps to the real team once the group lands.
 export function KnockoutMatch({
   slot,
   disabled,
   onPick,
+  projection,
 }: {
   slot: KnockoutSlot;
   disabled: boolean;
   onPick: (matchNo: number, code: string) => void;
+  projection?: StadiumProjection;
 }) {
   const ready = Boolean(slot.a && slot.b);
   const hasPick = Boolean(slot.pick);
 
-  const row = (side: KnockoutSlot["a"]) => {
+  const row = (side: KnockoutSlot["a"], proj?: R32SlotProjection) => {
     const picked = Boolean(side && slot.pick === side.code);
     const dimmed = hasPick && !picked;
+    // Show the position + candidates only while the slot is genuinely undecided.
+    const showProjected = Boolean(proj && !proj.decided);
+    const headline = showProjected ? proj!.label : side ? side.name : "—";
     return (
       <button
         type="button"
@@ -69,29 +91,36 @@ export function KnockoutMatch({
           picked ? "bg-pitch-tint" : "enabled:hover:bg-surface-sunk"
         }`}
       >
-        <Flag code={side?.code ?? null} size={24} />
-        <span
-          className={`flex-1 truncate ${
-            picked
-              ? "font-bold text-pitch-dark"
-              : dimmed
-                ? "font-medium text-ink-4"
-                : "font-medium text-ink"
-          }`}
-        >
-          {side ? side.name : "—"}
-          {side ? (
-            <span
-              className={`ml-1.5 font-mono text-[10px] ${
-                picked ? "text-pitch-dark/70" : "text-ink-3"
-              }`}
-            >
-              {side.code}
+        <Flag code={showProjected ? null : (side?.code ?? null)} size={24} />
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block truncate ${
+              picked
+                ? "font-bold text-pitch-dark"
+                : dimmed
+                  ? "font-medium text-ink-4"
+                  : "font-medium text-ink"
+            }`}
+          >
+            {headline}
+            {!showProjected && side ? (
+              <span
+                className={`ml-1.5 font-mono text-[10px] ${
+                  picked ? "text-pitch-dark/70" : "text-ink-3"
+                }`}
+              >
+                {side.code}
+              </span>
+            ) : null}
+          </span>
+          {showProjected && proj!.candidates.length > 0 ? (
+            <span className="block truncate font-mono text-[10px] text-ink-4">
+              {candidateLine(proj!)}
             </span>
           ) : null}
         </span>
         {picked ? (
-          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-pitch-dark">
+          <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-pitch-dark">
             Pick
           </span>
         ) : null}
@@ -100,6 +129,8 @@ export function KnockoutMatch({
   };
 
   const accent = ROUND_ACCENT[roundCodeForMatch(slot.matchNo)] ?? "var(--line)";
+  const kickoff = kickoffFor(slot.matchNo);
+  const venue = venueFor(slot.matchNo);
 
   return (
     <div
@@ -113,13 +144,19 @@ export function KnockoutMatch({
             M{slot.matchNo}
           </span>
         </span>
-        {ready && !hasPick && !disabled ? (
-          <span className="font-mono text-[10px] text-ink-3">Tap to pick</span>
+        {kickoff ? (
+          <span className="font-mono text-[10px] text-ink-3">{formatKickoff(kickoff.toISOString())}</span>
         ) : null}
       </div>
-      {row(slot.a)}
+      {row(slot.a, projection?.a)}
       <div className="my-0.5 h-px bg-line-soft" />
-      {row(slot.b)}
+      {row(slot.b, projection?.b)}
+      {venue ? (
+        <div className="mt-1.5 truncate text-[10px] text-ink-4">
+          {venue.venue}
+          {venue.city ? <span className="text-ink-4"> · {venue.city}</span> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -73,18 +73,19 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
   // full-bracket guard would wrongly reject every save.)
   let picksToSave = picks as Picks;
   if (pool.format === "KNOCKOUT") {
-    const { open, locksAt, seed } = await getKnockoutState(pool.tournament.id);
-    if (!open) {
+    const { open, earlyOpen, locksAt, seed, projectedSeed } = await getKnockoutState(pool.tournament.id);
+    if (!open && !earlyOpen) {
       return { ok: false, error: "Knockout picks aren't open yet — the last 32 aren't set." };
     }
     if (isKnockoutLocked(locksAt)) {
       return { ok: false, error: "Picks are locked — the Round of 32 has kicked off." };
     }
     // Keep only knockout + awards (drop any group data adopted from a CSV import),
-    // then reject winners that aren't actually in their match per the official
-    // seed — the client is untrusted, so the seed is the authority, not the payload.
+    // then reject winners that aren't actually in their match. Early (projected)
+    // saves validate against the same projected seed the builder rendered; once
+    // open, the official seed is the authority. The client is untrusted either way.
     picksToSave = knockoutOnlyPicks(picksToSave);
-    if (inconsistentKnockoutPicks(picksToSave, seed).length > 0) {
+    if (inconsistentKnockoutPicks(picksToSave, open ? seed : projectedSeed).length > 0) {
       return { ok: false, error: "Some picks aren't valid for this bracket — please reload." };
     }
   } else if (arePicksLocked(pool.tournament.startsAt)) {
