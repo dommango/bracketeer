@@ -18,7 +18,7 @@ export function ChallengeStanding({
   if (!standing) {
     return (
       <div className="rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-xs)]">
-        <p className="text-sm font-semibold text-ink-2">You&apos;re not on the board yet</p>
+        <p className="text-sm font-semibold text-ink-2">You&apos;re not on the leaderboard yet</p>
         <p className="mt-1.5 text-sm text-ink-3">
           Complete your entry to take your place on the global leaderboard.
         </p>
@@ -72,7 +72,7 @@ export function ChallengeStanding({
           </>
         )}
         <Link href={boardHref} className="ml-auto text-xs font-semibold text-pitch hover:underline">
-          Full board →
+          Full leaderboard →
         </Link>
       </div>
     </div>

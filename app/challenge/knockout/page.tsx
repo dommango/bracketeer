@@ -54,7 +54,7 @@ export default async function KnockoutChallengeHomePage() {
               {hasBracket
                 ? entered
                   ? "On the global leaderboard — edit until the Round of 32 kicks off."
-                  : "Enter it into the challenge to climb the global board."
+                  : "Enter it into the challenge to climb the global leaderboard."
                 : "Pick every knockout winner from the Round of 32 to the final."}
             </span>
           </span>
