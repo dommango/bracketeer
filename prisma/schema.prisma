@@ -29,6 +29,9 @@ model User {
   // accepted; we keep timestamps (not a bool) for an auditable consent record.
   termsAcceptedAt DateTime?
   ageConfirmedAt  DateTime?
+  // The name shown on the public Match Day Pickem leaderboard, when the user picks
+  // one in account settings. Null => fall back to their account name (via publicLabel).
+  challengeDisplayName String?
 
   accounts    Account[]
   sessions    Session[]

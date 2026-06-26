@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { saveMyMd3Predictions } from "@/lib/challenge/md3-entry";
 import { MD3_MATCH_NOS } from "@/lib/pool/match-day-3";
@@ -54,9 +55,14 @@ export async function saveMd3ChallengeEntry(
   }
 
   const scores = parseScores(formData);
-  // Public-board label must never be an email (publicLabel falls back to an
-  // anonymous handle when there's no usable name).
-  const label = publicLabel(user.name, user.id);
+  // Public-board label: the user's chosen leaderboard name if set, else their
+  // account name. publicLabel never lets an email reach the board (falls back to
+  // an anonymous handle when there's no usable name).
+  const account = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { challengeDisplayName: true },
+  });
+  const label = publicLabel(account?.challengeDisplayName ?? user.name, user.id);
 
   try {
     await saveMyMd3Predictions({ userId: user.id, label, scores });
