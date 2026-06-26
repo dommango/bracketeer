@@ -10,7 +10,6 @@ import {
   TARGET_GROUPS,
   TARGET_THIRDS,
   TARGET_KNOCKOUT,
-  TARGET_AWARDS,
 } from "./pick-form";
 import { GROUPS, R32 } from "@/lib/scoring/data";
 import { resolveR32Slots, type ResolvedR32 } from "@/lib/scoring/resolve";
@@ -198,7 +197,7 @@ describe("inconsistentKnockoutPicks", () => {
 });
 
 describe("knockoutOnlyProgress", () => {
-  it("counts only knockout winners + awards, not groups/thirds", () => {
+  it("counts only knockout winners — not groups/thirds/awards", () => {
     const seed = officialR32Seed();
     const picks = emptyPicks();
     // Fill every scored knockout winner by cascading the 'a' side forward.
@@ -208,14 +207,15 @@ describe("knockoutOnlyProgress", () => {
         if (slot.a) picks.knockout[slot.matchNo] = slot.a.code;
       }
     }
+    // Awards are no longer part of a knockout bracket; they don't affect progress.
     picks.awards = { player: "A", young: "B", boot: "C", goal: "D" };
 
     const p = knockoutOnlyProgress(picks);
     expect(p.groups.total).toBe(0);
     expect(p.thirds.total).toBe(0);
+    expect(p.awards.total).toBe(0);
     expect(p.knockout.done).toBe(TARGET_KNOCKOUT);
-    expect(p.awards.done).toBe(TARGET_AWARDS);
-    expect(p.overall.total).toBe(TARGET_KNOCKOUT + TARGET_AWARDS);
+    expect(p.overall.total).toBe(TARGET_KNOCKOUT);
     expect(p.complete).toBe(true);
   });
 

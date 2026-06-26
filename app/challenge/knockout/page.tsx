@@ -62,6 +62,19 @@ export default async function KnockoutChallengeHomePage() {
         </Link>
       )}
 
+      <Link
+        href="/challenge/knockout/scoring"
+        className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk"
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-ink">How scoring works</span>
+          <span className="mt-0.5 block text-[13px] text-ink-3">
+            Points per round, plus the final-goals tiebreaker.
+          </span>
+        </span>
+        <span className="shrink-0 font-display text-pitch-dark">→</span>
+      </Link>
+
       <ScoreCards
         live={cards.live}
         last={cards.last}

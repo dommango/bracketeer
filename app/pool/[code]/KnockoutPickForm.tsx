@@ -9,7 +9,7 @@ import {
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import { emptyPicks, type Picks } from "@/lib/scoring/types";
 import { submitPicksAction } from "./picks/actions";
-import { AWARDS, Bar, LABEL } from "./pick-ui";
+import { Bar, LABEL } from "./pick-ui";
 import { KnockoutCascade } from "./BracketTreeBuilder";
 
 // The save contract shared by the pool and solo flows: a payload of the edited
@@ -23,11 +23,12 @@ export type SaveBracket = (payload: {
 }) => Promise<{ ok: boolean; error?: string; entryId?: string }>;
 
 // Knockout-only bracket builder: the 32 qualifiers are fixed by the official R32
-// seed, so the picker only chooses a winner for each match (R32 → Final), plus
-// awards + tiebreak. No group / third-place sections (that's the full-bracket
-// PickForm). Saves through submitPicksAction by default (pool flow); the solo
-// flow passes saveAction instead. The group halves of the payload stay empty and
-// score zero.
+// seed, so the picker only chooses a winner for each match (R32 → Final), plus a
+// single goals-in-the-final tiebreak. No awards (most casual players can't pick
+// them) and no group / third-place sections (that's the full-bracket PickForm).
+// Saves through submitPicksAction by default (pool flow); the solo flow passes
+// saveAction instead. The group/award halves of the payload stay empty and score
+// zero, so removing the awards UI never changes a score.
 export function KnockoutPickForm({
   code,
   entryId,
@@ -73,9 +74,6 @@ export function KnockoutPickForm({
 
   const pickWinner = (matchNo: number, teamCode: string) =>
     update((p) => ({ ...p, knockout: { ...p.knockout, [matchNo]: teamCode } }));
-
-  const setAward = (key: keyof Picks["awards"], value: string) =>
-    update((p) => ({ ...p, awards: { ...p.awards, [key]: value } }));
 
   const submit = () => {
     setError(null);
@@ -149,26 +147,13 @@ export function KnockoutPickForm({
         <KnockoutCascade ko={ko} disabled={locked} onPick={pickWinner} />
       </section>
 
-      {/* Awards + tiebreak */}
+      {/* Tiebreaker */}
       <section>
-        <h3 className={`${LABEL} mb-2`}>Awards &amp; tiebreaker</h3>
+        <h3 className={`${LABEL} mb-2`}>Tiebreaker</h3>
         <div className="space-y-3 rounded-md border border-line bg-surface p-3">
-          {AWARDS.map((a) => (
-            <label key={a.key} className="block">
-              <span className="mb-1 block text-[11px] font-semibold text-ink-2">{a.label}</span>
-              <input
-                value={picks.awards[a.key] ?? ""}
-                onChange={(e) => setAward(a.key, e.target.value)}
-                disabled={locked}
-                maxLength={60}
-                placeholder="Player or team name"
-                className="h-10 w-full rounded border border-line bg-surface px-2.5 text-sm text-ink outline-none focus:border-pitch disabled:cursor-not-allowed disabled:opacity-70"
-              />
-            </label>
-          ))}
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold text-ink-2">
-              Tiebreaker — total goals in the final
+              Total goals in the final
             </span>
             <input
               value={tiebreak}

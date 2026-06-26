@@ -31,6 +31,12 @@ export default async function BracketsPage() {
           Build a knockout bracket, enter it into the Knockout Challenge, and add it to
           any pool you like.
         </p>
+        <Link
+          href="/challenge/knockout/scoring"
+          className="inline-block text-sm font-semibold text-pitch underline-offset-2 hover:underline"
+        >
+          How scoring works →
+        </Link>
       </header>
 
       {!open ? (
@@ -115,6 +121,9 @@ function BracketCard({
           <p className="mt-1 font-display text-3xl tabular-nums text-ink">
             {bracket.total}
             <span className="ml-1 text-sm font-normal text-ink-3">pts</span>
+          </p>
+          <p className="mt-0.5 text-[11px] text-ink-3">
+            {isKnockout ? "Knockout points only" : "Includes group-stage points"}
           </p>
         </div>
         {bracket.progress ? (
