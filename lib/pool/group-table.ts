@@ -6,6 +6,7 @@
 // the still-tied subset). Inseparable teams share a rank and are flagged tied.
 
 import { GROUPS } from "@/lib/scoring/data";
+import { kickoffFor } from "@/lib/scoring/schedule";
 import type { GroupLetter, TeamCode, Results } from "@/lib/scoring/types";
 
 export interface GroupResultRow {
@@ -13,7 +14,7 @@ export interface GroupResultRow {
   awayCode: TeamCode;
   homeScore: number;
   awayScore: number;
-  matchNo?: number; // for chronological form ordering; falls back to input order
+  matchNo?: number; // resolved to its real kickoff for chronological form ordering; falls back to input order
 }
 
 export interface GroupTableRow {
@@ -135,13 +136,22 @@ function order(
   return [subset]; // inseparable → one tied cluster
 }
 
-// A team's actual results in match order (most-recent last), as a W/D/L string.
-// Ordered by matchNo when present, else by the order rows were supplied.
+// A team's actual results in kickoff order (most-recent last), as a W/D/L string.
+// matchNo is mapped to its real kickoff instant for ordering — matchNo itself is
+// NOT chronological (a group's 6 pairings are stored round-robin, so e.g. a team's
+// last-numbered match can kick off before an earlier-numbered one). Without
+// matchNo (or a kickoff for it) we fall back to the order rows were supplied.
+function formOrder(m: GroupResultRow, i: number): number {
+  if (m.matchNo == null) return i;
+  const kickoff = kickoffFor(m.matchNo);
+  return kickoff ? kickoff.getTime() : m.matchNo;
+}
+
 function teamForm(code: TeamCode, matches: GroupResultRow[]): string {
   return matches
     .map((m, i) => ({ m, i }))
     .filter(({ m }) => m.homeCode === code || m.awayCode === code)
-    .sort((a, b) => (a.m.matchNo ?? a.i) - (b.m.matchNo ?? b.i))
+    .sort((a, b) => formOrder(a.m, a.i) - formOrder(b.m, b.i))
     .map(({ m }) => {
       const gf = m.homeCode === code ? m.homeScore : m.awayScore;
       const ga = m.homeCode === code ? m.awayScore : m.homeScore;

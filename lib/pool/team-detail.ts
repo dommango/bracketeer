@@ -49,7 +49,13 @@ export async function getTeamDetail(
         status: { in: ["LIVE", "FINAL"] },
         match: { tournamentId, roundCode: "GROUP" },
       },
-      select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+      select: {
+        homeTeamCode: true,
+        awayTeamCode: true,
+        homeScore: true,
+        awayScore: true,
+        match: { select: { matchNo: true } },
+      },
     }),
     getMatchCenter(poolId, null),
     getEntriesWithPicks(poolId),
@@ -67,6 +73,7 @@ export async function getTeamDetail(
       awayCode: r.awayTeamCode,
       homeScore: r.homeScore,
       awayScore: r.awayScore,
+      matchNo: r.match.matchNo,
     });
   }
   const table = group ? computeGroupTables(groupRows)[group] : [];
@@ -99,7 +106,13 @@ async function teamGroupTable(
       status: { in: ["LIVE", "FINAL"] },
       match: { tournamentId, roundCode: "GROUP" },
     },
-    select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+    select: {
+      homeTeamCode: true,
+      awayTeamCode: true,
+      homeScore: true,
+      awayScore: true,
+      match: { select: { matchNo: true } },
+    },
   });
   const groupRows: GroupResultRow[] = [];
   for (const r of resultRows) {
@@ -109,6 +122,7 @@ async function teamGroupTable(
       awayCode: r.awayTeamCode,
       homeScore: r.homeScore,
       awayScore: r.awayScore,
+      matchNo: r.match.matchNo,
     });
   }
   return computeGroupTables(groupRows)[group];
