@@ -187,30 +187,25 @@ export function pickFormProgress(picks: Picks): PickFormProgress {
   return { groups, thirds, knockout, awards, overall, complete };
 }
 
-// Progress for a knockout-only pool: just the 31 scored knockout winners plus
-// the 4 awards (no group / third-place sections — the qualifiers are fixed). The
-// group/thirds buckets report a zero total so a shared progress bar reads 100%
-// only when the knockout + awards are filled. "complete" mirrors the full form:
-// every scored knockout winner chosen (awards stay optional).
+// Progress for a knockout-only pool: just the 31 scored knockout winners (no
+// group / third-place sections — the qualifiers are fixed — and no awards, which
+// the knockout builder no longer collects). The group/thirds/awards buckets
+// report a zero total so a shared progress bar reads 100% once every scored
+// knockout winner is chosen. "complete" mirrors that: every winner picked.
 export function knockoutOnlyProgress(picks: Picks): PickFormProgress {
   let knockoutDone = 0;
   for (const n of scoredKnockoutNumbers()) {
     if (picks.knockout[n]) knockoutDone++;
   }
 
-  let awardsDone = 0;
-  for (const k of AWARD_KEYS) {
-    if ((picks.awards?.[k] ?? "").trim()) awardsDone++;
-  }
-
   const groups: SectionProgress = { done: 0, total: 0 };
   const thirds: SectionProgress = { done: 0, total: 0 };
   const knockout: SectionProgress = { done: knockoutDone, total: TARGET_KNOCKOUT };
-  const awards: SectionProgress = { done: awardsDone, total: TARGET_AWARDS };
+  const awards: SectionProgress = { done: 0, total: 0 };
 
   const overall: SectionProgress = {
-    done: knockoutDone + awardsDone,
-    total: TARGET_KNOCKOUT + TARGET_AWARDS,
+    done: knockoutDone,
+    total: TARGET_KNOCKOUT,
   };
 
   return {
