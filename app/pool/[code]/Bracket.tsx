@@ -216,7 +216,16 @@ export function Bracket({ view }: { view: BracketView }) {
   );
 }
 
-export function GroupStandings({ view, code }: { view: BracketView; code: string }) {
+export function GroupStandings({
+  view,
+  code,
+  basePath,
+}: {
+  view: BracketView;
+  code?: string;
+  basePath?: string;
+}) {
+  const base = basePath ?? `/pool/${code}`;
   // Tables are always populated (all 4 teams, 0–0 before play), so every group
   // renders the same full-size table; the empty state only shows pre-seed.
   const anySet = view.groups.some((g) => g.table.length > 0) || view.thirds.length > 0;
@@ -235,7 +244,7 @@ export function GroupStandings({ view, code }: { view: BracketView; code: string
           return (
             <Link
               key={g.group}
-              href={`/pool/${code}/matches?view=groups&fx=group#group-${g.group}`}
+              href={`${base}/matches?view=groups&fx=group#group-${g.group}`}
               aria-label={`Group ${g.group} fixtures`}
               className="relative block overflow-hidden rounded-xl border border-line bg-surface p-3 text-sm transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch active:scale-[0.99]"
             >

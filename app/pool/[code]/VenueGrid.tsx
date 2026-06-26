@@ -4,7 +4,17 @@ import type { VenueCard } from "@/lib/pool/fixture-views";
 
 // Grid of host-venue cards (the "By City" fixture view). Each card drills into
 // the per-venue schedule page, which shows that venue's full cross-stage slate.
-export function VenueGrid({ code, venues }: { code: string; venues: VenueCard[] }) {
+// Links resolve under `basePath` (e.g. /challenge/md3) or the pool path from `code`.
+export function VenueGrid({
+  code,
+  basePath,
+  venues,
+}: {
+  code?: string;
+  basePath?: string;
+  venues: VenueCard[];
+}) {
+  const base = basePath ?? `/pool/${code}`;
   if (venues.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">
@@ -17,7 +27,7 @@ export function VenueGrid({ code, venues }: { code: string; venues: VenueCard[] 
       {venues.map((v) => (
         <Link
           key={v.token}
-          href={`/pool/${code}/stadiums/${v.token}`}
+          href={`${base}/stadiums/${v.token}`}
           className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-ink-4"
         >
           {/* City-accent rail down the left edge. */}
