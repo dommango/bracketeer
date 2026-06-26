@@ -69,7 +69,7 @@ export async function getMd3ChallengeHome(
     getMd3ChallengeLeaderboard(),
     getMd3ChallengeView(tournamentId, userId, now),
     getTournamentMatchInputs(tournamentId, MD3_MATCH_NOS),
-    getRecentMatchUpdates(tournamentId),
+    getRecentMatchUpdates(tournamentId, 3),
   ]);
   // The viewer's own scoreline predictions (and points once final), oriented to
   // each card so the live / last cards on Home show "your pick" beside the score

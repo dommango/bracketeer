@@ -14,3 +14,19 @@ export function assignRanks<T extends { total: number }>(
     rank: sorted.filter((o) => valueOf(o) > valueOf(r)).length + 1,
   }));
 }
+
+// Competition ranking driven by an ordering comparator instead of a scalar value,
+// for standings whose tiebreak can't collapse to one number (e.g. the MD3 quality
+// cascade). `compare(o, r) < 0` means o ranks strictly ahead of r, so rank is the
+// count of entries ahead + 1 — entries share a rank only on a genuine dead heat
+// (compare === 0). The comparator must encode the ranking criteria ONLY; leave any
+// display-only nudge (label order) out of it, as with `assignRanks`.
+export function assignRanksByCompare<T>(
+  sorted: readonly T[],
+  compare: (a: T, b: T) => number,
+): Array<T & { rank: number }> {
+  return sorted.map((r) => ({
+    ...r,
+    rank: sorted.filter((o) => compare(o, r) < 0).length + 1,
+  }));
+}

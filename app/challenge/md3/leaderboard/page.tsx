@@ -42,13 +42,23 @@ export default async function Md3ChallengeLeaderboardPage() {
           No entries yet — you&apos;re first on the leaderboard.
         </p>
       ) : (
-        <Leaderboard
-          rows={rows}
-          youUserId={user?.id}
-          linkBase="/challenge/md3/u"
-          showMedals={!isMd3GameOpen()}
-          showLiveNote={false}
-        />
+        <>
+          <Leaderboard
+            rows={rows}
+            youUserId={user?.id}
+            linkBase="/challenge/md3/u"
+            showMedals={!isMd3GameOpen()}
+            showLiveNote={false}
+          />
+          {/* Tiebreak order lives in full on the rules page; keep the board light. */}
+          <p className="px-1 text-[13px] text-ink-3">
+            Tied on points?{" "}
+            <Link href="/rules" className="font-semibold text-pitch-dark hover:underline">
+              See how ties break
+            </Link>
+            .
+          </p>
+        </>
       )}
     </section>
   );

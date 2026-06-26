@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { asScoringConfig, type LeaderboardRow } from "@/lib/pool/scoring";
 import { rankEnteredRows } from "@/lib/challenge/rank-entered";
+import { parseMd3Tiebreak } from "@/lib/challenge/md3-tiebreak";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { decodeMd3Rows, type Md3Scores } from "@/lib/pool/md3-picks";
@@ -223,6 +224,9 @@ export async function getMd3ChallengeLeaderboard(
     total: e.breakdown?.totalPoints ?? 0,
     breakdown: e.breakdown?.byCategory ?? null,
     tiebreak: e.tiebreak,
+    // Quality-cascade tiebreak cached at scoring time; makes equal-point entries
+    // rank decisively instead of sharing a place (see lib/challenge/md3-tiebreak).
+    md3Tiebreak: parseMd3Tiebreak(e.breakdown?.byCategory),
   }));
 
   const withLive = await overlayMd3LiveProjection(

@@ -7,6 +7,7 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import { md3Fixtures, MD3_MATCH_NOS, scoreMd3, type ScoreLine } from "@/lib/pool/match-day-3";
+import { buildMd3Tiebreak } from "@/lib/challenge/md3-tiebreak";
 
 type Db = Prisma.TransactionClient;
 
@@ -81,6 +82,10 @@ async function scoreMd3EntrySet(tx: Db, entries: Md3PickEntry[], tournamentId: s
     const byMatch = decodePickRows(entry.picks);
     let total = 0;
     const perPick: Record<string, number> = {};
+    // Aggregate predicted vs actual goals across scored matches — the final tier of
+    // the leaderboard tiebreak (closest total goals); see lib/challenge/md3-tiebreak.
+    let predGoals = 0;
+    let actualGoals = 0;
 
     for (const f of fixtures) {
       const result = results.get(f.matchNo);
@@ -101,12 +106,21 @@ async function scoreMd3EntrySet(tx: Db, entries: Md3PickEntry[], tournamentId: s
       const points = scoreMd3(predLine, actualLine);
       total += points;
       perPick[`M${f.matchNo}`] = points;
+      predGoals += predLine.home + predLine.away;
+      actualGoals += actualLine.home + actualLine.away;
     }
 
+    const tb = buildMd3Tiebreak(perPick, predGoals, actualGoals);
+    // Fresh literal (not the named Md3Tiebreak interface) so it satisfies Prisma's
+    // structural Json input type; parseMd3Tiebreak reads it back off byCategory.
+    const byCategory = {
+      md3: total,
+      tb: { exact: tb.exact, gd: tb.gd, result: tb.result, goalDelta: tb.goalDelta },
+    };
     await tx.scoreBreakdown.upsert({
       where: { entryId: entry.id },
-      update: { totalPoints: total, byCategory: { md3: total }, perPick, computedAt: new Date() },
-      create: { entryId: entry.id, totalPoints: total, byCategory: { md3: total }, perPick },
+      update: { totalPoints: total, byCategory, perPick, computedAt: new Date() },
+      create: { entryId: entry.id, totalPoints: total, byCategory, perPick },
     });
   }
 }

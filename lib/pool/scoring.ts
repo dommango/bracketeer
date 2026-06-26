@@ -11,6 +11,7 @@ import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
 import { assignRanks } from "@/lib/pool/rank";
 import { scoreMd3Pool, scoreMd3Entry, scoreStandaloneMd3 } from "@/lib/pool/md3-scoring";
+import type { Md3Tiebreak } from "@/lib/challenge/md3-tiebreak";
 
 type Db = Prisma.TransactionClient;
 
@@ -195,6 +196,10 @@ export interface LeaderboardRow {
   // Display-only: points this entry would gain if live knockout matches ended
   // at their current score (see lib/pool/projected.ts). Absent when nothing is live.
   projected?: number;
+  // Decisive ranking tiebreak for the Match Day Pickem board, derived from the
+  // cached per-pick scoring (see lib/challenge/md3-tiebreak.ts). Set only for MD3
+  // rows; absent on full-bracket/knockout rows, which keep total-only ranking.
+  md3Tiebreak?: Md3Tiebreak;
 }
 
 // Read the cached leaderboard for a pool, ranked by total desc then label.
