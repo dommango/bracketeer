@@ -250,6 +250,7 @@ body {
    ============================================================ */
 .bkt-cell {
   position: relative;
+  flex: 1;
 }
 /* outgoing elbow on the right of every cell except the Final column */
 .bkt-round:not(:last-child) .bkt-cell::after {

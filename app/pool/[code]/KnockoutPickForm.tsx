@@ -5,12 +5,12 @@ import {
   resolveKnockout,
   reconcileKnockoutPicks,
   knockoutOnlyProgress,
-  type KnockoutSlot,
 } from "@/lib/pool/pick-form";
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import { emptyPicks, type Picks } from "@/lib/scoring/types";
 import { submitPicksAction } from "./picks/actions";
-import { AWARDS, Bar, KO_STAGES, KnockoutMatch, LABEL } from "./pick-ui";
+import { AWARDS, Bar, LABEL } from "./pick-ui";
+import { KnockoutCascade } from "./BracketTreeBuilder";
 
 // The save contract shared by the pool and solo flows: a payload of the edited
 // bracket, returning ok/error. The pool flow binds it to submitPicksAction with
@@ -134,34 +134,7 @@ export function KnockoutPickForm({
             {progress.knockout.done}/{progress.knockout.total}
           </span>
         </div>
-        {KO_STAGES.map((stage) => {
-          const slots = ko[stage.key] as KnockoutSlot[];
-          return (
-            <div key={stage.key}>
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
-                {stage.label}
-              </p>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {slots.map((slot) => (
-                  <KnockoutMatch
-                    key={slot.matchNo}
-                    slot={slot}
-                    disabled={locked}
-                    onPick={pickWinner}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-        <div>
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-gold-dark">
-            Final
-          </p>
-          <div className="sm:max-w-[50%]">
-            <KnockoutMatch slot={ko.final} disabled={locked} onPick={pickWinner} />
-          </div>
-        </div>
+        <KnockoutCascade ko={ko} disabled={locked} onPick={pickWinner} />
       </section>
 
       {/* Awards + tiebreak */}
