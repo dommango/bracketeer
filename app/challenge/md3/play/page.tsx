@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import { hasAcceptedTerms } from "@/lib/account/consent";
+import { GAME_CATALOG } from "@/lib/pool/games";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
 
 // Predictions, locks, and results change at request time.
@@ -49,6 +50,13 @@ export default async function Md3ChallengePlayPage() {
           Pick the exact scoreline for each open match below — each locks at its own kickoff.
         </p>
       )}
+
+      {/* How points are calculated — straight from the game catalog so it can't
+          drift from the hero/rules copy. */}
+      <p className="rounded-2xl border border-line bg-surface-sunk/40 px-4 py-3 text-[13px] text-ink-2">
+        <span className="font-semibold text-ink">How points work:</span>{" "}
+        {GAME_CATALOG.MATCH_DAY_3_PICKEM.scoringSummary}
+      </p>
 
       <Md3ChallengeForm
         fixtures={view.fixtures}

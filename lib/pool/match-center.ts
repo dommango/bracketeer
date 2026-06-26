@@ -63,6 +63,29 @@ export interface YourScore {
   points: number | null;
 }
 
+// Re-key a scoreline prediction from the fixture's canonical draw orientation onto
+// a display row's home/away. MD3 picks are stored/keyed by the canonical home/away,
+// but match cards render teams in the live Result row's orientation, which differs
+// at neutral venues (the sports feed's "home" needn't be the draw's home). Without
+// this the scoreline shows transposed against the team labels (a 3–0 home pick
+// rendered as 0–3). Aligned by team code; falls back to the prediction as-is when a
+// row code is unknown (so a missing/odd code never corrupts the numbers).
+export function orientScorePrediction(
+  pred: { home: number; away: number },
+  fixtureHomeCode: string,
+  fixtureAwayCode: string,
+  rowHomeCode: string | null,
+  rowAwayCode: string | null,
+): { home: number; away: number } {
+  const byTeam: Record<string, number> = {
+    [fixtureHomeCode]: pred.home,
+    [fixtureAwayCode]: pred.away,
+  };
+  const home = rowHomeCode != null ? byTeam[rowHomeCode] : undefined;
+  const away = rowAwayCode != null ? byTeam[rowAwayCode] : undefined;
+  return { home: home ?? pred.home, away: away ?? pred.away };
+}
+
 export interface MatchCenterRow {
   matchNo: number;
   roundCode: string;

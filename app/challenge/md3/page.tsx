@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
-import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
+import { getMd3ChallengeHome, getMd3Bracket } from "@/lib/challenge/md3-dashboard";
 import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { Countdown } from "@/app/pool/[code]/Countdown";
+import { GroupStandings } from "@/app/pool/[code]/Bracket";
 import { ChallengeStanding } from "../ChallengeStanding";
 
 // Predictions, locks, and live results change at request time.
@@ -11,7 +12,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Md3ChallengeHomePage() {
   const user = await getSessionUser();
-  const { standing, board, view, cards } = await getMd3ChallengeHome(user?.id ?? null);
+  const [{ standing, board, view, cards }, bracket] = await Promise.all([
+    getMd3ChallengeHome(user?.id ?? null),
+    getMd3Bracket(),
+  ]);
 
   // The soonest still-open fixture's kickoff is the next lock; null once all 24
   // have kicked off (the game is fully locked).
@@ -35,6 +39,13 @@ export default async function Md3ChallengeHomePage() {
         standing={standing}
         boardHref="/challenge/md3/leaderboard"
         cta={{ href: "/challenge/md3/play", label: "Make your picks" }}
+      />
+
+      <ScoreCards
+        live={cards.live}
+        last={cards.last}
+        next={cards.next}
+        hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
       />
 
       <div className="rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]">
@@ -66,13 +77,6 @@ export default async function Md3ChallengeHomePage() {
         </div>
       </div>
 
-      <ScoreCards
-        live={cards.live}
-        last={cards.last}
-        next={cards.next}
-        hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
-      />
-
       {isParticipant && preview.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
@@ -92,6 +96,23 @@ export default async function Md3ChallengeHomePage() {
             showMedals={view.openCount === 0}
           />
         </div>
+      ) : null}
+
+      {bracket ? (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+              Group standings
+            </h2>
+            <Link
+              href="/challenge/md3/matches?view=groups"
+              className="text-xs font-semibold text-pitch hover:underline"
+            >
+              See all →
+            </Link>
+          </div>
+          <GroupStandings view={bracket} basePath="/challenge/md3" />
+        </section>
       ) : null}
     </section>
   );

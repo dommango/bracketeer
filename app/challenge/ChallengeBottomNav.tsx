@@ -54,7 +54,7 @@ export function ChallengeBottomNav() {
     },
     {
       key: "leaderboard",
-      label: "Board",
+      label: "Leaderboard",
       href: `${base}/leaderboard`,
       isActive: (p) => p === `${base}/leaderboard` || p.startsWith(`${base}/u/`),
       icon: <BoardGlyph />,

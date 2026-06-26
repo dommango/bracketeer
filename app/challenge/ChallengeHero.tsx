@@ -45,10 +45,7 @@ export function ChallengeHero({ format }: { format: PoolFormat }) {
             boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
           }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
-            Public challenge
-          </p>
-          <h1 className="mt-1 break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+          <h1 className="break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
             {name}
           </h1>
           <p className="mt-1.5 text-sm text-white/90">

@@ -4,7 +4,16 @@ import type { ChampionshipOdd } from "@/lib/pool/queries";
 // Tournament-winner futures, highest implied probability first. A thin wrapper
 // over the shared OddsBoard so the title market and every other odds surface
 // share one visual pattern; each row links to the team drill-down.
-export function ChampionshipOdds({ odds, code }: { odds: ChampionshipOdd[]; code: string }) {
+export function ChampionshipOdds({
+  odds,
+  code,
+  basePath,
+}: {
+  odds: ChampionshipOdd[];
+  code?: string;
+  basePath?: string;
+}) {
+  const base = basePath ?? `/pool/${code}`;
   return (
     <OddsBoard
       title="Title odds"
@@ -15,7 +24,7 @@ export function ChampionshipOdds({ odds, code }: { odds: ChampionshipOdd[]; code
         primary: o.name,
         secondary: o.teamCode,
         winProb: o.winProb,
-        href: `/pool/${code}/teams/${o.teamCode}`,
+        href: `${base}/teams/${o.teamCode}`,
       }))}
     />
   );

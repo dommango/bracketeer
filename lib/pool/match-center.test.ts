@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMatchCenter, type MatchInput } from "./match-center";
+import { buildMatchCenter, orientScorePrediction, type MatchInput } from "./match-center";
 
 function m(partial: Partial<MatchInput> & { matchNo: number; roundCode: string }): MatchInput {
   return {
@@ -108,5 +108,31 @@ describe("buildMatchCenter", () => {
     const row = sections[0].matches[0];
     expect(row.venue).toBe("Estadio Azteca");
     expect(row.city).toBe("Mexico City");
+  });
+});
+
+describe("orientScorePrediction", () => {
+  // Fixture canonical home = GER; pred is GER 3, ECU 0.
+  it("keeps the pick as-is when the row matches the fixture orientation", () => {
+    expect(orientScorePrediction({ home: 3, away: 0 }, "GER", "ECU", "GER", "ECU")).toEqual({
+      home: 3,
+      away: 0,
+    });
+  });
+
+  it("transposes the pick when the row's home/away is flipped vs the fixture", () => {
+    // The card shows ECU as home (live Result orientation); the GER 3–0 pick must
+    // render as 0–3 so the numbers line up with the labels.
+    expect(orientScorePrediction({ home: 3, away: 0 }, "GER", "ECU", "ECU", "GER")).toEqual({
+      home: 0,
+      away: 3,
+    });
+  });
+
+  it("falls back to the prediction as-is when a row code is unknown", () => {
+    expect(orientScorePrediction({ home: 2, away: 1 }, "NED", "TUN", null, null)).toEqual({
+      home: 2,
+      away: 1,
+    });
   });
 });

@@ -195,9 +195,9 @@ export function prizeTeaser(format: PoolFormat): string | null {
   // Scaled prizes advertise the guaranteed floor ("$50+") so we never over-promise
   // a value that depends on the final entrant count; fixed prizes show their figure.
   if (prize.kind === "scaled") {
-    return `Win a ${formatPrize(prize.min, prize.currency)}+ gift card (grows with entries) — top the challenge.`;
+    return `Top the challenge — win a ${formatPrize(prize.min, prize.currency)}+ gift card (grows with entries).`;
   }
-  return `Win ${prize.description} — top the challenge.`;
+  return `Top the challenge — win ${prize.description}.`;
 }
 
 const MONTH_DAY = new Intl.DateTimeFormat("en-GB", {

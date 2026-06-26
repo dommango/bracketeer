@@ -159,6 +159,17 @@ describe("group-table form", () => {
     expect(rankOf(t, "MEX").form).toBe("LWD");
   });
 
+  it("orders form by real kickoff, not matchNo (a group's pairings aren't chronological)", () => {
+    // KOR's group-A matches: matchNo 2 (Jun 19), 4 (Jun 25), 6 (Jun 12). matchNo
+    // order would give "LWD"; real kickoff order is m6, m2, m4 → "DLW".
+    const t = computeGroupTables([
+      mn("MEX", "KOR", 1, 0, 2), // KOR L  — Jun 19
+      mn("RSA", "KOR", 0, 1, 4), // KOR W  — Jun 25
+      mn("KOR", "CZE", 1, 1, 6), // KOR D  — Jun 12
+    ]).A;
+    expect(rankOf(t, "KOR").form).toBe("DLW");
+  });
+
   it("covers only played matches and falls back to input order without matchNo", () => {
     const t = computeGroupTables([
       m("MEX", "RSA", 0, 2), // MEX L, RSA W

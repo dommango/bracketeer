@@ -471,17 +471,19 @@ export async function getPoolView(code: string): Promise<PoolView | null> {
   };
 }
 
-// The live bracket + group standings for a pool's tournament, built from the
-// official answer key and per-match display scores.
-export async function getPoolBracket(poolId: string): Promise<BracketView | null> {
-  const pool = await prisma.pool.findUnique({
-    where: { id: poolId },
-    select: { tournament: { select: { id: true, officialResults: true } } },
+// The live bracket + group standings for a tournament, built from the official
+// answer key and per-match display scores. Pool-agnostic so the public challenge
+// surfaces can render the same bracket/standings without a pool (getPoolBracket
+// just resolves the tournament from a pool first).
+export async function getTournamentBracket(tournamentId: string): Promise<BracketView | null> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { officialResults: true },
   });
-  if (!pool) return null;
+  if (!tournament) return null;
 
   const resultRows = await prisma.result.findMany({
-    where: { match: { tournamentId: pool.tournament.id } },
+    where: { match: { tournamentId } },
     select: {
       homeTeamCode: true,
       awayTeamCode: true,
@@ -514,7 +516,17 @@ export async function getPoolBracket(poolId: string): Promise<BracketView | null
     });
   }
 
-  return buildBracketView(asResults(pool.tournament.officialResults), scores, groupRows);
+  return buildBracketView(asResults(tournament.officialResults), scores, groupRows);
+}
+
+// The live bracket + group standings for a pool's tournament.
+export async function getPoolBracket(poolId: string): Promise<BracketView | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true },
+  });
+  if (!pool) return null;
+  return getTournamentBracket(pool.tournamentId);
 }
 
 export interface BracketOverlay {
