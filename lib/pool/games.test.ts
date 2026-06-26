@@ -106,9 +106,10 @@ describe("featuredGame across the Jun 22→28 window", () => {
 
 describe("prizeTeaser", () => {
   it("returns a teaser for challenge formats and null for full bracket", () => {
-    // Knockout is a scaled prize — advertises the guaranteed floor; MD3 is fixed.
-    expect(prizeTeaser("KNOCKOUT")).toMatch(/\$50\+ gift card.*top the challenge/i);
-    expect(prizeTeaser("MATCH_DAY_3_PICKEM")).toMatch(/\$50 gift card.*top the challenge/i);
+    // Teasers lead with the call to action; Knockout is a scaled prize (advertises
+    // the guaranteed floor "$50+"), MD3 is fixed ("$50").
+    expect(prizeTeaser("KNOCKOUT")).toMatch(/top the challenge.*\$50\+ gift card/i);
+    expect(prizeTeaser("MATCH_DAY_3_PICKEM")).toMatch(/top the challenge.*\$50 gift card/i);
     expect(prizeTeaser("FULL_BRACKET")).toBeNull();
   });
 });
