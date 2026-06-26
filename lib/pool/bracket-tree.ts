@@ -45,3 +45,16 @@ export function sortByTree<T extends { matchNo: number }>(matches: T[]): T[] {
     (a, b) => (TREE_ORDER[a.matchNo] ?? 0) - (TREE_ORDER[b.matchNo] ?? 0),
   );
 }
+
+// Internal match number → round code, for picking a card's accent without
+// threading the round through every caller. Knockout numbering: 73–88 R32,
+// 89–96 R16, 97–100 QF, 101–102 SF, 103 bronze, 104 final.
+export function roundCodeForMatch(matchNo: number): string {
+  if (matchNo >= 104) return "FINAL";
+  if (matchNo === 103) return "BRONZE";
+  if (matchNo >= 101) return "SF";
+  if (matchNo >= 97) return "QF";
+  if (matchNo >= 89) return "R16";
+  if (matchNo >= 73) return "R32";
+  return "GROUP";
+}

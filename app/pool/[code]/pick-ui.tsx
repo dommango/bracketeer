@@ -6,6 +6,7 @@
 
 import { resolveKnockout, type KnockoutSlot } from "@/lib/pool/pick-form";
 import type { Picks } from "@/lib/scoring/types";
+import { ROUND_ACCENT, roundCodeForMatch } from "@/lib/pool/bracket-tree";
 import { Flag } from "./Flag";
 
 export const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
@@ -85,9 +86,17 @@ export function KnockoutMatch({
     );
   };
 
+  const accent = ROUND_ACCENT[roundCodeForMatch(slot.matchNo)] ?? "var(--line)";
+
   return (
-    <div className="rounded-xl border border-line bg-surface p-3">
-      <div className="mb-2 px-0.5 font-mono text-[11px] font-bold text-ink-3">M{slot.matchNo}</div>
+    <div
+      className="rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]"
+      style={{ borderLeft: `4px solid ${accent}` }}
+    >
+      <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
+        <span className="font-mono">M{slot.matchNo}</span>
+      </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2.5">
         {option(slot.a)}
         <span className="self-center font-display text-xs text-ink-3" aria-hidden>
