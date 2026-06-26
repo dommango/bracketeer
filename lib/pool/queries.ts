@@ -8,7 +8,7 @@ import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/
 import { resolveBracket } from "@/lib/pool/bracket";
 import {
   knockoutR32Seed,
-  isKnockoutFieldSet,
+  knockoutOpenState,
   KNOCKOUT_PICKS_OPEN_UTC,
 } from "@/lib/pool/knockout";
 import { arePicksLocked } from "@/lib/pool/lock";
@@ -277,10 +277,13 @@ export const isGroupStageComplete = cache(async (tournamentId: string): Promise<
 });
 
 export interface KnockoutState {
-  // The 32 qualifiers are decided in the answer key — picks can be made.
+  // Picks can be made: any R32 matchup is concrete (provisional) or all 32 are set.
   open: boolean;
-  // Fixed target for the "picks open" countdown shown while still closed (the
-  // bracket can't be filled until the last 32 are confirmed). See knockout.ts.
+  // Open, but the field isn't final — some matchups are still TBD and a seeded slot
+  // can still shift as group results land. Drives the "seeding isn't final" banner.
+  provisional: boolean;
+  // Fixed target for the "seeding finalises" countdown — when the last group
+  // matches confirm the full bracket (just before the R32 kickoff). See knockout.ts.
   opensAt: Date;
   // When picks lock: the Round-of-32 kickoff (Match 73). Null if unscheduled.
   locksAt: Date | null;
@@ -304,8 +307,10 @@ export const getKnockoutState = cache(async (tournamentId: string): Promise<Knoc
     }),
   ]);
   const results = asResults(tournament.officialResults);
+  const { open, provisional } = knockoutOpenState(results);
   return {
-    open: isKnockoutFieldSet(results),
+    open,
+    provisional,
     opensAt: new Date(KNOCKOUT_PICKS_OPEN_UTC),
     locksAt: firstR32?.scheduledAt ?? null,
     seed: knockoutR32Seed(results),

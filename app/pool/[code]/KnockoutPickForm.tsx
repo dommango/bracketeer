@@ -36,6 +36,7 @@ export function KnockoutPickForm({
   label,
   locked,
   seed,
+  provisional = false,
   saveAction,
 }: {
   code?: string;
@@ -45,6 +46,9 @@ export function KnockoutPickForm({
   label: string;
   locked: boolean;
   seed: ResolvedR32;
+  // The field isn't final — some matchups are still TBD and can shift as group
+  // results land. Shows a heads-up banner; TBD slots render non-pickable as usual.
+  provisional?: boolean;
   saveAction?: SaveBracket;
 }) {
   const [picks, setPicks] = useState<Picks>(() =>
@@ -134,6 +138,14 @@ export function KnockoutPickForm({
             {progress.knockout.done}/{progress.knockout.total}
           </span>
         </div>
+        {provisional && !locked ? (
+          <p className="rounded-xl border border-gold-dark/40 bg-gold-tint/40 px-3 py-2 text-[12px] leading-snug text-ink-2">
+            <span className="font-semibold text-gold-dark">Seeding isn&apos;t final yet.</span>{" "}
+            Get a head start now — matchups still marked <span className="font-mono">TBD</span> unlock
+            as the last group results land. If a result changes a matchup, that pick clears, so
+            check back before kickoff.
+          </p>
+        ) : null}
         <KnockoutCascade ko={ko} disabled={locked} onPick={pickWinner} />
       </section>
 
