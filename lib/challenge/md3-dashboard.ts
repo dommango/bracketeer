@@ -14,6 +14,7 @@ import { getMd3ChallengeView, type Md3View } from "@/lib/pool/md3-view";
 import { buildStanding, type Standing } from "@/lib/pool/home";
 import {
   buildGroupCenterSections,
+  orientScorePrediction,
   type MatchCenterSection,
   type YourScore,
 } from "@/lib/pool/match-center";
@@ -67,10 +68,23 @@ export async function getMd3MatchCenter(
     getMd3ChallengeView(tournamentId, userId),
   ]);
 
+  // Cards render teams in the inputs' (live Result row) orientation, which can
+  // differ from the fixture's canonical draw orientation at neutral venues; orient
+  // each pick to its card so the scoreline lines up with the team labels.
+  const inputByNo = new Map(inputs.map((i) => [i.matchNo, i]));
   const scorePicks: Record<number, YourScore> = {};
   for (const f of view.fixtures) {
     // The viewer always sees their own picks fully revealed, so f.pred is safe.
-    if (f.pred) scorePicks[f.matchNo] = { home: f.pred.home, away: f.pred.away, points: f.points };
+    if (!f.pred) continue;
+    const input = inputByNo.get(f.matchNo);
+    const oriented = orientScorePrediction(
+      f.pred,
+      f.homeCode,
+      f.awayCode,
+      input?.homeCode ?? f.homeCode,
+      input?.awayCode ?? f.awayCode,
+    );
+    scorePicks[f.matchNo] = { home: oriented.home, away: oriented.away, points: f.points };
   }
 
   return buildGroupCenterSections(inputs, {}, scorePicks);
