@@ -12,6 +12,7 @@ function row(p: Partial<LeaderboardRow> & { entryId: string }): LeaderboardRow {
     breakdown: p.breakdown ?? null,
     tiebreak: p.tiebreak ?? null,
     projected: p.projected,
+    md3Tiebreak: p.md3Tiebreak,
   };
 }
 
@@ -62,6 +63,65 @@ describe("rankEnteredRows", () => {
       ["Ann", 1],
       ["Zoe", 1],
       ["Bob", 3],
+    ]);
+  });
+
+  it("breaks an MD3 points tie decisively on the quality cascade (distinct ranks)", () => {
+    // Equal points, but Zoe nailed more exact scorelines — she takes 1st outright,
+    // not a shared place, even though 'Ann' sorts first alphabetically.
+    const rows = [
+      row({
+        entryId: "x",
+        label: "Zoe",
+        total: 5,
+        md3Tiebreak: { exact: 3, gd: 0, result: 2, goalDelta: 1 },
+      }),
+      row({
+        entryId: "y",
+        label: "Ann",
+        total: 5,
+        md3Tiebreak: { exact: 1, gd: 2, result: 2, goalDelta: 1 },
+      }),
+    ];
+    const out = rankEnteredRows(rows, new Set(["x", "y"]));
+    expect(out.map((r) => [r.label, r.rank])).toEqual([
+      ["Zoe", 1],
+      ["Ann", 2],
+    ]);
+  });
+
+  it("uses the closest-total-goals tier when the hit counts match", () => {
+    const rows = [
+      row({
+        entryId: "x",
+        label: "Far",
+        total: 8,
+        md3Tiebreak: { exact: 1, gd: 1, result: 1, goalDelta: 6 },
+      }),
+      row({
+        entryId: "y",
+        label: "Near",
+        total: 8,
+        md3Tiebreak: { exact: 1, gd: 1, result: 1, goalDelta: 2 },
+      }),
+    ];
+    const out = rankEnteredRows(rows, new Set(["x", "y"]));
+    expect(out.map((r) => [r.label, r.rank])).toEqual([
+      ["Near", 1],
+      ["Far", 2],
+    ]);
+  });
+
+  it("shares a rank only on a genuine dead heat (identical vector), label orders display", () => {
+    const tb = { exact: 2, gd: 1, result: 1, goalDelta: 3 };
+    const rows = [
+      row({ entryId: "x", label: "Zoe", total: 6, md3Tiebreak: { ...tb } }),
+      row({ entryId: "y", label: "Ann", total: 6, md3Tiebreak: { ...tb } }),
+    ];
+    const out = rankEnteredRows(rows, new Set(["x", "y"]));
+    expect(out.map((r) => [r.label, r.rank])).toEqual([
+      ["Ann", 1],
+      ["Zoe", 1],
     ]);
   });
 
