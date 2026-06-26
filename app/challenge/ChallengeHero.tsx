@@ -37,10 +37,7 @@ export function ChallengeHero({ format }: { format: PoolFormat }) {
           <span aria-hidden="true">←</span> Bracketeer
         </Link>
         <div className="mt-3 min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
-            Public challenge
-          </p>
-          <h1 className="mt-1 break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+          <h1 className="break-words font-display text-[28px] leading-[1.05] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
             {name}
           </h1>
           <p className="mt-1.5 text-sm text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]">

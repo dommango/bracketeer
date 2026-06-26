@@ -182,15 +182,28 @@ export function Md3ChallengeForm({
     }
   }
 
-  // Frontload the fixtures you can still pick — split open (not yet kicked off)
-  // from closed (locked/final). Open ones lead the form; closed ones drop into a
-  // collapsed section below so the pickable games aren't buried under scores you
-  // can no longer change.
+  // Split open (not yet kicked off) from closed (locked/final). Closed games sit in
+  // a collapsed section pinned to the top — a quick glance at scores you can no
+  // longer change, kept out of the way of the pickable games that lead the form.
   const open = fixtures.filter((f) => !f.locked);
   const closed = fixtures.filter((f) => f.locked);
 
   return (
     <>
+      {/* Closed fixtures — kicked off, so read-only. Collapsed by default and pinned
+          to the top; each still surfaces your prediction next to the final score. */}
+      {closed.length > 0 ? (
+        <details className="mb-3 overflow-hidden rounded-2xl border border-line bg-surface-sunk/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[13px] font-semibold text-ink-2 [&::-webkit-details-marker]:hidden">
+            <span>Closed fixtures</span>
+            <span className="text-[12px] font-normal text-ink-3">{closed.length} kicked off ›</span>
+          </summary>
+          <div className="px-3 pb-3">
+            <FixtureList fixtures={closed} canEdit={false} />
+          </div>
+        </details>
+      ) : null}
+
       <form ref={formRef} action={action} className="space-y-3">
         {open.length > 0 ? (
           <FixtureList fixtures={open} canEdit={canEdit} />
@@ -228,21 +241,6 @@ export function Md3ChallengeForm({
           </div>
         ) : null}
       </form>
-
-      {/* Closed fixtures — kicked off, so read-only. Collapsed by default and shown
-          below the pickable games; each still surfaces your prediction next to the
-          live/final score. */}
-      {closed.length > 0 ? (
-        <details className="mt-2 overflow-hidden rounded-2xl border border-line bg-surface-sunk/40">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[13px] font-semibold text-ink-2 [&::-webkit-details-marker]:hidden">
-            <span>Closed fixtures</span>
-            <span className="text-[12px] font-normal text-ink-3">{closed.length} kicked off ›</span>
-          </summary>
-          <div className="px-3 pb-3">
-            <FixtureList fixtures={closed} canEdit={false} />
-          </div>
-        </details>
-      ) : null}
 
       {showConsent ? (
         <ConsentPopup
