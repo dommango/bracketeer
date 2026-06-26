@@ -22,7 +22,7 @@ export default async function SoloBracketEditPage({
   const entryId = Array.isArray(entryIdParam) ? entryIdParam[0] : entryIdParam;
 
   const tournamentId = await getTournamentIdBySlug();
-  const { open, opensAt, locksAt, seed } = await getKnockoutState(tournamentId);
+  const { open, provisional, opensAt, locksAt, seed } = await getKnockoutState(tournamentId);
 
   const header = (
     <div className="flex items-center justify-between">
@@ -78,6 +78,7 @@ export default async function SoloBracketEditPage({
         label={bracket?.label ?? user.name ?? "Player"}
         locked={locked}
         seed={seed}
+        provisional={provisional}
         saveAction={saveSoloBracketAction}
       />
     </section>

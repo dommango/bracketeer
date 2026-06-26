@@ -4,6 +4,8 @@ import {
   isKnockoutFieldSet,
   isKnockoutLocked,
   knockoutOnlyPicks,
+  hasConcreteR32Slots,
+  knockoutOpenState,
 } from "./knockout";
 import { GROUPS } from "@/lib/scoring/data";
 import { emptyPicks } from "@/lib/scoring/types";
@@ -45,6 +47,34 @@ describe("knockoutR32Seed / isKnockoutFieldSet", () => {
     const r = completeResults();
     r.groupSecond["L"] = "";
     expect(isKnockoutFieldSet(r)).toBe(false);
+  });
+});
+
+describe("knockoutOpenState / hasConcreteR32Slots", () => {
+  // All 12 groups' 1st & 2nd set but no third-place advancers — the field isn't
+  // final, yet the R32 matches that pair two group positions are already concrete.
+  function groupsOnlyResults(): Results {
+    const r = completeResults();
+    r.thirdAdvance = [];
+    return r;
+  }
+
+  it("is closed before any matchup is concrete (empty standings)", () => {
+    const r: Results = { ...emptyPicks(), finalGoals: null };
+    expect(hasConcreteR32Slots(r)).toBe(false);
+    expect(knockoutOpenState(r)).toEqual({ open: false, provisional: false });
+  });
+
+  it("is provisionally open once some R32 matchups are concrete but the field isn't final", () => {
+    const r = groupsOnlyResults();
+    expect(isKnockoutFieldSet(r)).toBe(false);
+    expect(hasConcreteR32Slots(r)).toBe(true);
+    expect(knockoutOpenState(r)).toEqual({ open: true, provisional: true });
+  });
+
+  it("is open and final once all 32 qualifiers are seated", () => {
+    const r = completeResults();
+    expect(knockoutOpenState(r)).toEqual({ open: true, provisional: false });
   });
 });
 

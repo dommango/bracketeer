@@ -1,43 +1,11 @@
 import Link from "next/link";
 import type { BracketView, BracketMatch, BracketRound } from "@/lib/pool/bracket-view";
 import type { GroupTableRow } from "@/lib/pool/group-table";
-import { R16, QF, SF, FINAL } from "@/lib/scoring/data";
 import { formatMatchDate, formatKickoff } from "@/lib/pool/format";
+import { ROUND_ACCENT, sortByTree } from "@/lib/pool/bracket-tree";
 import { Flag } from "./Flag";
 import { GROUP_CITY, GroupLetterMark, FormChips } from "./group-bits";
 import { roundLabel } from "@/lib/pool/rounds";
-
-// Pre-order DFS from the Final (a-branch before b-branch) gives every knockout
-// match a top-to-bottom position so its two feeders sit directly beside it —
-// the backbone of the desktop bracket tree. Leaves (R32) have no feeders.
-const FEEDERS: Record<number, [number, number]> = Object.fromEntries(
-  [...R16, ...QF, ...SF, FINAL].map((m) => [m.id, [m.a, m.b]]),
-);
-const TREE_ORDER: Record<number, number> = (() => {
-  const order: Record<number, number> = {};
-  let next = 0;
-  const visit = (id: number) => {
-    order[id] = next++;
-    const feeders = FEEDERS[id];
-    if (feeders) {
-      visit(feeders[0]);
-      visit(feeders[1]);
-    }
-  };
-  visit(FINAL.id);
-  return order;
-})();
-
-// Each knockout round gets a host-city tint so the bracket reads as a chromatic
-// sweep from group-stage green through royal blue, purple, magenta, to gold.
-const ROUND_ACCENT: Record<string, string> = {
-  R32: "var(--round-r32)",
-  R16: "var(--round-r16)",
-  QF: "var(--round-qf)",
-  SF: "var(--round-sf)",
-  BRONZE: "var(--gold-dark)",
-  FINAL: "var(--round-final)",
-};
 
 function Side({
   name,
@@ -55,7 +23,7 @@ function Side({
   const dimmed = decided && !isWinner;
   return (
     <div className={`flex items-center gap-2.5 py-1 ${dimmed ? "text-ink-4" : "text-ink"}`}>
-      <Flag code={code} size={20} />
+      <Flag code={code} size={24} />
       <span className={`flex-1 truncate ${isWinner ? "font-bold" : "font-medium"}`}>
         {name}
         {code ? (
@@ -75,15 +43,18 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
   const decided = Boolean(m.winnerCode);
   return (
     <div
-      className="rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm"
+      className="rounded-2xl border border-line bg-surface p-4 text-sm shadow-[var(--shadow-xs)]"
       style={{ borderLeft: `4px solid ${accent}` }}
     >
-      <div className="mb-1 flex items-center justify-between gap-2">
-        {m.tag ? (
-          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-ink-4">
-            {m.tag}
-          </span>
-        ) : <span />}
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
+          {m.tag ? (
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-ink-4">
+              {m.tag}
+            </span>
+          ) : null}
+        </span>
         {m.live ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-live-tint px-2 py-0.5 font-mono text-[10px] font-bold text-live">
             <span className="h-[5px] w-[5px] rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
@@ -172,9 +143,7 @@ function BracketTree({ rounds, bronze }: { rounds: BracketRound[]; bronze?: Brac
         <div className="mt-2 flex min-w-[1040px]">
           {treeRounds.map((round) => {
             const accent = ROUND_ACCENT[round.code] ?? "var(--line)";
-            const ordered = [...round.matches].sort(
-              (a, b) => (TREE_ORDER[a.matchNo] ?? 0) - (TREE_ORDER[b.matchNo] ?? 0),
-            );
+            const ordered = sortByTree(round.matches);
             return (
               <div key={round.code} className="bkt-round flex min-w-[200px] flex-1 flex-col">
                 {ordered.map((m) => (

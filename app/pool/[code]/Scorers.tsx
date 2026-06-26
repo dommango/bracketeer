@@ -2,6 +2,7 @@ import type { getTopScorers } from "@/lib/pool/queries";
 import { Flag } from "./Flag";
 import { TeamLink } from "./TeamLink";
 import { PlayerLink } from "./PlayerLink";
+import { UpdatedAt } from "./UpdatedAt";
 
 // Golden Boot leaderboard (actual goals). Presentational only — data is fetched
 // by the caller (the Matches "scorers" sub-view and the legacy redirect both
@@ -22,9 +23,12 @@ export function Scorers({
 }) {
   return (
     <section>
-      <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-        Golden Boot
-      </h2>
+      <div className="flex items-baseline justify-between gap-2 px-1">
+        <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+          Golden Boot
+        </h2>
+        <UpdatedAt date={scorers[0]?.fetchedAt} />
+      </div>
       <p className="mt-1 px-1 text-[11px] text-ink-4">Tournament top scorers.</p>
       {scorers.length === 0 ? (
         <p className="mt-2.5 rounded-2xl border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-3">

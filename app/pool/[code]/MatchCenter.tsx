@@ -40,7 +40,7 @@ function Side({ side, isWinner, decided }: { side: MatchCenterSide; isWinner: bo
   const dimmed = decided && !isWinner;
   return (
     <div className={`flex items-center gap-2.5 py-1 ${dimmed ? "text-ink-4" : "text-ink"}`}>
-      <Flag code={side.code} size={20} />
+      <Flag code={side.code} size={24} />
       <span className={`flex-1 truncate ${isWinner ? "font-bold" : "font-medium"}`}>
         {side.name}
         {side.code ? (
@@ -103,7 +103,7 @@ function MatchRow({
   return (
     <Link
       href={hrefForMatch(row.matchNo)}
-      className="block rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
+      className="block rounded-2xl border border-line bg-surface p-4 text-sm shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch"
       style={{ borderLeft: `4px solid ${accent}` }}
     >
       <div className="mb-1 flex items-center justify-end gap-2">

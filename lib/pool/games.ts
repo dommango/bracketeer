@@ -131,7 +131,9 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
     if (t < KNOCKOUT_OPEN.getTime()) {
       return {
         phase: "CREATE_ONLY",
-        label: "Opens Jun 28",
+        // Picks open progressively as group results land (provisional seeding),
+        // so this isn't a hard "opens Jun 28" gate any more — the bracket fills in.
+        label: "Picks opening",
         deadline: KNOCKOUT_OPEN,
         creatable: true,
         joinable: true,

@@ -8,6 +8,18 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.12.0",
+    date: "June 26, 2026",
+    title: "Build your knockout bracket — desktop tree & early picks",
+    notes: [
+      "Knockout and Challenge brackets are open early: start building now against the qualifiers already decided. Matchups still being decided show as TBD and unlock as the last group results land.",
+      "Heads-up while seeding finalises: if a result changes one of your matchups, that pick clears — so check back before kickoff.",
+      "The bracket builder now shows as a proper left-to-right bracket tree on desktop, with winners flowing rightward as you tap; the mobile layout is unchanged.",
+      "Every odds surface — title odds, Golden Boot odds, the scorer board and a match’s win-probability — now shows when it was last updated.",
+      "Polished the knockout pick cards, bracket and match cards to match the rest of the app.",
+    ],
+  },
+  {
     version: "0.11.0",
     date: "June 26, 2026",
     title: "Match Day Pickem, full tournament view",

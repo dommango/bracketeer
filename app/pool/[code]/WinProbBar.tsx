@@ -1,18 +1,23 @@
 import type { ImpliedProbs } from "@/lib/odds/map";
 import { resolvePair, NEUTRAL, DRAW_FILL } from "@/lib/teams/colors";
+import { UpdatedAt } from "./UpdatedAt";
 
 const pct = (x: number) => Math.round(x * 100);
 
 // The home/away segments are tinted with the colors of the teams playing (draw
 // stays neutral grey). When codes are absent the bar falls back to brand tokens.
+// Pass `fetchedAt` to stamp the bar with an "Updated …" freshness label (used on
+// the roomy match-detail surfaces; inline card bars omit it to stay compact).
 export function WinProbBar({
   odds,
   homeCode,
   awayCode,
+  fetchedAt,
 }: {
   odds: ImpliedProbs | null;
   homeCode?: string | null;
   awayCode?: string | null;
+  fetchedAt?: Date | null;
 }) {
   if (!odds) return null;
   const h = pct(odds.homeWinProb);
@@ -40,6 +45,11 @@ export function WinProbBar({
         <span style={{ color: drawText }}>D {d}%</span>
         <span style={{ color: away }}>{a}%</span>
       </div>
+      {fetchedAt ? (
+        <div className="mt-1">
+          <UpdatedAt date={fetchedAt} />
+        </div>
+      ) : null}
     </div>
   );
 }

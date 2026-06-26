@@ -46,6 +46,26 @@ export function isKnockoutFieldSet(results: Results): boolean {
   return R32.every((m) => Boolean(seed[m.id]?.a) && Boolean(seed[m.id]?.b));
 }
 
+// Whether the official R32 seed has at least one fully-determined matchup (both
+// teams seated). The trigger for *provisional* knockout picks: as group results
+// land, concrete matchups appear and can be picked while the rest stay TBD.
+export function hasConcreteR32Slots(results: Results): boolean {
+  const seed = resolveR32Slots(results);
+  return R32.some((m) => Boolean(seed[m.id]?.a) && Boolean(seed[m.id]?.b));
+}
+
+// Knockout-pick open state. Picks open once any R32 matchup is concrete (so users
+// can start building early) and become *final* once all 32 qualifiers are seated
+// (isKnockoutFieldSet). Between those the field is "provisional": some matchups are
+// still TBD, and a landed group result can still shift a seeded slot — a pick on a
+// matchup that changes is dropped by reconcileKnockoutPicks (and rejected server-
+// side by inconsistentKnockoutPicks), so scores never depend on the provisional fill.
+export function knockoutOpenState(results: Results): { open: boolean; provisional: boolean } {
+  if (isKnockoutFieldSet(results)) return { open: true, provisional: false };
+  if (hasConcreteR32Slots(results)) return { open: true, provisional: true };
+  return { open: false, provisional: false };
+}
+
 // Reduce a Picks to the only sections a knockout entry owns — the 31 winner
 // picks + 4 awards — with empty group / third-place halves. Saving a knockout
 // entry through this guarantees it never carries full-bracket data it can't edit

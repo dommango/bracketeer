@@ -5,12 +5,12 @@ import {
   resolveKnockout,
   reconcileKnockoutPicks,
   knockoutOnlyProgress,
-  type KnockoutSlot,
 } from "@/lib/pool/pick-form";
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import { emptyPicks, type Picks } from "@/lib/scoring/types";
 import { submitPicksAction } from "./picks/actions";
-import { AWARDS, Bar, KO_STAGES, KnockoutMatch, LABEL } from "./pick-ui";
+import { AWARDS, Bar, LABEL } from "./pick-ui";
+import { KnockoutCascade } from "./BracketTreeBuilder";
 
 // The save contract shared by the pool and solo flows: a payload of the edited
 // bracket, returning ok/error. The pool flow binds it to submitPicksAction with
@@ -36,6 +36,7 @@ export function KnockoutPickForm({
   label,
   locked,
   seed,
+  provisional = false,
   saveAction,
 }: {
   code?: string;
@@ -45,6 +46,9 @@ export function KnockoutPickForm({
   label: string;
   locked: boolean;
   seed: ResolvedR32;
+  // The field isn't final — some matchups are still TBD and can shift as group
+  // results land. Shows a heads-up banner; TBD slots render non-pickable as usual.
+  provisional?: boolean;
   saveAction?: SaveBracket;
 }) {
   const [picks, setPicks] = useState<Picks>(() =>
@@ -134,34 +138,15 @@ export function KnockoutPickForm({
             {progress.knockout.done}/{progress.knockout.total}
           </span>
         </div>
-        {KO_STAGES.map((stage) => {
-          const slots = ko[stage.key] as KnockoutSlot[];
-          return (
-            <div key={stage.key}>
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
-                {stage.label}
-              </p>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {slots.map((slot) => (
-                  <KnockoutMatch
-                    key={slot.matchNo}
-                    slot={slot}
-                    disabled={locked}
-                    onPick={pickWinner}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-        <div>
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-gold-dark">
-            Final
+        {provisional && !locked ? (
+          <p className="rounded-xl border border-gold-dark/40 bg-gold-tint/40 px-3 py-2 text-[12px] leading-snug text-ink-2">
+            <span className="font-semibold text-gold-dark">Seeding isn&apos;t final yet.</span>{" "}
+            Get a head start now — matchups still marked <span className="font-mono">TBD</span> unlock
+            as the last group results land. If a result changes a matchup, that pick clears, so
+            check back before kickoff.
           </p>
-          <div className="sm:max-w-[50%]">
-            <KnockoutMatch slot={ko.final} disabled={locked} onPick={pickWinner} />
-          </div>
-        </div>
+        ) : null}
+        <KnockoutCascade ko={ko} disabled={locked} onPick={pickWinner} />
       </section>
 
       {/* Awards + tiebreak */}

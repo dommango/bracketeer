@@ -109,7 +109,7 @@ export default async function PicksPage({
   // Round-of-32 kickoff (not the long-past tournament start). Until the field is
   // set there's nothing to pick, so show a clear "opens at the draw" gate.
   if (pool.format === "KNOCKOUT") {
-    const { open, opensAt, locksAt, seed } = await getKnockoutState(pool.tournament.id);
+    const { open, provisional, opensAt, locksAt, seed } = await getKnockoutState(pool.tournament.id);
     if (!open) {
       return (
         <section className="space-y-4">
@@ -146,6 +146,7 @@ export default async function PicksPage({
           label={label}
           locked={locked}
           seed={seed}
+          provisional={provisional}
         />
       </section>
     );

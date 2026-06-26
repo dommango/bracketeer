@@ -183,7 +183,7 @@ export function ChallengeMatchDetail({
             basePath={basePath}
           />
         </div>
-        <WinProbBar odds={detail.odds} homeCode={detail.home.code} awayCode={detail.away.code} />
+        <WinProbBar odds={detail.odds} homeCode={detail.home.code} awayCode={detail.away.code} fetchedAt={detail.oddsFetchedAt} />
         <TotalsLine totals={detail.totals} />
         {yourScore ? <YourPrediction pick={yourScore} /> : null}
       </div>
