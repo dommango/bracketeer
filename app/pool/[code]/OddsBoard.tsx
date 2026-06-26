@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Flag } from "./Flag";
 import { teamColor } from "@/lib/teams/colors";
+import { UpdatedAt } from "./UpdatedAt";
 
 // One unified pattern for every implied-probability market (title odds, Golden
 // Boot odds, …): flag + name + team-colored bar scaled to the favorite + %.
@@ -57,17 +58,22 @@ export function OddsBoard({
   title,
   subtitle,
   rows,
+  fetchedAt,
 }: {
   title: string;
   subtitle?: string;
   rows: OddsBoardRow[];
+  fetchedAt?: Date | null;
 }) {
   if (rows.length === 0) return null;
   const top = rows[0]?.winProb || 1; // bars scale relative to the favorite
 
   return (
     <section>
-      <h2 className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">{title}</h2>
+      <div className="flex items-baseline justify-between gap-2 px-1">
+        <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">{title}</h2>
+        <UpdatedAt date={fetchedAt} />
+      </div>
       {subtitle ? <p className="mt-1 px-1 text-[11px] text-ink-4">{subtitle}</p> : null}
       <div className="mt-2.5 space-y-1.5 rounded-2xl border border-line bg-surface p-3 shadow-[var(--shadow-xs)]">
         {rows.map((r) => (

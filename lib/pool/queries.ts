@@ -963,6 +963,7 @@ export interface MatchDetail {
   timeline: TimelineItem[]; // goal/card events (empty when none fed)
   stats: StatBar[]; // paired team stats (empty when none fed)
   odds: ImpliedProbs | null;
+  oddsFetchedAt: Date | null; // when the match odds were last polled (freshness stamp)
   // Over/Under total-goals market; null until a totals line has been polled.
   totals: { line: number; overProb: number; underProb: number } | null;
   // Lowest price + official buy link (Ticketmaster); null when not configured.
@@ -1023,6 +1024,7 @@ export async function getChallengeMatchDetail(
           totalLine: true,
           overProb: true,
           underProb: true,
+          fetchedAt: true,
         },
       },
       tickets: { select: { minPrice: true, currency: true, url: true } },
@@ -1110,6 +1112,7 @@ export async function getChallengeMatchDetail(
     timeline,
     stats,
     odds: match.odds ?? null,
+    oddsFetchedAt: match.odds?.fetchedAt ?? null,
     totals:
       match.odds?.totalLine != null &&
       match.odds.overProb != null &&
@@ -1182,6 +1185,7 @@ export interface ChampionshipOdd {
   name: string;
   winProb: number;
   decimal: number;
+  fetchedAt: Date; // when this price was last polled (shown as an "Updated …" stamp)
 }
 
 // Tournament-winner futures, highest implied probability first. Empty when the
@@ -1194,13 +1198,14 @@ export async function getChampionshipOdds(
     where: { tournamentId },
     orderBy: { winProb: "desc" },
     take: limit,
-    select: { teamCode: true, winProb: true, decimal: true },
+    select: { teamCode: true, winProb: true, decimal: true, fetchedAt: true },
   });
   return rows.map((r) => ({
     teamCode: r.teamCode,
     name: teamName(r.teamCode),
     winProb: r.winProb,
     decimal: r.decimal,
+    fetchedAt: r.fetchedAt,
   }));
 }
 
@@ -1212,6 +1217,7 @@ export interface TopScorerRow {
   goals: number;
   assists: number | null;
   appearances: number | null;
+  fetchedAt: Date; // when the scorer board was last polled (shown as an "Updated …" stamp)
 }
 
 // The Golden Boot leaderboard, lowest rank first. Empty when the top-scorers poll
@@ -1228,6 +1234,7 @@ export async function getTopScorers(tournamentId: string, limit = 30): Promise<T
       goals: true,
       assists: true,
       appearances: true,
+      fetchedAt: true,
     },
   });
   return rows.map((r) => ({ ...r, teamName: teamName(r.teamCode) }));
@@ -1238,6 +1245,7 @@ export interface GoalscorerOdd {
   winProb: number;
   decimal: number;
   teamCode: string | null; // resolved from the top-scorer board when the name matches
+  fetchedAt: Date; // when this price was last polled (shown as an "Updated …" stamp)
 }
 
 // Top-goalscorer (Golden Boot) futures, highest implied probability first. Each row
@@ -1254,7 +1262,7 @@ export async function getGoalscorerOutrights(
       where: { tournamentId },
       orderBy: { winProb: "desc" },
       take: limit,
-      select: { playerName: true, winProb: true, decimal: true },
+      select: { playerName: true, winProb: true, decimal: true, fetchedAt: true },
     }),
     prisma.topScorer.findMany({ where: { tournamentId }, select: { playerName: true, teamCode: true } }),
   ]);
@@ -1263,6 +1271,7 @@ export async function getGoalscorerOutrights(
     winProb: r.winProb,
     decimal: r.decimal,
     teamCode: matchPlayerCode(r.playerName, board),
+    fetchedAt: r.fetchedAt,
   }));
 }
 

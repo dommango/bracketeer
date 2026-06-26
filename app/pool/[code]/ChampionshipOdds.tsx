@@ -18,6 +18,7 @@ export function ChampionshipOdds({
     <OddsBoard
       title="Title odds"
       subtitle="Market-implied chance of winning the tournament."
+      fetchedAt={odds[0]?.fetchedAt}
       rows={odds.map((o) => ({
         key: o.teamCode,
         code: o.teamCode,

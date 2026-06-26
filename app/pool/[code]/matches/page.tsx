@@ -212,6 +212,7 @@ export default async function MatchesPage({
             <OddsBoard
               title="Golden Boot odds"
               subtitle="Market-implied chance of finishing top scorer."
+              fetchedAt={favorites[0]?.fetchedAt}
               rows={favorites.map((f) => ({
                 key: f.playerName,
                 code: f.teamCode,
