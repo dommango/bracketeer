@@ -18,6 +18,19 @@ const THIRDS_NEEDED = 8;
 // 23:30Z) confirm the bracket, ahead of the Round-of-32 kickoff (June 28 19:00Z).
 export const KNOCKOUT_PICKS_OPEN_UTC = "2026-06-28T02:00:00Z";
 
+// When the builder opens *early* against projected placeholders — before the field
+// is final — so people can fill their bracket while the group stage is still in
+// progress. Set a few days in, once every team has played enough that current
+// standings give a meaningful projection. Distinct from KNOCKOUT_PICKS_OPEN_UTC
+// (the official open) and from scoring, which still key off the real answer key.
+export const EARLY_BUILDER_OPEN_UTC = "2026-06-18T00:00:00Z";
+
+// True once early projected-fill should be available (independent of the official
+// open). Time-gated so a pre-tournament visitor doesn't see a bracket of pure TBDs.
+export function isEarlyBuilderOpen(now: Date = new Date()): boolean {
+  return now.getTime() >= new Date(EARLY_BUILDER_OPEN_UTC).getTime();
+}
+
 // The official Round-of-32 matchups (the 32 qualifiers) from the answer key.
 // Identical resolution to the live bracket (resolveBracket reuses resolveR32Slots),
 // so the pick UI and the displayed bracket can never disagree on who plays whom.

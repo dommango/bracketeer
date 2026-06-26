@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { resolveKnockout, knockoutOnlyProgress } from "@/lib/pool/pick-form";
 import {
-  resolveKnockout,
-  reconcileKnockoutPicks,
-  knockoutOnlyProgress,
-} from "@/lib/pool/pick-form";
+  resolveAdvance,
+  deriveAdvance,
+  quickFillFavorites,
+  type AdvanceMap,
+} from "@/lib/pool/knockout-advance";
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
+import type { StadiumProjection } from "@/lib/pool/stadium-projection";
+import type { OutrightProb } from "@/lib/odds/map";
 import { emptyPicks, type Picks } from "@/lib/scoring/types";
 import { submitPicksAction } from "./picks/actions";
 import { Bar, LABEL } from "./pick-ui";
@@ -38,6 +42,9 @@ export function KnockoutPickForm({
   locked,
   seed,
   provisional = false,
+  early = false,
+  projections,
+  outrights,
   saveAction,
 }: {
   code?: string;
@@ -50,10 +57,22 @@ export function KnockoutPickForm({
   // The field isn't final — some matchups are still TBD and can shift as group
   // results land. Shows a heads-up banner; TBD slots render non-pickable as usual.
   provisional?: boolean;
+  // Early/projected mode: the bracket is open before the field is final, seeded
+  // from current standings. R32 slots show their position ("Group A Winner") + the
+  // likely candidates until the group decides. Picks are positional and carry over.
+  early?: boolean;
+  // Per-R32-match projection (label + ranked candidates), keyed by match number.
+  projections?: Record<number, StadiumProjection>;
+  // Championship odds, for the one-tap "fill favourites".
+  outrights?: OutrightProb[];
   saveAction?: SaveBracket;
 }) {
-  const [picks, setPicks] = useState<Picks>(() =>
-    reconcileKnockoutPicks(initialPicks ?? emptyPicks(), seed),
+  // Picks are stored as an AdvanceMap (which SIDE of each match advances) — a
+  // positional model that resolves to team codes against the current seed. When a
+  // projected slot firms up to a different team, the same map re-resolves to it, so
+  // an early pick carries forward instead of being dropped.
+  const [advance, setAdvance] = useState<AdvanceMap>(() =>
+    deriveAdvance((initialPicks ?? emptyPicks()).knockout, seed),
   );
   const [tiebreak, setTiebreak] = useState(initialTiebreak);
   const [saved, setSaved] = useState<string | null>(null);
@@ -64,16 +83,28 @@ export function KnockoutPickForm({
   // instead of inserting another on the next save.
   const [currentEntryId, setCurrentEntryId] = useState(entryId);
 
+  const picks = useMemo<Picks>(
+    () => ({ ...emptyPicks(), knockout: resolveAdvance(advance, seed) }),
+    [advance, seed],
+  );
   const ko = useMemo(() => resolveKnockout(picks, seed), [picks, seed]);
   const progress = useMemo(() => knockoutOnlyProgress(picks), [picks]);
 
-  const update = (mut: (p: Picks) => Picks) => {
+  // The card taps a side's projected team; map it back to which side advances.
+  const pickWinner = (matchNo: number, teamCode: string) => {
     setSaved(null);
-    setPicks((p) => reconcileKnockoutPicks(mut(p), seed));
+    const slot = [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ko.final].find(
+      (s) => s.matchNo === matchNo,
+    );
+    const side = slot?.a?.code === teamCode ? "a" : slot?.b?.code === teamCode ? "b" : null;
+    if (!side) return;
+    setAdvance((prev) => ({ ...prev, [matchNo]: side }));
   };
 
-  const pickWinner = (matchNo: number, teamCode: string) =>
-    update((p) => ({ ...p, knockout: { ...p.knockout, [matchNo]: teamCode } }));
+  const fillFavorites = () => {
+    setSaved(null);
+    setAdvance(quickFillFavorites(seed, outrights ?? []));
+  };
 
   const submit = () => {
     setError(null);
@@ -130,21 +161,45 @@ export function KnockoutPickForm({
 
       {/* Knockout cascade */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h3 className={LABEL}>Pick every winner</h3>
-          <span className="font-mono text-xs tabular-nums text-ink-3">
-            {progress.knockout.done}/{progress.knockout.total}
-          </span>
+          <div className="flex items-center gap-3">
+            {!locked && (early || provisional) ? (
+              <button
+                type="button"
+                onClick={fillFavorites}
+                className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-pitch hover:bg-surface-sunk active:scale-[0.98]"
+              >
+                Fill favourites
+              </button>
+            ) : null}
+            <span className="font-mono text-xs tabular-nums text-ink-3">
+              {progress.knockout.done}/{progress.knockout.total}
+            </span>
+          </div>
         </div>
-        {provisional && !locked ? (
+        {early && !locked ? (
+          <p className="rounded-xl border border-gold-dark/40 bg-gold-tint/40 px-3 py-2 text-[12px] leading-snug text-ink-2">
+            <span className="font-semibold text-gold-dark">Get a head start.</span>{" "}
+            The field isn&apos;t set yet, so Round-of-32 slots show their position (e.g.{" "}
+            <span className="font-medium">Group A Winner</span>) with the most likely teams. Pick the
+            path you fancy — each slot fills in with the real team as its group finishes, and your
+            picks carry over. <span className="font-medium">Fill favourites</span> drafts the whole
+            bracket from the odds in one tap.
+          </p>
+        ) : provisional && !locked ? (
           <p className="rounded-xl border border-gold-dark/40 bg-gold-tint/40 px-3 py-2 text-[12px] leading-snug text-ink-2">
             <span className="font-semibold text-gold-dark">Seeding isn&apos;t final yet.</span>{" "}
             Get a head start now — matchups still marked <span className="font-mono">TBD</span> unlock
-            as the last group results land. If a result changes a matchup, that pick clears, so
-            check back before kickoff.
+            as the last group results land.
           </p>
         ) : null}
-        <KnockoutCascade ko={ko} disabled={locked} onPick={pickWinner} />
+        <KnockoutCascade
+          ko={ko}
+          disabled={locked}
+          onPick={pickWinner}
+          projections={early ? projections : undefined}
+        />
       </section>
 
       {/* Tiebreaker */}

@@ -78,18 +78,20 @@ export interface SaveSoloResult {
 // bracket; without one it creates a new bracket. No pool membership.
 export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloResult> {
   const tournamentId = await getTournamentIdBySlug(input.tournamentSlug ?? DEFAULT_TOURNAMENT_SLUG);
-  const { open, locksAt, seed } = await getKnockoutState(tournamentId);
-  if (!open) {
+  const { open, earlyOpen, locksAt, seed, projectedSeed } = await getKnockoutState(tournamentId);
+  if (!open && !earlyOpen) {
     throw new Error("Knockout picks aren't open yet — the last 32 aren't set.");
   }
   if (isKnockoutLocked(locksAt)) {
     throw new Error("Picks are locked — the Round of 32 has kicked off.");
   }
 
-  // The client is untrusted: keep only knockout + awards, then verify every
-  // winner is actually in its match per the official seed.
+  // The client is untrusted: keep only knockout + awards, then verify every winner
+  // is actually in its match. Early (projected) saves validate against the same
+  // projected seed the builder rendered; once open, the official seed is authority.
+  const validationSeed = open ? seed : projectedSeed;
   const picks = knockoutOnlyPicks(input.picks);
-  if (inconsistentKnockoutPicks(picks, seed).length > 0) {
+  if (inconsistentKnockoutPicks(picks, validationSeed).length > 0) {
     throw new Error("Some picks aren't valid for this bracket — please reload.");
   }
   const errors = validatePicks(picks);

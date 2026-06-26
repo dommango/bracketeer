@@ -10,9 +10,10 @@ import {
   knockoutR32Seed,
   knockoutOpenState,
   KNOCKOUT_PICKS_OPEN_UTC,
+  isEarlyBuilderOpen,
 } from "@/lib/pool/knockout";
 import { arePicksLocked } from "@/lib/pool/lock";
-import type { ResolvedR32 } from "@/lib/scoring/resolve";
+import { resolveR32Slots, type ResolvedR32 } from "@/lib/scoring/resolve";
 import { computeMovers, type SnapshotPoint, type Mover } from "@/lib/pool/movers";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import {
@@ -46,7 +47,7 @@ import {
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { groupOverlayBreakdown, type GroupOverlayBreakdown } from "@/lib/pool/group-overlay";
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
-import type { ImpliedProbs } from "@/lib/odds/map";
+import type { ImpliedProbs, OutrightProb } from "@/lib/odds/map";
 import type { H2HSummary } from "@/lib/sports/predictions-parse";
 import type { LineupPlayer } from "@/lib/sports/lineups-parse";
 import type { InjuryItem } from "@/lib/sports/injuries-parse";
@@ -289,6 +290,13 @@ export interface KnockoutState {
   locksAt: Date | null;
   // The official R32 matchups the pick form seeds from (a/b per match 73–88).
   seed: ResolvedR32;
+  // Early projected fill is available (before the official open) — lets people
+  // build their bracket against placeholders while the group stage is in progress.
+  earlyOpen: boolean;
+  // The seed the builder renders in early mode: official occupants where a slot is
+  // already concrete, current-standings projections where it isn't. Resolves to the
+  // official `seed` once the field is final. Never used for scoring.
+  projectedSeed: ResolvedR32;
 }
 
 // Knockout-pool gating: whether picks are open (the 32 are set), when they lock
@@ -296,7 +304,7 @@ export interface KnockoutState {
 // the tournament answer key + the Match-73 schedule, so it tracks admin/API
 // result entry without any extra state.
 export const getKnockoutState = cache(async (tournamentId: string): Promise<KnockoutState> => {
-  const [tournament, firstR32] = await Promise.all([
+  const [tournament, firstR32, groupResults] = await Promise.all([
     prisma.tournament.findUniqueOrThrow({
       where: { id: tournamentId },
       select: { officialResults: true },
@@ -305,15 +313,35 @@ export const getKnockoutState = cache(async (tournamentId: string): Promise<Knoc
       where: { tournamentId_matchNo: { tournamentId, matchNo: 73 } },
       select: { scheduledAt: true },
     }),
+    // Live/finished group matches (1–72) → current standings for the projected seed.
+    prisma.result.findMany({
+      where: { status: { in: ["LIVE", "FINAL"] }, match: { tournamentId, matchNo: { lte: 72 } } },
+      select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true },
+    }),
   ]);
   const results = asResults(tournament.officialResults);
   const { open, provisional } = knockoutOpenState(results);
+  const seed = knockoutR32Seed(results);
+
+  // Projected seed: official occupants where set, current-standings projection
+  // elsewhere. Identical to `seed` once the field is final. Display/early-fill only.
+  const rows: GroupResultRow[] = [];
+  for (const r of groupResults) {
+    if (!r.homeTeamCode || !r.awayTeamCode || r.homeScore == null || r.awayScore == null) continue;
+    rows.push({ homeCode: r.homeTeamCode, awayCode: r.awayTeamCode, homeScore: r.homeScore, awayScore: r.awayScore });
+  }
+  const projectedSeed = open
+    ? seed
+    : resolveR32Slots(overlayProvisional(results, provisionalStandings(computeGroupTables(rows))));
+
   return {
     open,
     provisional,
     opensAt: new Date(KNOCKOUT_PICKS_OPEN_UTC),
     locksAt: firstR32?.scheduledAt ?? null,
-    seed: knockoutR32Seed(results),
+    seed,
+    earlyOpen: isEarlyBuilderOpen(),
+    projectedSeed,
   };
 });
 
@@ -1476,15 +1504,13 @@ function usableMatchProbs(o: {
 // Monte-Carlo projection of which teams are likely to fill each Round-of-32 slot
 // (hence each stadium). FINAL group results are held fixed; every other group
 // match is sampled from its live odds (or the neutral prior). Display-only.
-export async function getStadiumProjections(poolId: string): Promise<StadiumProjection[]> {
-  const pool = await prisma.pool.findUnique({
-    where: { id: poolId },
-    select: { tournamentId: true },
-  });
-  if (!pool) return [];
-
+// Tournament-scoped so both pools and the standalone/challenge bracket builder
+// (which has no pool) can share it.
+export async function getStadiumProjectionsForTournament(
+  tournamentId: string,
+): Promise<StadiumProjection[]> {
   const matches = await prisma.match.findMany({
-    where: { tournamentId: pool.tournamentId, matchNo: { lte: 72 } },
+    where: { tournamentId, matchNo: { lte: 72 } },
     select: {
       matchNo: true,
       homeSlotRef: true,
@@ -1523,6 +1549,37 @@ export async function getStadiumProjections(poolId: string): Promise<StadiumProj
   }
 
   return projectStadiums({ finished, remaining });
+}
+
+// Pool-scoped wrapper — resolves the pool's tournament, then delegates.
+export async function getStadiumProjections(poolId: string): Promise<StadiumProjection[]> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true },
+  });
+  if (!pool) return [];
+  return getStadiumProjectionsForTournament(pool.tournamentId);
+}
+
+// Everything the early/projected knockout builder needs: per-R32-match projections
+// (position label + ranked candidates), keyed by match number, plus championship
+// odds for the one-tap "fill favourites". Empty/[] degrade gracefully (no odds →
+// neutral projections, no favourites signal).
+export async function getKnockoutBuilderProjections(
+  tournamentId: string,
+): Promise<{ projections: Record<number, StadiumProjection>; outrights: OutrightProb[] }> {
+  const [slots, odds] = await Promise.all([
+    getStadiumProjectionsForTournament(tournamentId),
+    getChampionshipOdds(tournamentId, 48),
+  ]);
+  const projections: Record<number, StadiumProjection> = {};
+  for (const s of slots) projections[s.matchNo] = s;
+  const outrights: OutrightProb[] = odds.map((o) => ({
+    teamCode: o.teamCode,
+    decimal: o.decimal,
+    winProb: o.winProb,
+  }));
+  return { projections, outrights };
 }
 
 // Group-Stage focused match center: 12 group sections (A–L) followed by knockout
