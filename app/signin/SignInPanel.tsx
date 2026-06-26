@@ -72,7 +72,7 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
               Sign in or create an account
             </h1>
             <p className="mt-2 text-sm text-white/90">
-              Make your picks, follow the live leaderboard, and join the chat.
+              Make your picks, track the live leaderboard, and join the chat.
             </p>
           </div>
         </div>

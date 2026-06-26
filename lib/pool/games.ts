@@ -37,7 +37,7 @@ export interface GameCatalogEntry {
 export const GAME_CATALOG: Record<PoolFormat, GameCatalogEntry> = {
   MATCH_DAY_3_PICKEM: {
     challengeName: "Match Day Pickem",
-    tagline: "Predict the score lines for the Match Day 3 games (June 24–27).",
+    tagline: "Predict the scorelines for the Match Day 3 games (June 24–27).",
     blurb:
       "Predict the exact scoreline of every final group-stage match. Each pick locks at its own kickoff, so later fixtures stay open after earlier ones start.",
     scoringSummary: "Exact score 5 · right result & goal difference 3 · right result 1.",

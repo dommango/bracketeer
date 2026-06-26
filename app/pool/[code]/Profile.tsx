@@ -70,6 +70,9 @@ function TeamLine({ pick, size = 18 }: { pick: TeamPick; size?: number }) {
 // This entry's headline picks — only rendered once picks have locked.
 function Selections({ selections }: { selections: EntrySelections }) {
   const { champion, finalists, groupWinners, thirdAdvance, awards } = selections;
+  // Knockout brackets don't pick awards, so every value is "—" — hide the whole
+  // section rather than show a block of dashes. Full-tournament brackets keep it.
+  const hasAwards = awards.some((a) => a.value && a.value !== "—");
   return (
     <div className="rounded-2xl border border-line bg-surface p-4">
       <p className={`${LABEL} mb-3`}>Their picks</p>
@@ -137,19 +140,21 @@ function Selections({ selections }: { selections: EntrySelections }) {
           </div>
         ) : null}
 
-        <div>
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
-            Awards
-          </p>
-          <dl className="space-y-1">
-            {awards.map((a) => (
-              <div key={a.label} className="flex items-baseline justify-between gap-3 text-sm">
-                <dt className="shrink-0 text-ink-3">{a.label}</dt>
-                <dd className="min-w-0 truncate text-right font-medium text-ink">{a.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+        {hasAwards ? (
+          <div>
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+              Awards
+            </p>
+            <dl className="space-y-1">
+              {awards.map((a) => (
+                <div key={a.label} className="flex items-baseline justify-between gap-3 text-sm">
+                  <dt className="shrink-0 text-ink-3">{a.label}</dt>
+                  <dd className="min-w-0 truncate text-right font-medium text-ink">{a.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : null}
       </div>
     </div>
   );

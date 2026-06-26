@@ -70,7 +70,7 @@ function StartAPoolPromo({ now }: { now: Date }) {
         <Link href="/join" className="font-semibold text-pitch-dark hover:underline">
           Join a pool
         </Link>{" "}
-        — any bracket imported under your email links automatically.
+        — any bracket imported under your email connects automatically.
       </p>
     </div>
   );

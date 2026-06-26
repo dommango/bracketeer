@@ -69,7 +69,7 @@ export function deriveAdvance(knockout: Picks["knockout"], seed: ResolvedR32): A
 }
 
 // One-tap "chalk" fill: advance the side whose current occupant has the higher
-// championship probability. Resolves forward so each round's favourite carries on.
+// championship probability. Resolves forward so each round's favorite carries on.
 // Teams with no odds rank below any priced team; with neither side priced (or a
 // dead heat) it defaults to side a, so the fill is total and deterministic even
 // with the odds integration off.

@@ -19,9 +19,9 @@ export default async function Md3ChallengePlayPage() {
     <section className="space-y-4">
       <div className="flex items-end justify-between px-1">
         <div>
-          <h1 className="font-display text-lg text-ink">Your predictions</h1>
+          <h1 className="font-display text-lg text-ink">Your picks</h1>
           <p className="text-[13px] text-ink-3">
-            {view.pickedCount}/24 predicted · {view.openCount} still open
+            {view.pickedCount}/24 picked · {view.openCount} still open
             {view.scoredCount > 0 ? ` · ${view.totalPoints} pts` : ""}
             {standing ? ` · rank ${standing.rank}` : ""}
           </p>
@@ -50,7 +50,7 @@ export default async function Md3ChallengePlayPage() {
       {/* One tight line: the date range + per-match lock, then how points are
           scored (straight from the game catalog so it can't drift from the rules). */}
       <p className="px-1 text-[13px] text-ink-3">
-        Predict the exact score lines for Match Day 3 ({md3DateRange()}) — each locks at kickoff.
+        Predict the exact scorelines for Match Day 3 ({md3DateRange()}) — each locks at kickoff.
         Scoring: {GAME_CATALOG.MATCH_DAY_3_PICKEM.scoringSummary}
       </p>
 

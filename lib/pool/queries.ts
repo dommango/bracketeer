@@ -1563,8 +1563,8 @@ export async function getStadiumProjections(poolId: string): Promise<StadiumProj
 
 // Everything the early/projected knockout builder needs: per-R32-match projections
 // (position label + ranked candidates), keyed by match number, plus championship
-// odds for the one-tap "fill favourites". Empty/[] degrade gracefully (no odds →
-// neutral projections, no favourites signal).
+// odds for the one-tap "fill favorites". Empty/[] degrade gracefully (no odds →
+// neutral projections, no favorites signal).
 export async function getKnockoutBuilderProjections(
   tournamentId: string,
 ): Promise<{ projections: Record<number, StadiumProjection>; outrights: OutrightProb[] }> {
