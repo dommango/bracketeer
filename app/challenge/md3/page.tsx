@@ -6,13 +6,14 @@ import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { Countdown } from "@/app/pool/[code]/Countdown";
 import { GroupStandings } from "@/app/pool/[code]/Bracket";
 import { ChallengeStanding } from "../ChallengeStanding";
+import { MatchUpdates } from "./MatchUpdates";
 
 // Predictions, locks, and live results change at request time.
 export const dynamic = "force-dynamic";
 
 export default async function Md3ChallengeHomePage() {
   const user = await getSessionUser();
-  const [{ standing, board, view, cards }, bracket] = await Promise.all([
+  const [{ standing, board, view, cards, updates }, bracket] = await Promise.all([
     getMd3ChallengeHome(user?.id ?? null),
     getMd3Bracket(),
   ]);
@@ -35,17 +36,19 @@ export default async function Md3ChallengeHomePage() {
 
   return (
     <section className="space-y-5">
-      <ChallengeStanding
-        standing={standing}
-        boardHref="/challenge/md3/leaderboard"
-        cta={{ href: "/challenge/md3/play", label: "Make your picks" }}
-      />
-
       <ScoreCards
         live={cards.live}
         last={cards.last}
         next={cards.next}
         hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
+      />
+
+      <MatchUpdates updates={updates} />
+
+      <ChallengeStanding
+        standing={standing}
+        boardHref="/challenge/md3/leaderboard"
+        cta={{ href: "/challenge/md3/play", label: "Make your picks" }}
       />
 
       <div className="rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]">
