@@ -50,12 +50,13 @@ export default async function Md3ChallengeLeaderboardPage() {
             showMedals={!isMd3GameOpen()}
             showLiveNote={false}
           />
-          {/* Tiebreak order — mirrors the quality cascade in
-              lib/challenge/md3-tiebreak.ts and the /rules copy. */}
-          <p className="rounded-2xl border border-line bg-surface-sunk/40 px-4 py-3 text-[13px] leading-relaxed text-ink-3">
-            <span className="font-semibold text-ink">Tied on points?</span> Whoever nailed more
-            exact scorelines ranks first — then more right result &amp; goal difference, then more
-            correct results, then whoever&apos;s total goals land closest to the real total.
+          {/* Tiebreak order lives in full on the rules page; keep the board light. */}
+          <p className="px-1 text-[13px] text-ink-3">
+            Tied on points?{" "}
+            <Link href="/rules" className="font-semibold text-pitch-dark hover:underline">
+              See how ties break
+            </Link>
+            .
           </p>
         </>
       )}
