@@ -1,11 +1,22 @@
+import Link from "next/link";
 import { ChallengeHero } from "../ChallengeHero";
 
 // Knockout Challenge sub-shell: the format-specific hero above every knockout
-// board page (Home / Leaderboard / Matches / entry profile).
+// board page (Home / Leaderboard / Matches / entry profile). The back-to-app link
+// sits in ink above the hero (not white-on-artwork) so it never collides with the
+// title at wide widths.
 export default function KnockoutChallengeLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="space-y-6">
-      <ChallengeHero format="KNOCKOUT" />
+      <div className="space-y-3">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.1em] text-ink-3 underline-offset-2 hover:text-ink"
+        >
+          <span aria-hidden="true">←</span> Bracketeer
+        </Link>
+        <ChallengeHero format="KNOCKOUT" />
+      </div>
       {children}
     </div>
   );

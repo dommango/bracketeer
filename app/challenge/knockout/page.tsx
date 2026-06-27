@@ -5,13 +5,16 @@ import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { Countdown } from "@/app/pool/[code]/Countdown";
 import { ChallengeStanding } from "../ChallengeStanding";
+// Shared presentational feed (lives in the md3 folder; used by both home boards).
+import { MatchUpdates } from "@/app/challenge/md3/MatchUpdates";
+import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 
 // Picks, locks, and live results change at request time.
 export const dynamic = "force-dynamic";
 
 export default async function KnockoutChallengeHomePage() {
   const user = await getSessionUser();
-  const { standing, board, cards, myBrackets, open, earlyOpen, opensAt } =
+  const { standing, board, cards, myBrackets, updates, open, earlyOpen, opensAt } =
     await getKnockoutChallengeHome(user?.id ?? null);
 
   const buildable = open || earlyOpen;
@@ -24,6 +27,19 @@ export default async function KnockoutChallengeHomePage() {
 
   return (
     <section className="space-y-5">
+      <MatchUpdates updates={updates} />
+
+      <ScoreCards
+        live={cards.live}
+        last={cards.last}
+        next={cards.next}
+        hrefForMatch={(no) =>
+          no >= 73 ? `/challenge/knockout/matches/${no}` : `/challenge/md3/matches/${no}`
+        }
+      />
+
+      <GameSwitcher now={new Date()} />
+
       <ChallengeStanding
         standing={standing}
         boardHref="/challenge/knockout/leaderboard"
@@ -74,15 +90,6 @@ export default async function KnockoutChallengeHomePage() {
         </span>
         <span className="shrink-0 font-display text-pitch-dark">→</span>
       </Link>
-
-      <ScoreCards
-        live={cards.live}
-        last={cards.last}
-        next={cards.next}
-        hrefForMatch={(no) =>
-          no >= 73 ? `/challenge/knockout/matches/${no}` : "/challenge/knockout/matches"
-        }
-      />
 
       {preview.length > 0 ? (
         <div className="space-y-2">

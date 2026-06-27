@@ -7,6 +7,8 @@ import { Countdown } from "@/app/pool/[code]/Countdown";
 import { GroupStandings } from "@/app/pool/[code]/Bracket";
 import { ChallengeStanding } from "../ChallengeStanding";
 import { MatchUpdates } from "./MatchUpdates";
+import { md3CountLine } from "@/lib/pool/md3-summary";
+import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 
 // Predictions, locks, and live results change at request time.
 export const dynamic = "force-dynamic";
@@ -42,8 +44,12 @@ export default async function Md3ChallengeHomePage() {
         live={cards.live}
         last={cards.last}
         next={cards.next}
-        hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
+        hrefForMatch={(no) =>
+          no >= 73 ? `/challenge/knockout/matches/${no}` : `/challenge/md3/matches/${no}`
+        }
       />
+
+      <GameSwitcher now={new Date()} />
 
       <ChallengeStanding
         standing={standing}
@@ -54,12 +60,7 @@ export default async function Md3ChallengeHomePage() {
       <div className="rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-semibold text-ink">
-              {view.pickedCount}/24 predicted
-              {view.openCount > 0 ? (
-                <span className="font-normal text-ink-3"> · {view.openCount} still open</span>
-              ) : null}
-            </p>
+            <p className="font-semibold text-ink">{md3CountLine(view)}</p>
             {nextLock ? (
               <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-ink-3">
                 Next lock in{" "}

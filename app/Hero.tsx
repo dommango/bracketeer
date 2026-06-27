@@ -36,7 +36,7 @@ export function Hero() {
           <span>·</span>
           <span>104 matches</span>
           <span>·</span>
-          <span>June 11</span>
+          <span>June 11 – July 19</span>
         </div>
       </div>
     </div>

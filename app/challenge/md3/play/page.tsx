@@ -4,6 +4,7 @@ import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
 import { isMd3GameOpen } from "@/lib/pool/match-day-3";
 import { hasAcceptedTerms } from "@/lib/account/consent";
 import { GAME_CATALOG, md3DateRange } from "@/lib/pool/games";
+import { md3CountLine } from "@/lib/pool/md3-summary";
 import { Md3ChallengeForm } from "../Md3ChallengeForm";
 
 // Predictions, locks, and results change at request time.
@@ -21,7 +22,7 @@ export default async function Md3ChallengePlayPage() {
         <div>
           <h1 className="font-display text-lg text-ink">Your picks</h1>
           <p className="text-[13px] text-ink-3">
-            {view.pickedCount}/24 picked · {view.openCount} still open
+            {md3CountLine(view)}
             {view.scoredCount > 0 ? ` · ${view.totalPoints} pts` : ""}
             {standing ? ` · rank ${standing.rank}` : ""}
           </p>

@@ -46,7 +46,7 @@ export function PublicGames({ now }: { now: Date }) {
 function Md3PromoCard({ now }: { now: Date }) {
   const teaser = prizeTeaser("MATCH_DAY_3_PICKEM");
   return (
-    <div className="rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
+    <div className="relative rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-pitch-dark">
           Live now · {GAME_CATALOG.MATCH_DAY_3_PICKEM.challengeName}
@@ -54,10 +54,17 @@ function Md3PromoCard({ now }: { now: Date }) {
         <NewTag />
       </div>
       <h2 className="mt-1 font-display text-xl text-ink">
-        {GAME_CATALOG.MATCH_DAY_3_PICKEM.tagline}
+        {/* The title is the card's full-bleed click target (::after overlay); the
+            action buttons sit above it via z-10 to keep their own destinations. */}
+        <Link
+          href="/challenge/md3"
+          className="after:absolute after:inset-0 after:rounded-3xl hover:underline"
+        >
+          Predict every Match Day 3 scoreline
+        </Link>
       </h2>
       <p className="mt-1 text-[13px] text-ink-3">
-        Predict the scorelines for the final group-stage games · {md3DateRange()}
+        Final group-stage games · {md3DateRange()}
       </p>
       <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">
         {gameStateLine("MATCH_DAY_3_PICKEM", now)}
@@ -65,7 +72,7 @@ function Md3PromoCard({ now }: { now: Date }) {
       {teaser ? (
         <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
       ) : null}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="relative z-10 mt-3 grid grid-cols-2 gap-2">
         <Link href="/challenge/md3/play" className={PRIMARY_BTN}>
           Play
         </Link>
@@ -87,16 +94,25 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
   const teaser = prizeTeaser("KNOCKOUT");
   const r32 = kickoffFor(73);
   return (
-    <div className="rounded-3xl border border-gold/40 bg-gold-tint p-[22px]">
+    <div className="relative rounded-3xl border border-gold/40 bg-gold-tint p-[22px]">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold-dark">
-          {GAME_CATALOG.KNOCKOUT.challengeName}
+          Knockout Stage Bracket Games
         </p>
         <NewTag />
       </div>
       <h2 className="mt-1 font-display text-xl text-ink">
-        Build your bracket and top the global leaderboard.
+        {/* Full-bleed card link to the challenge home; the buttons keep z-10. */}
+        <Link
+          href="/challenge/knockout"
+          className="after:absolute after:inset-0 after:rounded-3xl hover:underline"
+        >
+          Build your bracket and top the global leaderboard.
+        </Link>
       </h2>
+      <p className="mt-1 text-[13px] text-ink-3">
+        Enter the global challenge, or run a pool with friends.
+      </p>
       <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">
         {open
           ? "Picks open now — lock at the Round of 32 kickoff."
@@ -112,9 +128,18 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
           <R32Countdown target={r32.toISOString()} label="Round of 32 kicks off in" />
         </div>
       ) : null}
-      <Link href="/bracket" className={`mt-3 ${PRIMARY_BTN}`}>
+      <Link href="/bracket" className={`relative z-10 mt-3 ${PRIMARY_BTN}`}>
         Build your bracket →
       </Link>
+      <p className="relative z-10 mt-2 text-center text-[12px] text-ink-3">
+        Playing with friends?{" "}
+        <Link
+          href="/pool/create?game=knockout"
+          className="font-semibold text-pitch-dark hover:underline"
+        >
+          Create a pool
+        </Link>
+      </p>
     </div>
   );
 }

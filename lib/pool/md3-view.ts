@@ -44,6 +44,10 @@ export interface Md3View {
   scoredCount: number;
   pickedCount: number;
   openCount: number;
+  // Fixtures that have kicked off without a prediction — a late joiner can no
+  // longer pick these. Distinct from openCount (still pickable) so the UI can
+  // tell "missed" from "still open".
+  missedCount: number;
 }
 
 // The viewer's MD3 predictions in the public challenge (standalone entry, no pool).
@@ -156,6 +160,7 @@ async function buildMd3View(
   let scoredCount = 0;
   let pickedCount = 0;
   let openCount = 0;
+  let missedCount = 0;
 
   const vms: Md3FixtureVM[] = fixtures.map((f) => {
     const locked = isMd3MatchLocked(f.matchNo, now);
@@ -163,6 +168,7 @@ async function buildMd3View(
 
     const rawPred = predictions[f.matchNo] ?? null;
     if (rawPred) pickedCount += 1;
+    else if (locked) missedCount += 1;
 
     // Hide another player's scoreline until this fixture kicks off. Withhold it
     // uniformly for every not-yet-revealed fixture (regardless of whether they
@@ -207,5 +213,5 @@ async function buildMd3View(
     };
   });
 
-  return { fixtures: vms, totalPoints, scoredCount, pickedCount, openCount };
+  return { fixtures: vms, totalPoints, scoredCount, pickedCount, openCount, missedCount };
 }

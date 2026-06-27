@@ -4,13 +4,13 @@
 // predictions from getMd3ChallengeView, and the live cards from the same 24 MD3
 // match inputs the Matches tab uses.
 
-import { prisma } from "@/lib/db";
 import {
   getTournamentIdBySlug,
   DEFAULT_TOURNAMENT_SLUG,
   getTournamentMatchInputs,
   getTournamentBracket,
 } from "@/lib/pool/queries";
+import { getRecentTournamentUpdates, BOARD_MATCH_NOS } from "@/lib/challenge/recent-updates";
 import { getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { getMd3ChallengeView, type Md3View } from "@/lib/pool/md3-view";
 import { buildStanding, type Standing } from "@/lib/pool/home";
@@ -23,7 +23,7 @@ import {
 } from "@/lib/pool/match-center";
 import type { BracketView } from "@/lib/pool/bracket-view";
 import { buildScoreCardInputs, type ScoreCardInputs } from "@/lib/challenge/match-cards";
-import { buildMatchUpdateLines, type MatchUpdate } from "@/lib/challenge/match-updates";
+import { type MatchUpdate } from "@/lib/challenge/match-updates";
 import { MD3_MATCH_NOS } from "@/lib/pool/match-day-3";
 import type { LeaderboardRow } from "@/lib/pool/scoring";
 
@@ -31,8 +31,8 @@ export interface Md3ChallengeHome {
   standing: Standing | null; // the viewer's rank/gap, null until they complete all 24
   board: LeaderboardRow[];
   view: Md3View; // the viewer's decorated predictions + counts
-  cards: ScoreCardInputs; // live / last / next, scoped to the 24 MD3 fixtures
-  updates: MatchUpdate[]; // recent goal / red-card / full-time lines across MD3
+  cards: ScoreCardInputs; // live / last / next across the shared board (MD3 + knockout)
+  updates: MatchUpdate[]; // recent updates across the shared board (identical to knockout home)
 }
 
 // The viewer's MD3 scoreline predictions, keyed by matchNo and oriented onto each
@@ -68,8 +68,8 @@ export async function getMd3ChallengeHome(
   const [board, view, inputs, updates] = await Promise.all([
     getMd3ChallengeLeaderboard(),
     getMd3ChallengeView(tournamentId, userId, now),
-    getTournamentMatchInputs(tournamentId, MD3_MATCH_NOS),
-    getRecentMatchUpdates(tournamentId, 3),
+    getTournamentMatchInputs(tournamentId, BOARD_MATCH_NOS),
+    getRecentTournamentUpdates(tournamentId, 3),
   ]);
   // The viewer's own scoreline predictions (and points once final), oriented to
   // each card so the live / last cards on Home show "your pick" beside the score
@@ -83,67 +83,6 @@ export async function getMd3ChallengeHome(
     cards: buildScoreCardInputs(inputs, {}, now, scorePicks),
     updates,
   };
-}
-
-// The most recent MD3 match updates across the tournament, newest first. Scoped to
-// the 24 MD3 fixtures (all GROUP matches), so home/away codes come straight from
-// the Result row, falling back to the match's slot ref. Lines are rebuilt from
-// MatchEvent + Result via the pure buildMatchUpdateLines (lib/challenge/match-updates).
-export async function getRecentMatchUpdates(
-  tournamentId: string,
-  limit = 6,
-): Promise<MatchUpdate[]> {
-  const matches = await prisma.match.findMany({
-    where: {
-      tournamentId,
-      matchNo: { in: [...MD3_MATCH_NOS] },
-      result: { status: { in: ["LIVE", "FINAL"] } },
-    },
-    select: {
-      matchNo: true,
-      homeSlotRef: true,
-      awaySlotRef: true,
-      result: {
-        select: {
-          status: true,
-          homeScore: true,
-          awayScore: true,
-          homeTeamCode: true,
-          awayTeamCode: true,
-          elapsed: true,
-          updatedAt: true,
-        },
-      },
-      events: {
-        select: {
-          type: true,
-          teamCode: true,
-          playerName: true,
-          minute: true,
-          extraMinute: true,
-        },
-      },
-    },
-  });
-
-  // Most-recently-updated match first; within a match, newest line first (so FT
-  // and the latest goal lead).
-  const ranked = matches
-    .filter((m) => m.result)
-    .sort((a, b) => b.result!.updatedAt.getTime() - a.result!.updatedAt.getTime());
-
-  const out: MatchUpdate[] = [];
-  for (const m of ranked) {
-    const r = m.result!;
-    const homeCode = r.homeTeamCode ?? m.homeSlotRef ?? "TBD";
-    const awayCode = r.awayTeamCode ?? m.awaySlotRef ?? "TBD";
-    const lines = buildMatchUpdateLines(homeCode, awayCode, r, m.events);
-    for (let i = lines.length - 1; i >= 0; i--) {
-      out.push({ key: `${m.matchNo}:${i}`, ...lines[i] });
-      if (out.length >= limit) return out;
-    }
-  }
-  return out;
 }
 
 // The 24 final group-stage fixtures as a by-group match center, decorated with

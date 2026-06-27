@@ -17,6 +17,8 @@ import { getChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { buildStanding, type Standing } from "@/lib/pool/home";
 import { buildMatchCenter, type MatchCenterSection } from "@/lib/pool/match-center";
 import { buildScoreCardInputs, type ScoreCardInputs } from "@/lib/challenge/match-cards";
+import { type MatchUpdate } from "@/lib/challenge/match-updates";
+import { getRecentTournamentUpdates, BOARD_MATCH_NOS } from "@/lib/challenge/recent-updates";
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { asResults, type LeaderboardRow } from "@/lib/pool/scoring";
@@ -50,6 +52,7 @@ export interface KnockoutChallengeHome {
   board: LeaderboardRow[];
   cards: ScoreCardInputs; // live / last / next, scoped to the knockout matches
   myBrackets: BracketSummary[]; // the viewer's knockout brackets (for the "your bracket" CTA)
+  updates: MatchUpdate[]; // recent updates across the shared board (identical to MD3 home)
   open: boolean; // picks open (the field is set)
   earlyOpen: boolean; // early projected-fill available before the field is set
   opensAt: Date;
@@ -61,12 +64,13 @@ export async function getKnockoutChallengeHome(
   now: Date = new Date(),
 ): Promise<KnockoutChallengeHome> {
   const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
-  const [board, inputs, picks, knockoutState, myBrackets] = await Promise.all([
+  const [board, inputs, picks, knockoutState, myBrackets, updates] = await Promise.all([
     getChallengeLeaderboard(),
-    getTournamentMatchInputs(tournamentId, KNOCKOUT_MATCH_NOS),
+    getTournamentMatchInputs(tournamentId, BOARD_MATCH_NOS),
     getChallengeEntryKnockoutPicks(userId, tournamentId),
     getKnockoutState(tournamentId),
     userId ? getUserBrackets(userId, tournamentId) : Promise.resolve([]),
+    getRecentTournamentUpdates(tournamentId, 3),
   ]);
 
   return {
@@ -74,6 +78,7 @@ export async function getKnockoutChallengeHome(
     board,
     cards: buildScoreCardInputs(inputs, picks, now),
     myBrackets: myBrackets.filter((b) => b.format === "KNOCKOUT"),
+    updates,
     open: knockoutState.open,
     earlyOpen: knockoutState.earlyOpen,
     opensAt: knockoutState.opensAt,

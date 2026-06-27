@@ -4,6 +4,7 @@ import { getChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { getKnockoutState, getTournamentIdBySlug } from "@/lib/pool/queries";
 import { isKnockoutLocked } from "@/lib/pool/knockout";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
+import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function KnockoutChallengeLeaderboardPage() {
 
   return (
     <section className="space-y-4">
+      <GameSwitcher now={new Date()} />
       <header className="px-1">
         <h1 className="font-display text-xl text-ink">Leaderboard</h1>
         <p className="mt-0.5 text-[13px] text-ink-3">

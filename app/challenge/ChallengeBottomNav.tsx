@@ -3,6 +3,37 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode, SVGProps } from "react";
+import { challengeBaseFromPath, unifiedPicksBase } from "@/lib/challenge/nav";
+
+// Re-exported for back-compat with existing importers of the nav module.
+export { challengeBaseFromPath };
+
+const PICKS_HREF = "/challenge/picks";
+const MATCHES_HREF = "/challenge/matches";
+
+function onUnifiedPicks(pathname: string): boolean {
+  return pathname === PICKS_HREF || pathname.startsWith(`${PICKS_HREF}/`);
+}
+
+// The Matches tab is active on the unified route and on the per-game match-detail
+// pages it links to (/challenge/{md3,knockout}/matches/<no>).
+function onMatches(pathname: string): boolean {
+  return (
+    pathname === MATCHES_HREF ||
+    pathname.startsWith(`${MATCHES_HREF}/`) ||
+    /^\/challenge\/(?:md3|knockout)\/matches(?:\/|$)/.test(pathname)
+  );
+}
+
+// The unified Picks / Matches surfaces have no game segment, so the sibling tabs
+// resolve to the featured game tree.
+function onUnifiedSurface(pathname: string): boolean {
+  return (
+    onUnifiedPicks(pathname) ||
+    pathname === MATCHES_HREF ||
+    pathname.startsWith(`${MATCHES_HREF}/`)
+  );
+}
 
 // The challenge shell's bottom nav — the public-board analogue of the pool
 // BottomNav, sharing its active treatment (gold top accent + pitch-tint pill +
@@ -16,24 +47,13 @@ type Tab = {
   icon: ReactNode;
 };
 
-// The challenge segment immediately after /challenge ("md3" | "knockout"), or
-// null on the bare /challenge index.
-export function challengeBaseFromPath(pathname: string): string | null {
-  const m = pathname.match(/^\/challenge\/(md3|knockout)(?:\/|$)/);
-  return m ? `/challenge/${m[1]}` : null;
-}
-
 export function ChallengeBottomNav() {
   const pathname = usePathname() ?? "";
-  const base = challengeBaseFromPath(pathname);
+  // The unified picks surface has no game segment, so resolve a concrete game
+  // tree (featured game) for the sibling tabs (home/leaderboard/matches).
+  const base = onUnifiedSurface(pathname) ? unifiedPicksBase() : challengeBaseFromPath(pathname);
   // No bottom nav on the bare /challenge index (it redirects); render nothing.
   if (!base) return null;
-
-  // Where "make/edit your picks" lives differs by game: MD3 has its own /play
-  // form inside the challenge tree, while the Knockout Challenge is built at
-  // /bracket (outside /challenge), so that link leaves the challenge shell.
-  const isMd3 = base === "/challenge/md3";
-  const picksHref = isMd3 ? `${base}/play` : "/bracket";
 
   const tabs: Tab[] = [
     {
@@ -46,10 +66,10 @@ export function ChallengeBottomNav() {
     {
       key: "picks",
       label: "Picks",
-      href: picksHref,
-      // Active only for MD3's in-tree /play route; /bracket is outside the
-      // challenge shell, so the Knockout picks tab is a link-out (never active).
-      isActive: (p) => isMd3 && p === `${base}/play`,
+      // Both games now share one picks surface; the per-game /play and /bracket
+      // routes still work but the tab points everyone at the unified page.
+      href: PICKS_HREF,
+      isActive: (p) => onUnifiedPicks(p),
       icon: <PicksGlyph />,
     },
     {
@@ -62,8 +82,10 @@ export function ChallengeBottomNav() {
     {
       key: "matches",
       label: "Matches",
-      href: `${base}/matches`,
-      isActive: (p) => p === `${base}/matches` || p.startsWith(`${base}/matches/`),
+      // Unified tournament-wide Matches surface (like Picks); the per-game match
+      // detail pages still live under each game tree.
+      href: MATCHES_HREF,
+      isActive: (p) => onMatches(p),
       icon: <MatchesGlyph />,
     },
   ];

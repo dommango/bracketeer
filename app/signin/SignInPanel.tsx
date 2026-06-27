@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signIn } from "@/auth";
 import { googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { PublicGames } from "@/app/PublicGames";
+import { StartAPoolPromo } from "@/app/StartAPoolPromo";
 
 // Only same-origin relative paths are honored as a post-sign-in destination, so
 // a crafted ?callbackUrl can't turn sign-in into an open redirect. Reject
@@ -41,7 +42,7 @@ async function facebookSignIn(formData: FormData) {
 export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
   const now = new Date();
   return (
-    <main className="mx-auto max-w-[480px] px-5 pb-8 pt-12">
+    <main className="mx-auto max-w-2xl px-5 pb-8 pt-12">
       <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
         <div
           className="absolute inset-0"
@@ -148,6 +149,8 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
       </p>
 
       <PublicGames now={now} />
+
+      <StartAPoolPromo now={now} />
     </main>
   );
 }
