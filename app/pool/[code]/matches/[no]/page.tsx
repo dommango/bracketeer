@@ -4,6 +4,7 @@ import { getPoolByCode, getMatchDetail, type MatchDetail } from "@/lib/pool/quer
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { listMessages } from "@/lib/pool/chat";
 import type { PickSplit, PickSplitSlice } from "@/lib/pool/pick-split";
+import { buildConsensus } from "@/lib/pool/consensus";
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "../../Flag";
 import { TeamLink } from "../../TeamLink";
@@ -97,6 +98,84 @@ function PickSplitCard({ split }: { split: PickSplit }) {
         <SplitRow slice={split.away} kind="away" />
         <SplitRow slice={split.other} kind="other" />
       </div>
+    </div>
+  );
+}
+
+// Model-vs-pool consensus: overlays the API-Football model's win % against the
+// pool's own pick-split for this knockout match. Pure presentational composition
+// of data the match-detail query already returns — renders nothing when the model
+// has no win percentages or nobody has picked the match.
+function ConsensusCard({
+  prediction,
+  pickSplit,
+  home,
+  away,
+}: {
+  prediction: MatchDetail["prediction"];
+  pickSplit: PickSplit;
+  home: MatchDetail["home"];
+  away: MatchDetail["away"];
+}) {
+  if (!prediction || pickSplit.total === 0) return null;
+  const consensus = buildConsensus({
+    homeCode: home.code,
+    awayCode: away.code,
+    homeName: home.name,
+    awayName: away.name,
+    modelHomePct: prediction.homePercent,
+    modelAwayPct: prediction.awayPercent,
+    poolHomePct: pickSplit.home.pct,
+    poolAwayPct: pickSplit.away.pct,
+    poolOtherPct: pickSplit.other.pct,
+  });
+  if (!consensus) return null;
+
+  const { modelFavorite, poolFavorite, agree, poolDivided } = consensus;
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Model vs pool</p>
+      <p className="mt-2 text-sm text-ink-2">
+        {poolDivided ? (
+          <>
+            Model favors <span className="font-semibold text-ink">{modelFavorite.name}</span>{" "}
+            {modelFavorite.modelPct}% — but the biggest share of your pool ({consensus.poolOtherPct}%)
+            bracketed a different team into this match.
+          </>
+        ) : agree ? (
+          <>
+            Model favors <span className="font-semibold text-ink">{modelFavorite.name}</span>{" "}
+            {modelFavorite.modelPct}% — your pool backed them{" "}
+            <span className="font-semibold text-ink">{modelFavorite.poolPct}%</span>.
+          </>
+        ) : (
+          <>
+            Model favors <span className="font-semibold text-ink">{modelFavorite.name}</span>{" "}
+            {modelFavorite.modelPct}%, but your pool leaned{" "}
+            <span className="font-semibold text-ink">{poolFavorite.name}</span> ({poolFavorite.poolPct}%).
+          </>
+        )}
+      </p>
+      <div className="mt-3 space-y-2">
+        <ConsensusBar label="Model" pct={modelFavorite.modelPct} color="var(--round-r16)" />
+        <ConsensusBar label="Pool" pct={modelFavorite.poolPct} color="var(--pitch)" />
+      </div>
+      <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-4">
+        Both rows show {modelFavorite.code}
+      </p>
+    </div>
+  );
+}
+
+function ConsensusBar({ label, pct, color }: { label: string; pct: number; color: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-12 shrink-0 text-xs font-medium text-ink-3">{label}</span>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-sunk">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink-3">{pct}%</span>
     </div>
   );
 }
@@ -254,6 +333,15 @@ export default async function MatchDetailPage({
       <MatchStatsBars bars={detail.stats} homeCode={detail.home.code} awayCode={detail.away.code} />
 
       {detail.scored && detail.pickSplit ? <PickSplitCard split={detail.pickSplit} /> : null}
+
+      {detail.scored && detail.pickSplit ? (
+        <ConsensusCard
+          prediction={detail.prediction}
+          pickSplit={detail.pickSplit}
+          home={detail.home}
+          away={detail.away}
+        />
+      ) : null}
 
       {detail.scored && teamsKnown ? (
         isMember ? (
