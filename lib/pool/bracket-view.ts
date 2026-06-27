@@ -3,6 +3,7 @@
 // so the page component stays dumb.
 
 import { resolveBracket } from "./bracket";
+import { overlayProvisional } from "./group-provisional";
 import { GROUPS, TEAMS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { computeGroupTables, provisionalStandings, type GroupResultRow, type GroupTableRow } from "./group-table";
 import { slotLabel, KNOCKOUT_SLOT_REFS } from "./slot-label";
@@ -28,6 +29,10 @@ export interface BracketMatch {
   awayCode: string | null;
   home: string;
   away: string;
+  // True when the seated team comes from a live provisional projection (the early
+  // builder window) rather than the official answer key. Display-only — never scored.
+  homeProjected: boolean;
+  awayProjected: boolean;
   winnerCode: string | null;
   homeScore: number | null;
   awayScore: number | null;
@@ -81,11 +86,26 @@ export function buildBracketView(
   results: Results,
   scores: Map<number, MatchScore> = new Map(),
   groupRows: GroupResultRow[] = [],
+  opts: { projectBracket?: boolean } = {},
 ): BracketView {
-  const bracket = resolveBracket(results);
+  // Always compute tables (computeGroupTables seeds all 4 teams at 0 with no rows),
+  // so every group renders a full, same-size table whether it has played or not.
+  const tables = computeGroupTables(groupRows);
+  const provisional = provisionalStandings(tables);
+
+  // The bracket seats teams from the official answer key. When projection is on
+  // (the early-builder window), overlay live provisional standings so a uniquely-
+  // decided group winner/runner-up/third fills its R32 slot ahead of the official
+  // key — display only, never scored. We keep the official-only resolution to mark
+  // which seated teams are projected vs confirmed.
+  const officialBracket = resolveBracket(results);
+  const bracket = opts.projectBracket
+    ? resolveBracket(overlayProvisional(results, provisional))
+    : officialBracket;
 
   const row = (matchNo: number): BracketMatch => {
     const m = bracket[matchNo];
+    const o = officialBracket[matchNo];
     const s = scores.get(matchNo);
     const refs = KNOCKOUT_SLOT_REFS[matchNo];
     const v = venueFor(matchNo);
@@ -96,6 +116,9 @@ export function buildBracketView(
       // Real team once known, else the humanized feeder slot ("1A", "SF1") not "TBD".
       home: m?.home ? teamName(m.home) : slotLabel(refs?.[0]),
       away: m?.away ? teamName(m.away) : slotLabel(refs?.[1]),
+      // Projected when the overlay seated a team the official key hasn't confirmed.
+      homeProjected: Boolean(m?.home) && !o?.home,
+      awayProjected: Boolean(m?.away) && !o?.away,
       winnerCode: m?.winner ?? null,
       homeScore: s?.homeScore ?? null,
       awayScore: s?.awayScore ?? null,
@@ -122,10 +145,6 @@ export function buildBracketView(
     round("FINAL", [row(FINAL.id)]),
   ];
 
-  // Always compute tables (computeGroupTables seeds all 4 teams at 0 with no rows),
-  // so every group renders a full, same-size table whether it has played or not.
-  const tables = computeGroupTables(groupRows);
-  const provisional = provisionalStandings(tables);
   const groups: GroupStanding[] = Object.keys(GROUPS).map((g, i) => {
     const officialFirst = results.groupFirst?.[g];
     const isProvisional = !officialFirst && Boolean(provisional.groupFirst[g]);

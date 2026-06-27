@@ -124,3 +124,49 @@ describe("buildBracketView group tables", () => {
     expect(a.first).toBe("Korea Republic");
   });
 });
+
+describe("buildBracketView projected bracket fill", () => {
+  // Group A = MEX, RSA, KOR, CZE. MEX uniquely 1st, RSA uniquely 2nd.
+  const rows: GroupResultRow[] = [
+    { homeCode: "MEX", awayCode: "KOR", homeScore: 2, awayScore: 0 },
+    { homeCode: "RSA", awayCode: "CZE", homeScore: 1, awayScore: 0 },
+  ];
+  // Match 73 is {a:{pos:2,group:A}, b:{...}} — Group A runner-up is the home side.
+  const m73 = R32[0].id;
+
+  it("leaves R32 slots TBD when projection is OFF (default — non-breaking)", () => {
+    const view = buildBracketView(results(), new Map(), rows);
+    const m = view.rounds[0].matches.find((x) => x.matchNo === m73)!;
+    expect(m.homeCode).toBeNull();
+    expect(m.homeProjected).toBe(false);
+    expect(m.awayProjected).toBe(false);
+  });
+
+  it("seats the uniquely-decided runner-up into its R32 slot when projection is ON", () => {
+    const view = buildBracketView(results(), new Map(), rows, { projectBracket: true });
+    const m = view.rounds[0].matches.find((x) => x.matchNo === m73)!;
+    // Group A runner-up (RSA) projects into the home side of match 73.
+    expect(m.homeCode).toBe("RSA");
+    expect(m.homeProjected).toBe(true);
+  });
+
+  it("marks officially-confirmed teams as NOT projected even with projection ON", () => {
+    const view = buildBracketView(
+      results({ groupSecond: { A: "RSA" } }),
+      new Map(),
+      rows,
+      { projectBracket: true },
+    );
+    const m = view.rounds[0].matches.find((x) => x.matchNo === m73)!;
+    expect(m.homeCode).toBe("RSA");
+    expect(m.homeProjected).toBe(false); // came from the official key, not the overlay
+  });
+
+  it("does not project a tied (unresolved) position", () => {
+    // No matches → all four teams tied at rank 1; nothing is uniquely decided.
+    const view = buildBracketView(results(), new Map(), [], { projectBracket: true });
+    const m = view.rounds[0].matches.find((x) => x.matchNo === m73)!;
+    expect(m.homeCode).toBeNull();
+    expect(m.homeProjected).toBe(false);
+  });
+});
