@@ -565,7 +565,11 @@ export async function getTournamentBracket(tournamentId: string): Promise<Bracke
     });
   }
 
-  return buildBracketView(asResults(tournament.officialResults), scores, groupRows);
+  // In the early-builder window, project uniquely-decided group placements into the
+  // live bracket (display only) so qualifiers appear before the official key is set.
+  return buildBracketView(asResults(tournament.officialResults), scores, groupRows, {
+    projectBracket: isEarlyBuilderOpen(),
+  });
 }
 
 // The live bracket + group standings for a pool's tournament.

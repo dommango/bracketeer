@@ -13,22 +13,36 @@ function Side({
   score,
   isWinner,
   decided,
+  projected,
 }: {
   name: string;
   code: string | null;
   score: number | null;
   isWinner: boolean;
   decided: boolean;
+  projected?: boolean;
 }) {
   const dimmed = decided && !isWinner;
   return (
     <div className={`flex items-center gap-2.5 py-1 ${dimmed ? "text-ink-4" : "text-ink"}`}>
       <Flag code={code} size={24} />
-      <span className={`flex-1 truncate ${isWinner ? "font-bold" : "font-medium"}`}>
+      <span
+        className={`flex-1 truncate ${isWinner ? "font-bold" : "font-medium"} ${
+          projected ? "italic text-ink-2" : ""
+        }`}
+      >
         {name}
         {code ? (
           <span className={`ml-1.5 font-mono text-[10px] ${dimmed ? "text-ink-4" : "text-ink-3"}`}>
             {code}
+          </span>
+        ) : null}
+        {projected ? (
+          <span
+            title="Projected from live group standings — not yet official"
+            className="ml-1.5 rounded-full bg-surface-sunk px-1.5 py-px align-middle font-mono text-[9px] font-semibold uppercase not-italic tracking-[0.04em] text-ink-4"
+          >
+            proj
           </span>
         ) : null}
       </span>
@@ -74,6 +88,7 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
         score={m.homeScore}
         isWinner={decided && m.winnerCode === m.homeCode}
         decided={decided}
+        projected={m.homeProjected}
       />
       <div className="my-0.5 h-px bg-line-soft" />
       <Side
@@ -82,6 +97,7 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
         score={m.awayScore}
         isWinner={decided && m.winnerCode === m.awayCode}
         decided={decided}
+        projected={m.awayProjected}
       />
       {m.venue ? (
         <div className="mt-1.5 truncate text-[10px] text-ink-4">
