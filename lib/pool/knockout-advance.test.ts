@@ -9,7 +9,7 @@ import {
   type AdvanceMap,
 } from "./knockout-advance";
 import { resolveKnockout, scoredKnockoutNumbers } from "./pick-form";
-import { GROUPS, R32 } from "@/lib/scoring/data";
+import { GROUPS } from "@/lib/scoring/data";
 import { resolveR32Slots, type ResolvedR32 } from "@/lib/scoring/resolve";
 import { scorePicks } from "@/lib/scoring/score";
 import { emptyPicks } from "@/lib/scoring/types";

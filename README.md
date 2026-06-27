@@ -33,27 +33,40 @@ Vitest · Playwright · Capacitor (iOS wrap). External integrations are implemen
 
 ## Getting started
 
-**Prerequisites:** Node 22.x, a PostgreSQL database.
+**Prerequisites:** Node 22.x and a PostgreSQL database. No API keys are required — every
+integration is optional and the app runs fully keyless.
+
+No Postgres handy? Start one with Docker:
+
+```bash
+docker run -d --name bracketeer-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
+# → DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bracketeer
+```
 
 ```bash
 # 1. Install
 npm install
 
 # 2. Configure env
-cp .env.example .env        # then edit values (DATABASE_URL, AUTH_SECRET, CRON_SECRET, APP_BASE_URL)
+cp .env.example .env        # set DATABASE_URL, CRON_SECRET, APP_BASE_URL
+npx auth secret             # generates AUTH_SECRET and writes it into .env
 
-# 3. Set up the database
-npx prisma migrate deploy   # apply migrations
-npx prisma generate         # generate the client
-npx tsx prisma/seed.ts      # seed the World Cup 2026 tournament (48 teams, 104 matches)
+# 3. Set up the database (these npm scripts load .env for you)
+npm run db:deploy           # apply migrations
+npm run db:generate         # generate the Prisma client
+npm run db:seed             # seed the World Cup 2026 tournament (48 teams, 104 matches)
 
-# 4. Run
+# 4. (optional) Load a demo pool — synthetic entries + a live leaderboard
+npm run db:demo
+
+# 5. Run
 npm run dev                 # http://localhost:3000
 ```
 
-Required env vars: `DATABASE_URL`, `AUTH_SECRET` (32+ chars), `CRON_SECRET`, `APP_BASE_URL`.
-All third-party integrations are optional — see `lib/env.ts` for the full list and the boolean
-flag each one exposes.
+Required env vars: `DATABASE_URL`, `AUTH_SECRET` (16+ chars — `npx auth secret` generates one),
+`CRON_SECRET`, `APP_BASE_URL`. Every third-party integration is optional — see
+[`.env.example`](./.env.example) and [`lib/env.ts`](./lib/env.ts) for the full list and the
+boolean flag each one exposes.
 
 ## Common commands
 

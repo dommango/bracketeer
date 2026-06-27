@@ -24,7 +24,8 @@ import { recomputeEntry } from "@/lib/pool/scoring";
 let pass = 0;
 let fail = 0;
 function check(label: string, cond: boolean, detail = "") {
-  cond ? pass++ : fail++;
+  if (cond) pass++;
+  else fail++;
   console.log(`  ${cond ? "✓" : "✗"} ${label}${detail ? `  — ${detail}` : ""}`);
 }
 
