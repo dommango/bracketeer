@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode, getPoolView } from "@/lib/pool/queries";
+import { getPoolByCode, getPoolView, getPoolProjection } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
 import { Leaderboard } from "../Leaderboard";
+import { ProjectedFinish } from "../ProjectedFinish";
 import { BracketsTabNav } from "../BracketsTabNav";
 
 // Standings change at request time as results land.
@@ -17,7 +18,11 @@ export default async function LeaderboardPage({
   const pool = await getPoolByCode(code);
   if (!pool) notFound();
 
-  const [sessionUser, poolView] = await Promise.all([getSessionUser(), getPoolView(code)]);
+  const [sessionUser, poolView, projection] = await Promise.all([
+    getSessionUser(),
+    getPoolView(code),
+    getPoolProjection(pool.id),
+  ]);
   const leaderboard = poolView?.leaderboard ?? [];
 
   return (
@@ -47,6 +52,7 @@ export default async function LeaderboardPage({
           showMedals={poolView?.groupStageComplete ?? false}
         />
       </div>
+      <ProjectedFinish projection={projection} youUserId={sessionUser?.id} />
     </section>
   );
 }
