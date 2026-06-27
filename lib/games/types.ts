@@ -61,11 +61,13 @@ export interface LockArgs {
   now?: Date;
 }
 
-// A row as the leaderboard ranks it. md3Tiebreak is set only for MD3 rows; bracket
-// rows leave it undefined and fall back to total-then-label.
+// A row as the leaderboard ranks it. `total` is whatever total the caller ranks
+// by — the cached score, or a live (official + projected) total. md3Tiebreak is
+// set only for MD3 rows; bracket rows leave it undefined and rank on total alone.
+// label is display-only and intentionally NOT read by compareForRank.
 export interface RankRow {
   total: number;
-  label: string;
+  label?: string;
   md3Tiebreak?: Md3Tiebreak;
 }
 
@@ -78,6 +80,9 @@ export interface GameModule {
   isLocked(args: LockArgs): boolean;
   // Score a batch of loaded entries; returns rows, does NOT upsert.
   scoreEntries(tx: Db, entries: ScorableGameEntry[], ctx: ScoringContext): Promise<ScoredEntry[]>;
-  // Leaderboard ranking + tiebreak comparator (<0 if a ranks ahead of b).
+  // Leaderboard ranking comparator (<0 if a ranks strictly ahead of b). Encodes
+  // the ranking criteria ONLY — total, then any game-specific tiebreak — and is
+  // label-free, so callers add label as a display-only nudge and ties share a
+  // rank only on a genuine dead heat (see assignRanksByCompare).
   compareForRank(a: RankRow, b: RankRow): number;
 }

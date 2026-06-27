@@ -8,11 +8,11 @@ import type { Prisma } from "@/generated/prisma/client";
 import { type ScoringConfig, DEFAULT_SCORING } from "@/lib/scoring/score";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
-import { assignRanks } from "@/lib/pool/rank";
+import { assignRanksByCompare } from "@/lib/pool/rank";
 import { gameFor } from "@/lib/games/registry";
 import type { ScorableGameEntry, ScoringContext, ScoredEntry } from "@/lib/games/types";
 import type { PoolFormat } from "@/lib/pool/manage";
-import type { Md3Tiebreak } from "@/lib/challenge/md3-tiebreak";
+import { parseMd3Tiebreak, type Md3Tiebreak } from "@/lib/challenge/md3-tiebreak";
 
 type Db = Prisma.TransactionClient;
 
@@ -103,7 +103,7 @@ export async function recomputePool(poolId: string) {
       );
       await upsertScored(tx, scored);
 
-      const leaderboard = await getLeaderboard(poolId, tx);
+      const leaderboard = await getLeaderboard(poolId, tx, pool.format as PoolFormat);
       await captureSnapshots(poolId, leaderboard, tx);
       return leaderboard;
     },
@@ -221,24 +221,40 @@ export interface LeaderboardRow {
 // Read the cached leaderboard for a pool, ranked by total desc then label.
 // (Tiebreak handling is intentionally simple for the MVP — surfaced but not
 // auto-applied; the organizer breaks ties using the final-goals tiebreak.)
-export async function getLeaderboard(poolId: string, db: Db = prisma): Promise<LeaderboardRow[]> {
-  const entries = await db.entry.findMany({
-    where: { poolId },
-    include: { breakdown: true },
-  });
+export async function getLeaderboard(
+  poolId: string,
+  db: Db = prisma,
+  format?: PoolFormat,
+): Promise<LeaderboardRow[]> {
+  // The game module decides the ranking, so we need the pool's format. Callers
+  // that already hold the pool (recomputePool) pass it in to avoid a second
+  // round-trip; otherwise look it up. A missing pool yields an empty board, as
+  // the pre-module version did (it simply found no entries).
+  let fmt = format;
+  if (!fmt) {
+    const pool = await db.pool.findUnique({ where: { id: poolId }, select: { format: true } });
+    if (!pool) return [];
+    fmt = pool.format as PoolFormat;
+  }
 
-  const rows = entries
-    .map((e) => ({
-      entryId: e.id,
-      label: e.label,
-      userId: e.userId,
-      total: e.breakdown?.totalPoints ?? 0,
-      breakdown: e.breakdown?.byCategory ?? null,
-      tiebreak: e.tiebreak,
-    }))
-    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
+  const entries = await db.entry.findMany({ where: { poolId }, include: { breakdown: true } });
 
-  // Tied entries share a place (standard competition ranking); label only orders
-  // the display within a tie, it does not break the rank.
-  return assignRanks(rows);
+  const rows = entries.map((e) => ({
+    entryId: e.id,
+    label: e.label,
+    userId: e.userId,
+    total: e.breakdown?.totalPoints ?? 0,
+    breakdown: e.breakdown?.byCategory ?? null,
+    tiebreak: e.tiebreak,
+    // Quality-cascade tiebreak cached at scoring time; undefined for bracket rows
+    // and older MD3 rows, so they fall back to total-only ranking.
+    md3Tiebreak: parseMd3Tiebreak(e.breakdown?.byCategory),
+  }));
+
+  // Rank through the pool's game module: bracket/knockout rank by total alone,
+  // Match Day Pickem adds its decisive quality tiebreak. compareForRank is
+  // label-free, so tied entries share a place; label only orders display.
+  const cmp = gameFor(fmt).compareForRank;
+  const sorted = [...rows].sort((a, b) => cmp(a, b) || a.label.localeCompare(b.label));
+  return assignRanksByCompare(sorted, cmp);
 }

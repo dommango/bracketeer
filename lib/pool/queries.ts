@@ -3,7 +3,9 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { getLeaderboard, asResults, asScoringConfig, type LeaderboardRow } from "@/lib/pool/scoring";
-import { assignRanks } from "@/lib/pool/rank";
+import { assignRanksByCompare } from "@/lib/pool/rank";
+import { gameFor } from "@/lib/games/registry";
+import type { PoolFormat } from "@/lib/pool/manage";
 import { buildBracketView, type BracketView, type MatchScore } from "@/lib/pool/bracket-view";
 import { resolveBracket } from "@/lib/pool/bracket";
 import {
@@ -412,6 +414,7 @@ async function withProjectedPoints(
   poolId: string,
   tournamentId: string,
   scoringConfig: unknown,
+  format: PoolFormat,
   rows: LeaderboardRow[],
 ): Promise<LeaderboardRow[]> {
   const [liveRows, groupPoints] = await Promise.all([
@@ -459,13 +462,22 @@ async function withProjectedPoints(
 
   // Re-rank by live total (official + provisional/projected) so the standings
   // reflect who is actually ahead right now; the ▲ badge still shows the
-  // provisional portion. Tied live totals share a place (competition ranking),
-  // label breaks display order only.
+  // provisional portion. Rank through the pool's game module over the live total:
+  // bracket/knockout rank on that alone, Match Day Pickem adds its decisive
+  // quality tiebreak. compareForRank is label-free, so tied live totals share a
+  // place (competition ranking) and label only orders the display.
+  // md3Tiebreak is the cached quality vector over FINAL matches only; the live
+  // total adds in-progress projected points but a still-live match has no settled
+  // quality, so it correctly contributes to the total, not the tiebreak.
   const liveTotal = (r: LeaderboardRow) => r.total + (r.projected ?? 0);
-  const sorted = [...withLive].sort(
-    (a, b) => liveTotal(b) - liveTotal(a) || a.label.localeCompare(b.label),
-  );
-  return assignRanks(sorted, liveTotal);
+  const compareForRank = gameFor(format).compareForRank;
+  const cmp = (a: LeaderboardRow, b: LeaderboardRow) =>
+    compareForRank(
+      { total: liveTotal(a), md3Tiebreak: a.md3Tiebreak },
+      { total: liveTotal(b), md3Tiebreak: b.md3Tiebreak },
+    );
+  const sorted = [...withLive].sort((a, b) => cmp(a, b) || a.label.localeCompare(b.label));
+  return assignRanksByCompare(sorted, cmp);
 }
 
 // The live leaderboard for a pool: the cached official board re-ranked by live
@@ -474,13 +486,14 @@ async function withProjectedPoints(
 export const liveLeaderboard = cache(async (poolId: string): Promise<LeaderboardRow[]> => {
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
-    select: { tournamentId: true, tournament: { select: { scoringConfig: true } } },
+    select: { tournamentId: true, format: true, tournament: { select: { scoringConfig: true } } },
   });
   if (!pool) return [];
   return withProjectedPoints(
     poolId,
     pool.tournamentId,
     pool.tournament.scoringConfig,
+    pool.format as PoolFormat,
     await cachedLeaderboard(poolId),
   );
 });
