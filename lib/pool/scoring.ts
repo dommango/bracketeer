@@ -5,17 +5,53 @@
 
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import { scorePicks, type ScoringConfig, DEFAULT_SCORING } from "@/lib/scoring/score";
-import { pickRowsToSubmission } from "@/lib/pool/picks";
-import { knockoutR32Seed } from "@/lib/pool/knockout";
-import { resolveAdvance, validateAdvanceMap } from "@/lib/pool/knockout-advance";
+import { type ScoringConfig, DEFAULT_SCORING } from "@/lib/scoring/score";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
 import { assignRanks } from "@/lib/pool/rank";
-import { scoreMd3Pool, scoreMd3Entry, scoreStandaloneMd3 } from "@/lib/pool/md3-scoring";
+import { gameFor } from "@/lib/games/registry";
+import type { ScorableGameEntry, ScoringContext, ScoredEntry } from "@/lib/games/types";
+import type { PoolFormat } from "@/lib/pool/manage";
 import type { Md3Tiebreak } from "@/lib/challenge/md3-tiebreak";
 
 type Db = Prisma.TransactionClient;
+
+// Build the format-independent scoring context once per recompute.
+function scoringContext(
+  tournamentId: string,
+  officialResults: unknown,
+  scoringConfig: unknown,
+): ScoringContext {
+  return {
+    tournamentId,
+    answer: asResults(officialResults),
+    cfg: asScoringConfig(scoringConfig),
+    now: new Date(),
+  };
+}
+
+// Upsert the ScoreBreakdown rows a module computed. perPick is written ONLY when
+// the module supplied it (MD3) — bracket rows carry no perPick, exactly as before.
+async function upsertScored(tx: Db, scored: ScoredEntry[]): Promise<void> {
+  for (const s of scored) {
+    const byCategory = s.byCategory as Prisma.InputJsonValue;
+    await tx.scoreBreakdown.upsert({
+      where: { entryId: s.entryId },
+      update: {
+        totalPoints: s.totalPoints,
+        byCategory,
+        ...(s.perPick ? { perPick: s.perPick } : {}),
+        computedAt: new Date(),
+      },
+      create: {
+        entryId: s.entryId,
+        totalPoints: s.totalPoints,
+        byCategory,
+        ...(s.perPick ? { perPick: s.perPick } : {}),
+      },
+    });
+  }
+}
 
 // Coerce the tournament's stored JSON answer key into a Results object.
 export function asResults(officialResults: unknown): Results {
@@ -48,24 +84,24 @@ export async function recomputePool(poolId: string) {
         include: { tournament: true },
       });
 
-      // Match Day Pickem scores against live per-match Result rows, not the answer
-      // key — its own engine. Every other format uses the parity oracle. MD3 is now
-      // challenge-only (no new MD3 pools); this pool arm is a defensive backstop for
-      // any not-yet-migrated MD3 pool and can be removed once the prod migration has
-      // run (scripts/migrate-md3-pools-to-challenge.ts).
-      if (pool.format === "MATCH_DAY_3_PICKEM") {
-        await scoreMd3Pool(tx, poolId, pool.tournamentId);
-      } else {
-        const answer = asResults(pool.tournament.officialResults);
-        const cfg = asScoringConfig(pool.tournament.scoringConfig);
-
-        const entries = await tx.entry.findMany({
-          where: { poolId },
-          include: { picks: true },
-        });
-
-        await scoreEntryBreakdowns(tx, entries, answer, cfg);
-      }
+      // One pool has one format, so one module scores every entry. The module
+      // decides how (the parity oracle for bracket/knockout, live Result rows for
+      // Match Day Pickem); the orchestrator just owns the transaction + upsert.
+      const entries = await tx.entry.findMany({
+        where: { poolId },
+        include: { picks: true },
+      });
+      const ctx = scoringContext(
+        pool.tournamentId,
+        pool.tournament.officialResults,
+        pool.tournament.scoringConfig,
+      );
+      const scored = await gameFor(pool.format as PoolFormat).scoreEntries(
+        tx,
+        entries as ScorableGameEntry[],
+        ctx,
+      );
+      await upsertScored(tx, scored);
 
       const leaderboard = await getLeaderboard(poolId, tx);
       await captureSnapshots(poolId, leaderboard, tx);
@@ -75,71 +111,29 @@ export async function recomputePool(poolId: string) {
   );
 }
 
-// Score a batch of entries (with their picks loaded) against an answer key and
-// upsert each ScoreBreakdown. Pool-independent — shared by recomputePool, the
-// per-entry recompute, and the standalone recompute. Writes the cache only; it
-// never touches snapshots (those are a pool concern).
-type ScorableEntry = {
-  id: string;
-  picks: Parameters<typeof pickRowsToSubmission>[0];
-  // Positional knockout picks, when this bracket was built early. Present (non-null)
-  // only for positional entries; null/absent for full-bracket, CSV, and pre-feature
-  // entries, which score from their Pick rows exactly as before.
-  knockoutAdvance?: unknown;
-};
-
-async function scoreEntryBreakdowns(
-  tx: Db,
-  entries: ScorableEntry[],
-  answer: Results,
-  cfg: ScoringConfig,
-): Promise<void> {
-  for (const entry of entries) {
-    const sub = pickRowsToSubmission(entry.picks);
-    // A positional bracket's winners come from its AdvanceMap, resolved against the
-    // OFFICIAL seed — so an early pick scores correctly however stale its Pick rows
-    // are. scorePicks still only ever sees team codes, so parity is untouched.
-    if (entry.knockoutAdvance != null && validateAdvanceMap(entry.knockoutAdvance)) {
-      sub.picks.knockout = resolveAdvance(entry.knockoutAdvance, knockoutR32Seed(answer));
-    }
-    const { total, breakdown } = scorePicks(sub.picks, answer, cfg);
-    await tx.scoreBreakdown.upsert({
-      where: { entryId: entry.id },
-      update: { totalPoints: total, byCategory: breakdown, computedAt: new Date() },
-      create: { entryId: entry.id, totalPoints: total, byCategory: breakdown },
-    });
-  }
-}
-
-// Recompute one entry against its own tournament's answer key. For standalone
-// brackets (solo save, Challenge toggle) where there's no pool to recompute and
-// no snapshot to capture. Scores against the entry's tournament directly, so it
-// works whether the entry is in a pool or stands alone.
-//
-// Match Day 3 entries are the exception: they score against live Result rows via
-// scoreMd3Pool (the parity oracle would read their pick rows as an empty bracket
-// and write 0). MD3 is pool-only, so this rescores that whole MD3 pool's
-// breakdowns — still without snapshots or the pool advisory lock (idempotent
-// upserts, so a concurrent recomputePool can't corrupt it).
+// Recompute one entry against its own tournament. For standalone brackets (solo
+// save, Challenge toggle) where there's no pool to recompute and no snapshot to
+// capture. The entry's GameModule decides how to score it — the bracket oracle, or
+// (for Match Day Pickem) live Result rows — so this works for every format without
+// a fork. No snapshots or pool advisory lock (idempotent upserts, so a concurrent
+// recomputePool can't corrupt it).
 export async function recomputeEntry(entryId: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const entry = await tx.entry.findUniqueOrThrow({
       where: { id: entryId },
       include: { picks: true, tournament: { select: { officialResults: true, scoringConfig: true } } },
     });
-    // Match Day Pickem entries score against live Result rows via their own engine;
-    // the parity oracle would decode their match_day_3 pick rows as an empty bracket
-    // (0 pts). Challenge entries are standalone (poolId null) and rescore just
-    // themselves. The pooled arm is a defensive backstop for any not-yet-migrated
-    // MD3 pool; removable once the prod migration has run.
-    if (entry.format === "MATCH_DAY_3_PICKEM") {
-      if (entry.poolId) await scoreMd3Pool(tx, entry.poolId, entry.tournamentId);
-      else await scoreMd3Entry(tx, entry.id, entry.tournamentId);
-      return;
-    }
-    const answer = asResults(entry.tournament.officialResults);
-    const cfg = asScoringConfig(entry.tournament.scoringConfig);
-    await scoreEntryBreakdowns(tx, [entry], answer, cfg);
+    const ctx = scoringContext(
+      entry.tournamentId,
+      entry.tournament.officialResults,
+      entry.tournament.scoringConfig,
+    );
+    const scored = await gameFor(entry.format as PoolFormat).scoreEntries(
+      tx,
+      [entry] as ScorableGameEntry[],
+      ctx,
+    );
+    await upsertScored(tx, scored);
   });
 }
 
@@ -152,18 +146,25 @@ export async function recomputeStandalone(tournamentId: string): Promise<number>
       where: { id: tournamentId },
       select: { officialResults: true, scoringConfig: true },
     });
-    const answer = asResults(t.officialResults);
-    const cfg = asScoringConfig(t.scoringConfig);
+    const ctx = scoringContext(tournamentId, t.officialResults, t.scoringConfig);
     const entries = await tx.entry.findMany({
       where: { tournamentId, poolId: null },
       include: { picks: true },
     });
-    // MD3 standalone entries score against live results, not the answer key (the
-    // oracle would read their pick rows as an empty bracket → 0). Split them out.
-    const bracketEntries = entries.filter((e) => e.format !== "MATCH_DAY_3_PICKEM");
-    const hasMd3 = entries.some((e) => e.format === "MATCH_DAY_3_PICKEM");
-    await scoreEntryBreakdowns(tx, bracketEntries, answer, cfg);
-    if (hasMd3) await scoreStandaloneMd3(tx, tournamentId);
+    // Standalone entries can mix formats (bracket challenge + Match Day Pickem), so
+    // group by format and let each game's module score its own — the bracket oracle
+    // for bracket/knockout, live Result rows for MD3.
+    const byFormat = new Map<PoolFormat, ScorableGameEntry[]>();
+    for (const e of entries) {
+      const format = e.format as PoolFormat;
+      const group = byFormat.get(format) ?? [];
+      group.push(e as ScorableGameEntry);
+      byFormat.set(format, group);
+    }
+    for (const [format, group] of byFormat) {
+      const scored = await gameFor(format).scoreEntries(tx, group, ctx);
+      await upsertScored(tx, scored);
+    }
     return entries.length;
   });
 }

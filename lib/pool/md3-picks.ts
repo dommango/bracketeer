@@ -65,7 +65,9 @@ export function decodeMd3Rows(
 
 // Build the canonical Pick rows for a full set of scores, pulling each fixture's
 // home/away team codes from md3Fixtures (server-authoritative orientation).
-function rowsFor(scores: Md3Scores): { section: string; category: string; key: string; code: string; teamOrValue: string }[] {
+// Exported as the single canonical MD3 group encoder — the daily-pickem engine
+// reuses it for its group fixtures so the two paths can't drift on row shape.
+export function rowsFor(scores: Md3Scores): { section: string; category: string; key: string; code: string; teamOrValue: string }[] {
   const byNo = new Map(md3Fixtures().map((f) => [f.matchNo, f]));
   const rows: { section: string; category: string; key: string; code: string; teamOrValue: string }[] = [];
   for (const [matchNoStr, line] of Object.entries(scores)) {
