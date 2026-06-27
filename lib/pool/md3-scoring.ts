@@ -8,6 +8,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { md3Fixtures, MD3_MATCH_NOS, scoreMd3, type ScoreLine } from "@/lib/pool/match-day-3";
 import { buildMd3Tiebreak } from "@/lib/challenge/md3-tiebreak";
+import type { ScoredEntry } from "@/lib/games/types";
 
 type Db = Prisma.TransactionClient;
 
@@ -71,13 +72,20 @@ type Md3PickEntry = {
   picks: { section: string; category: string; key: string; code: string; teamOrValue: string }[];
 };
 
-// Score a set of MD3 entries against the live results and upsert each
-// ScoreBreakdown. The entry set is caller-chosen (a pool, the standalone set, or a
-// single entry) — results are loaded once and orientation is by team code.
-async function scoreMd3EntrySet(tx: Db, entries: Md3PickEntry[], tournamentId: string): Promise<void> {
+// Compute MD3 ScoreBreakdown rows for a set of entries against the live results,
+// WITHOUT upserting. The entry set is caller-chosen (a pool, the standalone set, or
+// a single entry) — results are loaded once and orientation is by team code. This
+// is the body the GameModule (lib/games/md3.ts) calls; the orchestrator owns the
+// upsert. scoreMd3EntrySet below wraps it with the legacy upsert for direct callers.
+export async function computeMd3Breakdowns(
+  tx: Db,
+  entries: Md3PickEntry[],
+  tournamentId: string,
+): Promise<ScoredEntry[]> {
   const results = await loadMd3Results(tx, tournamentId);
   const fixtures = md3Fixtures();
 
+  const out: ScoredEntry[] = [];
   for (const entry of entries) {
     const byMatch = decodePickRows(entry.picks);
     let total = 0;
@@ -117,10 +125,22 @@ async function scoreMd3EntrySet(tx: Db, entries: Md3PickEntry[], tournamentId: s
       md3: total,
       tb: { exact: tb.exact, gd: tb.gd, result: tb.result, goalDelta: tb.goalDelta },
     };
+    out.push({ entryId: entry.id, totalPoints: total, byCategory, perPick });
+  }
+  return out;
+}
+
+// Score a set of MD3 entries against the live results and upsert each
+// ScoreBreakdown. Thin wrapper over computeMd3Breakdowns kept for the direct
+// callers (scoreMd3Pool / scoreStandaloneMd3 / scoreMd3Entry and the migration
+// script); behavior is byte-identical to before the compute/upsert split.
+async function scoreMd3EntrySet(tx: Db, entries: Md3PickEntry[], tournamentId: string): Promise<void> {
+  const scored = await computeMd3Breakdowns(tx, entries, tournamentId);
+  for (const s of scored) {
     await tx.scoreBreakdown.upsert({
-      where: { entryId: entry.id },
-      update: { totalPoints: total, byCategory, perPick, computedAt: new Date() },
-      create: { entryId: entry.id, totalPoints: total, byCategory, perPick },
+      where: { entryId: s.entryId },
+      update: { totalPoints: s.totalPoints, byCategory: s.byCategory as Prisma.InputJsonValue, perPick: s.perPick, computedAt: new Date() },
+      create: { entryId: s.entryId, totalPoints: s.totalPoints, byCategory: s.byCategory as Prisma.InputJsonValue, perPick: s.perPick },
     });
   }
 }
