@@ -4,7 +4,6 @@ import { getTournamentAdmin } from "@/lib/pool/access";
 import { prisma } from "@/lib/db";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { resolveKnockout, inconsistentKnockoutPicks, scoredKnockoutNumbers } from "@/lib/pool/pick-form";
-import { TEAMS, R32, R16, QF, SF, FINAL } from "@/lib/scoring/data";
 import type { PickRow } from "@/lib/pool/picks";
 import type { Picks } from "@/lib/scoring/types";
 import { AWARD_MAP, AWARD_KEYS } from "@/lib/scoring/csv";

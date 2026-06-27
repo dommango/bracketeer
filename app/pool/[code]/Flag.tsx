@@ -25,6 +25,7 @@ export function Flag({
   if (!iso2) return null;
   const height = Math.round(size * 0.75);
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- remote SVG flag from flagcdn; next/image can't optimize SVGs and would need remotePatterns config for a tiny fixed-size asset
     <img
       src={`https://flagcdn.com/${iso2}.svg`}
       alt=""

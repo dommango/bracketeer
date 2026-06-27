@@ -52,7 +52,6 @@ export function KnockoutPickForm({ entryId, slots, awards }: Props) {
           <div className="divide-y divide-black/5 rounded-2xl border border-black/10 bg-white">
             {roundSlots.map((s) => {
               const hasBothTeams = s.teamA && s.teamB;
-              const isAmbiguous = !hasBothTeams;
 
               return (
                 <div
