@@ -26,8 +26,8 @@ export const md3Module: GameModule = {
         ? isDailyKnockoutLocked(matchNo, now)
         : isMd3MatchLocked(matchNo, now))),
   scoreEntries: (tx, entries, ctx) => computeDailyBreakdowns(tx, entries, ctx),
+  // Label-free: total, then the decisive MD3 quality tiebreak. The caller breaks
+  // any remaining display tie by label.
   compareForRank: (a, b) =>
-    b.total - a.total ||
-    compareMd3Tiebreak(a.md3Tiebreak, b.md3Tiebreak) ||
-    a.label.localeCompare(b.label),
+    b.total - a.total || compareMd3Tiebreak(a.md3Tiebreak, b.md3Tiebreak),
 };

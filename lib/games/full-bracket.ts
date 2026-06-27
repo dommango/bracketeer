@@ -26,5 +26,6 @@ export const fullBracketModule: GameModule = {
   isLocked: ({ locksAt, entryLocked = false, now = new Date() }) =>
     locksAt ? arePicksLocked(locksAt, entryLocked, now) : entryLocked,
   scoreEntries: bracketScoreEntries,
-  compareForRank: (a, b) => b.total - a.total || a.label.localeCompare(b.label),
+  // Label-free: rank on total alone; the caller breaks display ties by label.
+  compareForRank: (a, b) => b.total - a.total,
 };
