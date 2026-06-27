@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode, getPoolView, getPoolAnalytics } from "@/lib/pool/queries";
+import { getPoolByCode, getPoolView, getPoolAnalytics, getPoolStandouts } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
 import { getUserEntries } from "@/lib/pool/submit-picks";
 import { PoolAnalytics } from "../PoolAnalytics";
@@ -39,10 +39,11 @@ export default async function BracketsHubPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [poolView, myEntries, analytics] = await Promise.all([
+  const [poolView, myEntries, analytics, standouts] = await Promise.all([
     getPoolView(code),
     sessionUser ? getUserEntries(pool.id, sessionUser.id) : Promise.resolve([]),
     getPoolAnalytics(pool.id),
+    getPoolStandouts(pool.id),
   ]);
   const entryCount = poolView?.leaderboard.length ?? 0;
   const myCount = myEntries.length;
@@ -72,7 +73,7 @@ export default async function BracketsHubPage({
         ) : null}
       </div>
 
-      {analytics ? <PoolAnalytics analytics={analytics} code={code} /> : null}
+      {analytics ? <PoolAnalytics analytics={analytics} code={code} standouts={standouts} /> : null}
     </section>
   );
 }

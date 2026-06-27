@@ -49,6 +49,7 @@ import {
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { buildWinModel, type R32MatchInput } from "@/lib/pool/win-model";
 import { projectStandings, type ProjectionEntry } from "@/lib/pool/expected-points";
+import { buildPoolStandouts, type StandoutInput, type PoolStandouts } from "@/lib/pool/standouts";
 import { groupOverlayBreakdown, type GroupOverlayBreakdown } from "@/lib/pool/group-overlay";
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import type { ImpliedProbs, OutrightProb } from "@/lib/odds/map";
@@ -1324,8 +1325,14 @@ export async function getGoalscorerOutrights(
 }
 
 // A single entry's player profile (hit-grid, accuracy, breakdown, boldest call).
-// Returns null when the entry doesn't belong to this pool.
-export async function getProfile(poolId: string, entryId: string): Promise<Profile | null> {
+// Returns null when the entry doesn't belong to this pool. `includeProjection`
+// (default on) controls the win-model projection — callers that only need the
+// summary (e.g. getHomeStats) opt out so the Home route doesn't pay to build it.
+export async function getProfile(
+  poolId: string,
+  entryId: string,
+  { includeProjection = true }: { includeProjection?: boolean } = {},
+): Promise<Profile | null> {
   const entry = await prisma.entry.findFirst({
     where: { id: entryId, poolId },
     select: { id: true, label: true, picks: true, breakdown: { select: { byCategory: true } } },
@@ -1341,12 +1348,27 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
   // liveLeaderboard (the official board re-ranked by live total), so the profile's
   // headline total + rank match the leaderboard and Home standing card exactly.
   // It's per-request cached, so on the Home route getHomeView already computed it.
-  const [leaderboard, allEntries] = await Promise.all([
+  const locked = arePicksLocked(pool.tournament.startsAt);
+  const [leaderboard, allEntries, projection] = await Promise.all([
     liveLeaderboard(poolId),
     getEntriesWithPicks(poolId),
+    // The projection reveals pick-derived info, so only fetch it once picks lock —
+    // and only when the caller actually renders it.
+    includeProjection && locked ? getPoolProjection(poolId) : Promise.resolve(null),
   ]);
   const row = leaderboard.find((r) => r.entryId === entryId);
   const projected = row?.projected ?? 0;
+
+  const projectionRow = projection?.hasData
+    ? projection.rows.find((r) => r.entryId === entryId)
+    : undefined;
+  const entryProjection = projectionRow
+    ? {
+        expectedRemaining: projectionRow.expectedRemaining,
+        projectedTotal: projectionRow.projectedTotal,
+        projectedRank: projectionRow.projectedRank,
+      }
+    : null;
 
   return buildProfile({
     entryId: entry.id,
@@ -1361,14 +1383,15 @@ export async function getProfile(poolId: string, entryId: string): Promise<Profi
     results: asResults(pool.tournament.officialResults),
     breakdown: (entry.breakdown?.byCategory as Record<string, number> | null) ?? null,
     pickShareByMatch: tallyPickShare(allEntries.map((e) => e.picks)),
-    locked: arePicksLocked(pool.tournament.startsAt),
+    locked,
+    projection: entryProjection,
   });
 }
 
 // Your headline stats for the dashboard, from your primary entry's profile.
 // Null when you have no entry or nothing is decided yet (pre-tournament).
 async function getHomeStats(poolId: string, entryId: string): Promise<HomeStats | null> {
-  const profile = await getProfile(poolId, entryId);
+  const profile = await getProfile(poolId, entryId, { includeProjection: false });
   if (!profile || profile.accuracy.decided === 0) return null;
   return { accuracy: profile.accuracy, boldest: profile.boldest };
 }
@@ -1600,7 +1623,9 @@ const EMPTY_PROJECTION: PoolProjection = { hasData: false, rows: [], fetchedAt: 
 // model (lib/pool/win-model.ts → lib/pool/expected-points.ts). Display-only — never
 // written to ScoreBreakdown or the answer key. Returns hasData=false (and the UI
 // no-ops) whenever the odds integration hasn't populated either market.
-export async function getPoolProjection(poolId: string): Promise<PoolProjection> {
+// Per-request memoized: the leaderboard, profile, and standouts can all reach it
+// on one request without recomputing the model.
+export const getPoolProjection = cache(async (poolId: string): Promise<PoolProjection> => {
   const pool = await prisma.pool.findUnique({
     where: { id: poolId },
     select: {
@@ -1687,6 +1712,33 @@ export async function getPoolProjection(poolId: string): Promise<PoolProjection>
   const fetchedAt = stamps.length ? new Date(Math.max(...stamps)) : null;
 
   return { hasData: true, rows, fetchedAt };
+});
+
+// Pool-level "standouts" (upside / contrarian / diversity) that extend the pick-
+// analytics card. Pick-revealing, so gated behind the same kickoff lock as the
+// analytics card; null pre-lock or with no entries. Upside is empty (but the
+// pick-only lenses still render) when the odds integration has no data.
+export async function getPoolStandouts(poolId: string): Promise<PoolStandouts | null> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournament: { select: { startsAt: true } } },
+  });
+  if (!pool || !arePicksLocked(pool.tournament.startsAt)) return null;
+
+  const [entries, projection] = await Promise.all([
+    getEntriesWithPicks(poolId),
+    getPoolProjection(poolId),
+  ]);
+  if (entries.length === 0) return null;
+
+  const evByEntry = new Map(projection.rows.map((r) => [r.entryId, r.expectedRemaining]));
+  const inputs: StandoutInput[] = entries.map((e) => ({
+    entryId: e.entryId,
+    label: e.label,
+    picks: e.picks,
+    expectedRemaining: projection.hasData ? (evByEntry.get(e.entryId) ?? 0) : null,
+  }));
+  return buildPoolStandouts(inputs);
 }
 
 // Everything the early/projected knockout builder needs: per-R32-match projections

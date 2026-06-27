@@ -52,6 +52,15 @@ export interface BoldestCall {
   sharePct: number; // % of the pool that also got this pick right
 }
 
+// Forward-looking projection for one entry, from the champion + match-odds win
+// model (lib/pool/expected-points.ts). Display-only and pick-revealing, so the
+// query only attaches it once picks have locked; absent when no odds exist.
+export interface EntryProjectionView {
+  expectedRemaining: number; // expected points still to come from the knockout rounds
+  projectedTotal: number; // actual scored total + expectedRemaining
+  projectedRank: number; // projected final placing
+}
+
 export interface Profile {
   entryId: string;
   label: string;
@@ -66,6 +75,8 @@ export interface Profile {
   // This entry's headline picks. Pick-revealing UI is hidden until `locked`.
   selections: EntrySelections;
   locked: boolean; // picks revealed (tournament has kicked off / entry locked)
+  // Win-model projection; null when the odds integration has no data (or pre-lock).
+  projection: EntryProjectionView | null;
 }
 
 const CATEGORY_LABELS: [string, string][] = [
@@ -98,6 +109,8 @@ export interface ProfileInput {
   // Pool-wide winner-pick counts per scored knockout match (for the boldest call).
   pickShareByMatch: Record<number, MatchPickShare>;
   locked: boolean; // whether this entry's picks may be revealed
+  // Win-model projection for this entry; null when unavailable (no odds / pre-lock).
+  projection?: EntryProjectionView | null;
 }
 
 export function buildProfile(input: ProfileInput): Profile {
@@ -173,6 +186,7 @@ export function buildProfile(input: ProfileInput): Profile {
     boldest,
     selections: entrySelections(picks),
     locked: input.locked,
+    projection: input.projection ?? null,
   };
 }
 

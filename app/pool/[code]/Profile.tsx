@@ -1,4 +1,4 @@
-import type { Profile as ProfileData, KnockoutHit } from "@/lib/pool/profile";
+import type { Profile as ProfileData, KnockoutHit, EntryProjectionView } from "@/lib/pool/profile";
 import type { EntrySelections, TeamPick } from "@/lib/pool/pick-analytics";
 import { ROUND_ORDER, roundLabel } from "@/lib/pool/rounds";
 import { teamColor } from "@/lib/teams/colors";
@@ -160,6 +160,54 @@ function Selections({ selections }: { selections: EntrySelections }) {
   );
 }
 
+// One decimal, trailing ".0" dropped — projected points are fractional.
+function fmt(n: number): string {
+  return (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, "");
+}
+
+// Display-only win-model projection for this entry: where they're heading and how
+// much upside is left. Never part of their actual score.
+function ProjectionCard({
+  projection,
+  currentRank,
+}: {
+  projection: EntryProjectionView;
+  currentRank: number;
+}) {
+  const delta = currentRank - projection.projectedRank; // >0 ⇒ projected to climb
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-4">
+      <p className={LABEL}>Projected finish</p>
+      <div className="mt-2 flex items-end gap-4">
+        <div className="leading-none">
+          <span className="font-display text-[40px] text-ink">#{projection.projectedRank}</span>
+          {delta !== 0 ? (
+            <span
+              className="ml-1.5 font-mono text-[11px] font-semibold tabular-nums"
+              style={{ color: delta > 0 ? "var(--positive)" : "var(--negative)" }}
+            >
+              {delta > 0 ? "▲" : "▼"}
+              {Math.abs(delta)}
+            </span>
+          ) : null}
+        </div>
+        <div className="ml-auto text-right leading-none">
+          <span className="font-display text-[32px] tabular-nums text-ink">
+            {fmt(projection.projectedTotal)}
+          </span>
+          <span className="text-xs text-ink-3"> proj pts</span>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-ink-3">
+        {projection.expectedRemaining > 0
+          ? `+${fmt(projection.expectedRemaining)} expected from the knockout rounds, on championship & match odds.`
+          : "No expected points left from the knockout rounds."}{" "}
+        For fun — it never changes your actual score.
+      </p>
+    </div>
+  );
+}
+
 // The reveal banner shown before picks lock — phrased per format, since lock
 // timing differs (full bracket at tournament kickoff, knockout at the R32
 // kickoff). Defaults to neutral wording.
@@ -243,6 +291,9 @@ export function Profile({ profile, format }: { profile: ProfileData; format?: st
 
       {profile.locked ? (
         <>
+          {profile.projection ? (
+            <ProjectionCard projection={profile.projection} currentRank={profile.rank} />
+          ) : null}
           <Selections selections={profile.selections} />
           <div className="rounded-2xl border border-line bg-surface p-4">
             <p className={`${LABEL} mb-3`}>Knockout hit grid</p>
