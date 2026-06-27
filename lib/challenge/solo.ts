@@ -12,6 +12,7 @@ import { upsertUiEntry, getStandaloneEntry } from "@/lib/pool/submit-picks";
 import { recomputeEntry } from "@/lib/pool/scoring";
 import { knockoutOnlyPicks, isKnockoutLocked } from "@/lib/pool/knockout";
 import { validatePicks, inconsistentKnockoutPicks } from "@/lib/pool/pick-form";
+import { validateAdvanceMap, resolveAdvance, type AdvanceMap } from "@/lib/pool/knockout-advance";
 import { CHALLENGE_ENTRY_CAP } from "@/lib/challenge/eligibility";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import type { Picks } from "@/lib/scoring/types";
@@ -63,6 +64,8 @@ export interface SaveSoloInput {
   label: string;
   tiebreak: string;
   picks: Picks;
+  // Positional knockout picks (matchNo -> side) from the early/projected builder.
+  knockoutAdvance?: AdvanceMap;
   tournamentSlug?: string;
 }
 
@@ -86,12 +89,20 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
     throw new Error("Picks are locked — the Round of 32 has kicked off.");
   }
 
-  // The client is untrusted: keep only knockout + awards, then verify every winner
-  // is actually in its match. Early (projected) saves validate against the same
-  // projected seed the builder rendered; once open, the official seed is authority.
+  // The client is untrusted. Keep only knockout + awards. A positional save carries
+  // an AdvanceMap (the source of truth): validate it structurally and materialize
+  // the display team codes server-side against the seed we control. A legacy
+  // team-code save is verified against that seed (early → projectedSeed, else official).
   const validationSeed = open ? seed : projectedSeed;
-  const picks = knockoutOnlyPicks(input.picks);
-  if (inconsistentKnockoutPicks(picks, validationSeed).length > 0) {
+  let picks = knockoutOnlyPicks(input.picks);
+  let knockoutAdvance: AdvanceMap | undefined;
+  if (input.knockoutAdvance !== undefined) {
+    if (!validateAdvanceMap(input.knockoutAdvance)) {
+      throw new Error("Invalid bracket picks.");
+    }
+    knockoutAdvance = input.knockoutAdvance;
+    picks = { ...picks, knockout: resolveAdvance(knockoutAdvance, validationSeed) };
+  } else if (inconsistentKnockoutPicks(picks, validationSeed).length > 0) {
     throw new Error("Some picks aren't valid for this bracket — please reload.");
   }
   const errors = validatePicks(picks);
@@ -113,6 +124,7 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
     picks,
     email: user?.email,
     tiebreak: input.tiebreak,
+    knockoutAdvance,
   });
 
   await recomputeEntry(res.entryId);

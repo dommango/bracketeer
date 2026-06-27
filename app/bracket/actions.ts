@@ -29,6 +29,8 @@ const saveSchema = z.object({
   label: z.string().max(40),
   tiebreak: z.string().max(20),
   picks: picksSchema,
+  // Positional knockout picks (matchNo -> side) from the early/projected builder.
+  knockoutAdvance: z.record(z.string(), z.enum(["a", "b"])).optional(),
 });
 
 export interface SoloSaveResult {
@@ -59,6 +61,7 @@ export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResul
       label: parsed.data.label,
       tiebreak: parsed.data.tiebreak,
       picks: parsed.data.picks as Picks,
+      knockoutAdvance: parsed.data.knockoutAdvance,
     });
     revalidatePath("/bracket");
     revalidatePath("/challenge/knockout");

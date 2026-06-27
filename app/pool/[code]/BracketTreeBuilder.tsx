@@ -11,11 +11,13 @@
 
 import type { KnockoutModel, KnockoutSlot } from "@/lib/pool/pick-form";
 import type { StadiumProjection } from "@/lib/pool/stadium-projection";
+import type { AdvanceMap } from "@/lib/pool/knockout-advance";
 import { ROUND_ACCENT, sortByTree } from "@/lib/pool/bracket-tree";
 import { roundLabel } from "@/lib/pool/rounds";
 import { KnockoutMatch, KO_STAGES } from "./pick-ui";
 
 type OnPick = (matchNo: number, code: string) => void;
+type OnPickSide = (matchNo: number, side: "a" | "b") => void;
 // Per-R32-match projection (position label + ranked candidates), keyed by matchNo.
 // Present only in early/projected mode; undefined otherwise.
 type Projections = Record<number, StadiumProjection> | undefined;
@@ -43,11 +45,15 @@ function BracketTreeBuilder({
   ko,
   disabled,
   onPick,
+  onPickSide,
+  advance,
   projections,
 }: {
   ko: KnockoutModel;
   disabled: boolean;
   onPick: OnPick;
+  onPickSide?: OnPickSide;
+  advance?: AdvanceMap;
   projections: Projections;
 }) {
   const slotsFor = (key: keyof KnockoutModel): KnockoutSlot[] =>
@@ -74,6 +80,8 @@ function BracketTreeBuilder({
                       slot={slot}
                       disabled={disabled}
                       onPick={onPick}
+                      onPickSide={onPickSide}
+                      pickedSide={advance?.[slot.matchNo]}
                       projection={projections?.[slot.matchNo]}
                     />
                   </div>
@@ -91,11 +99,15 @@ export function KnockoutCascade({
   ko,
   disabled,
   onPick,
+  onPickSide,
+  advance,
   projections,
 }: {
   ko: KnockoutModel;
   disabled: boolean;
   onPick: OnPick;
+  onPickSide?: OnPickSide;
+  advance?: AdvanceMap;
   projections?: Projections;
 }) {
   return (
@@ -116,6 +128,8 @@ export function KnockoutCascade({
                     slot={slot}
                     disabled={disabled}
                     onPick={onPick}
+                    onPickSide={onPickSide}
+                    pickedSide={advance?.[slot.matchNo]}
                     projection={projections?.[slot.matchNo]}
                   />
                 ))}
@@ -128,14 +142,27 @@ export function KnockoutCascade({
             Final
           </p>
           <div className="sm:max-w-[50%]">
-            <KnockoutMatch slot={ko.final} disabled={disabled} onPick={onPick} />
+            <KnockoutMatch
+              slot={ko.final}
+              disabled={disabled}
+              onPick={onPick}
+              onPickSide={onPickSide}
+              pickedSide={advance?.[ko.final.matchNo]}
+            />
           </div>
         </div>
       </div>
 
       {/* Desktop: the interactive bracket tree. */}
       <div className="hidden lg:block">
-        <BracketTreeBuilder ko={ko} disabled={disabled} onPick={onPick} projections={projections} />
+        <BracketTreeBuilder
+          ko={ko}
+          disabled={disabled}
+          onPick={onPick}
+          onPickSide={onPickSide}
+          advance={advance}
+          projections={projections}
+        />
       </div>
     </>
   );
