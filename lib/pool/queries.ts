@@ -47,6 +47,8 @@ import {
   type StadiumProjection,
 } from "@/lib/pool/stadium-projection";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
+import { buildWinModel, type R32MatchInput } from "@/lib/pool/win-model";
+import { projectStandings, type ProjectionEntry } from "@/lib/pool/expected-points";
 import { groupOverlayBreakdown, type GroupOverlayBreakdown } from "@/lib/pool/group-overlay";
 import { TEAMS, GROUPS } from "@/lib/scoring/data";
 import type { ImpliedProbs, OutrightProb } from "@/lib/odds/map";
@@ -1572,6 +1574,119 @@ export async function getStadiumProjections(poolId: string): Promise<StadiumProj
   });
   if (!pool) return [];
   return getStadiumProjectionsForTournament(pool.tournamentId);
+}
+
+export interface PoolProjectionRow {
+  entryId: string;
+  label: string;
+  userId: string | null;
+  actualPoints: number;
+  expectedRemaining: number;
+  projectedTotal: number;
+  projectedRank: number;
+  currentRank: number; // official rank now, so the UI can show projected movement
+}
+
+export interface PoolProjection {
+  hasData: boolean; // false when no usable odds — caller renders nothing
+  rows: PoolProjectionRow[]; // ordered by projected rank (best first)
+  fetchedAt: Date | null; // latest odds timestamp used, for an "updated…" stamp
+}
+
+const EMPTY_PROJECTION: PoolProjection = { hasData: false, rows: [], fetchedAt: null };
+
+// Probabilistic leaderboard projection: each entry's expected remaining knockout
+// points and projected final rank, from the champion-outright + R32 match-odds win
+// model (lib/pool/win-model.ts → lib/pool/expected-points.ts). Display-only — never
+// written to ScoreBreakdown or the answer key. Returns hasData=false (and the UI
+// no-ops) whenever the odds integration hasn't populated either market.
+export async function getPoolProjection(poolId: string): Promise<PoolProjection> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: {
+      tournamentId: true,
+      tournament: { select: { officialResults: true, scoringConfig: true } },
+    },
+  });
+  if (!pool) return EMPTY_PROJECTION;
+
+  const results = asResults(pool.tournament.officialResults);
+  const cfg = asScoringConfig(pool.tournament.scoringConfig);
+  const resolved = resolveBracket(results);
+  const decided = (results.knockout ?? {}) as Record<number, string>;
+
+  // R32 match odds (matches 73–88), oriented to the resolved/real home team exactly
+  // as the upset radar reads them. Plus champion outrights for the tournament.
+  const [r32Matches, outrightRows] = await Promise.all([
+    prisma.match.findMany({
+      where: { tournamentId: pool.tournamentId, matchNo: { gte: 73, lte: 88 } },
+      select: {
+        matchNo: true,
+        odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true, fetchedAt: true } },
+        result: { select: { homeTeamCode: true, awayTeamCode: true } },
+      },
+    }),
+    prisma.teamOutright.findMany({
+      where: { tournamentId: pool.tournamentId },
+      select: { teamCode: true, winProb: true, fetchedAt: true },
+    }),
+  ]);
+
+  const r32: R32MatchInput[] = r32Matches.map((m) => {
+    const r = resolved[m.matchNo];
+    return {
+      matchId: m.matchNo,
+      homeCode: m.result?.homeTeamCode ?? r?.home ?? null,
+      awayCode: m.result?.awayTeamCode ?? r?.away ?? null,
+      homeWinProb: m.odds?.homeWinProb ?? null,
+      drawProb: m.odds?.drawProb ?? null,
+      awayWinProb: m.odds?.awayWinProb ?? null,
+    };
+  });
+
+  const outrights: Record<string, number> = {};
+  for (const o of outrightRows) outrights[o.teamCode] = o.winProb;
+
+  const model = buildWinModel({ r32, outrights, decided });
+  if (!model.hasData) return EMPTY_PROJECTION;
+
+  // Actual totals (official scored points) + decoded knockout picks per entry.
+  const [leaderboard, entries] = await Promise.all([
+    getLeaderboard(poolId),
+    getEntriesWithPicks(poolId),
+  ]);
+  const totalByEntry = new Map(leaderboard.map((r) => [r.entryId, r.total]));
+  const currentRankByEntry = new Map(leaderboard.map((r) => [r.entryId, r.rank]));
+
+  const projectionEntries: ProjectionEntry[] = entries.map((e) => ({
+    entryId: e.entryId,
+    actualPoints: totalByEntry.get(e.entryId) ?? 0,
+    knockout: e.picks.knockout ?? {},
+  }));
+
+  const labelByEntry = new Map(entries.map((e) => [e.entryId, e.label]));
+  const userByEntry = new Map(leaderboard.map((r) => [r.entryId, r.userId]));
+
+  const rows: PoolProjectionRow[] = projectStandings(projectionEntries, model, decided, cfg).map(
+    (p) => ({
+      entryId: p.entryId,
+      label: labelByEntry.get(p.entryId) ?? "—",
+      userId: userByEntry.get(p.entryId) ?? null,
+      actualPoints: p.actualPoints,
+      expectedRemaining: p.expectedRemaining,
+      projectedTotal: p.projectedTotal,
+      projectedRank: p.projectedRank,
+      currentRank: currentRankByEntry.get(p.entryId) ?? p.projectedRank,
+    }),
+  );
+
+  // Freshness stamp: the most recent odds timestamp behind the model.
+  const stamps: number[] = [];
+  for (const m of r32Matches) if (m.odds?.fetchedAt) stamps.push(m.odds.fetchedAt.getTime());
+  for (const o of outrightRows) stamps.push(o.fetchedAt.getTime());
+  const fetchedAt = stamps.length ? new Date(Math.max(...stamps)) : null;
+
+  return { hasData: true, rows, fetchedAt };
 }
 
 // Everything the early/projected knockout builder needs: per-R32-match projections
