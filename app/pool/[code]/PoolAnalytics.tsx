@@ -2,8 +2,69 @@ import { Flag } from "./Flag";
 import { TeamLink } from "./TeamLink";
 import { teamColor } from "@/lib/teams/colors";
 import type { PickAnalytics, PickTally } from "@/lib/pool/pick-analytics";
+import type { PoolStandouts, StandoutRow } from "@/lib/pool/standouts";
 
 const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+
+// One decimal, trailing ".0" dropped — EV points are fractional.
+function fmtEv(n: number): string {
+  return (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, "");
+}
+
+// A compact entry leaderboard (upside / contrarian), each row label + a value.
+function StandoutList({ rows, suffix }: { rows: StandoutRow[]; suffix: (r: StandoutRow) => string }) {
+  return (
+    <ol className="mt-2 space-y-1">
+      {rows.map((r, i) => (
+        <li key={r.entryId} className="flex items-center gap-2.5 text-sm">
+          <span className="w-4 shrink-0 text-center font-mono text-[11px] text-ink-4">{i + 1}</span>
+          <span className="min-w-0 flex-1 truncate text-ink">{r.label}</span>
+          <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-ink-2">
+            {suffix(r)}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+// Pool-level "standouts" appended to the analytics card: who has the most upside
+// left (EV), the boldest brackets (contrarian), and how spread the title race is.
+function Standouts({ standouts }: { standouts: PoolStandouts }) {
+  const { upside, contrarian, diversity } = standouts;
+  if (upside.length === 0 && contrarian.length === 0) return null;
+  return (
+    <>
+      {upside.length > 0 ? (
+        <div>
+          <p className={LABEL}>Most upside</p>
+          <p className="mt-1 text-[11px] text-ink-4">Expected points still to come, on the odds.</p>
+          <StandoutList rows={upside} suffix={(r) => `+${fmtEv(r.value)}`} />
+        </div>
+      ) : null}
+
+      {contrarian.length > 0 ? (
+        <div>
+          <p className={LABEL}>Boldest brackets</p>
+          <p className="mt-1 text-[11px] text-ink-4">
+            Champion, finalists &amp; group winners the pool least shares.
+          </p>
+          <StandoutList rows={contrarian} suffix={(r) => `${r.value}`} />
+        </div>
+      ) : null}
+
+      <div>
+        <p className={LABEL}>Title-race diversity</p>
+        <p className="mt-1 text-sm text-ink-2">
+          <span className="font-semibold text-ink">{diversity.distinctChampions}</span> distinct{" "}
+          {diversity.distinctChampions === 1 ? "champion" : "champions"} backed
+          <span className="text-ink-4"> · </span>
+          spread index <span className="font-mono font-semibold">{diversity.index.toFixed(2)}</span>
+        </p>
+      </div>
+    </>
+  );
+}
 
 // One ranked pick with a team-colored share bar (mirrors ChampionshipOdds).
 function TallyRow({ t, code }: { t: PickTally; code: string }) {
@@ -29,7 +90,15 @@ function TallyRow({ t, code }: { t: PickTally; code: string }) {
 }
 
 // Pool-wide pick consensus: who the group backed, drawn from everyone's brackets.
-export function PoolAnalytics({ analytics, code }: { analytics: PickAnalytics; code: string }) {
+export function PoolAnalytics({
+  analytics,
+  code,
+  standouts,
+}: {
+  analytics: PickAnalytics;
+  code: string;
+  standouts?: PoolStandouts | null;
+}) {
   const { champion, finalists, groupWinners, contrarian, totalEntries } = analytics;
   if (totalEntries === 0 || !champion.top) return null;
 
@@ -136,6 +205,8 @@ export function PoolAnalytics({ analytics, code }: { analytics: PickAnalytics; c
             </div>
           </div>
         ) : null}
+
+        {standouts ? <Standouts standouts={standouts} /> : null}
       </div>
     </section>
   );
