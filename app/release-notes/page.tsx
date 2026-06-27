@@ -8,6 +8,19 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.14.0",
+    date: "June 27, 2026",
+    title: "One home for Match Day Pickem and the Knockout Challenge",
+    notes: [
+      "Match Day Pickem and the Knockout Challenge now share one set of tabs — flip between the two games with a tap instead of hunting for the right screen.",
+      "Picks: make your scoreline predictions and build your knockout bracket from a single Picks tab.",
+      "Matches: one tournament-wide view — group standings and fixtures, the knockout bracket, scorers and odds — with both your scoreline and winner picks marked.",
+      "The live scoreboard and match-updates feed now stay the same across both games, so “what’s on now” doesn’t change when you switch.",
+      "Your pick count now shows what you’ve predicted, what’s still open, and what you missed after kickoff.",
+      "Plus a refreshed home with a cycling game spotlight, tappable game cards, and wider, roomier screens.",
+    ],
+  },
+  {
     version: "0.13.0",
     date: "June 26, 2026",
     title: "Match Day Pickem home & leaderboard polish",
