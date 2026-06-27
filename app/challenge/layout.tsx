@@ -10,7 +10,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen pb-[calc(72px+env(safe-area-inset-bottom))]">
       <ChallengeRealtime />
-      <main className="mx-auto max-w-[480px] px-5 py-8">
+      <main className="mx-auto max-w-2xl px-5 py-8">
         {children}
         <Footer />
       </main>

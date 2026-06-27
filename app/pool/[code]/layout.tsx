@@ -41,7 +41,13 @@ export default async function PoolLayout({
       <PoolRealtime poolId={pool.id} />
 
       <main className="mx-auto max-w-2xl px-4 py-8">
-        <header className="relative overflow-hidden rounded-3xl bg-pitch p-6 text-white shadow-[var(--shadow-md)]">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.1em] text-ink-3 underline-offset-2 hover:text-ink"
+        >
+          <span aria-hidden="true">←</span> Bracketeer
+        </Link>
+        <header className="relative mt-3 overflow-hidden rounded-3xl bg-pitch p-6 text-white shadow-[var(--shadow-md)]">
           <div
             className="absolute inset-0"
             style={{
@@ -62,14 +68,8 @@ export default async function PoolLayout({
             }}
           />
           <div className="relative">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.1em] text-white/85 underline-offset-2 hover:text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]"
-            >
-              <span aria-hidden="true">←</span> Bracketeer
-            </Link>
             <div
-              className="mt-3 inline-block min-w-0 max-w-full rounded-2xl px-4 py-3"
+              className="inline-block min-w-0 max-w-full rounded-2xl px-4 py-3"
               style={{
                 background: "rgba(0,0,0,0.42)",
                 backdropFilter: "blur(12px)",

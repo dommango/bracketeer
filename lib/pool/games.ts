@@ -202,23 +202,30 @@ export function prizeTeaser(format: PoolFormat): string | null {
   return `Top the challenge — win ${prize.description}.`;
 }
 
-const MONTH_DAY = new Intl.DateTimeFormat("en-GB", {
-  month: "short",
+const MONTH_DAY = new Intl.DateTimeFormat("en-US", {
+  month: "long",
   day: "numeric",
   timeZone: "UTC",
 });
 
 function dayLabel(d: Date): string {
-  return MONTH_DAY.format(d); // e.g. "24 Jun"
+  return MONTH_DAY.format(d); // e.g. "June 24"
 }
 
 // The calendar span of the Match Day Pickem fixtures (first → last kickoff), for
 // copy that tells players which games they're predicting and when. UTC-framed to
-// match the rest of this module's date labels (gameStateLine). e.g. "24 – 28 Jun".
+// match the rest of this module's date labels (gameStateLine). Same-month spans
+// collapse the second month, e.g. "June 24–27"; cross-month stays "June 24 – July 2".
 export function md3DateRange(): string {
-  const first = dayLabel(firstMd3Kickoff());
-  const last = dayLabel(lastMd3Kickoff());
-  return first === last ? first : `${first} – ${last}`;
+  const first = firstMd3Kickoff();
+  const last = lastMd3Kickoff();
+  if (first.getUTCMonth() === last.getUTCMonth() && first.getUTCDate() === last.getUTCDate()) {
+    return dayLabel(first);
+  }
+  if (first.getUTCMonth() === last.getUTCMonth()) {
+    return `${dayLabel(first)}–${last.getUTCDate()}`;
+  }
+  return `${dayLabel(first)} – ${dayLabel(last)}`;
 }
 
 // A short, friendly state line for a game card / badge, derived from the phase.

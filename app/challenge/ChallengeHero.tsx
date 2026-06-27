@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { PoolFormat } from "@/lib/pool/manage";
 import { GAME_CATALOG, gameStateLine, prizeTeaser } from "@/lib/pool/games";
 
@@ -30,14 +29,8 @@ export function ChallengeHero({ format }: { format: PoolFormat }) {
         }}
       />
       <div className="relative">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.1em] text-white/85 underline-offset-2 hover:text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]"
-        >
-          <span aria-hidden="true">←</span> Bracketeer
-        </Link>
         <div
-          className="mt-3 inline-block min-w-0 max-w-full rounded-2xl px-4 py-3"
+          className="inline-block min-w-0 max-w-full rounded-2xl px-4 py-3"
           style={{
             background: "rgba(0,0,0,0.42)",
             backdropFilter: "blur(12px)",
