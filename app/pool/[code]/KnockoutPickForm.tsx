@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { resolveKnockout, knockoutOnlyProgress } from "@/lib/pool/pick-form";
+import { resolveKnockout } from "@/lib/pool/pick-form";
 import {
   resolveAdvance,
   deriveAdvance,
   quickFillFavorites,
+  advanceProgress,
   type AdvanceMap,
 } from "@/lib/pool/knockout-advance";
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
@@ -24,6 +25,7 @@ export type SaveBracket = (payload: {
   label: string;
   tiebreak: string;
   picks: Picks;
+  knockoutAdvance: AdvanceMap;
 }) => Promise<{ ok: boolean; error?: string; entryId?: string }>;
 
 // Knockout-only bracket builder: the 32 qualifiers are fixed by the official R32
@@ -37,6 +39,7 @@ export function KnockoutPickForm({
   code,
   entryId,
   initialPicks,
+  initialAdvance,
   initialTiebreak,
   label,
   locked,
@@ -50,6 +53,10 @@ export function KnockoutPickForm({
   code?: string;
   entryId?: string;
   initialPicks: Picks;
+  // The bracket's saved positional picks, if it was built early. Re-hydrates the
+  // AdvanceMap so early picks survive reloads; falls back to deriving from the
+  // team-code picks (legacy / full-bracket entries).
+  initialAdvance?: AdvanceMap;
   initialTiebreak: string;
   label: string;
   locked: boolean;
@@ -72,7 +79,9 @@ export function KnockoutPickForm({
   // projected slot firms up to a different team, the same map re-resolves to it, so
   // an early pick carries forward instead of being dropped.
   const [advance, setAdvance] = useState<AdvanceMap>(() =>
-    deriveAdvance((initialPicks ?? emptyPicks()).knockout, seed),
+    initialAdvance && Object.keys(initialAdvance).length > 0
+      ? initialAdvance
+      : deriveAdvance((initialPicks ?? emptyPicks()).knockout, seed),
   );
   const [tiebreak, setTiebreak] = useState(initialTiebreak);
   const [saved, setSaved] = useState<string | null>(null);
@@ -88,16 +97,13 @@ export function KnockoutPickForm({
     [advance, seed],
   );
   const ko = useMemo(() => resolveKnockout(picks, seed), [picks, seed]);
-  const progress = useMemo(() => knockoutOnlyProgress(picks), [picks]);
+  // Progress by position (sides chosen / 31) — reads fully even before teams seat.
+  const progress = useMemo(() => advanceProgress(advance), [advance]);
+  const complete = progress.done === progress.total;
 
-  // The card taps a side's projected team; map it back to which side advances.
-  const pickWinner = (matchNo: number, teamCode: string) => {
+  // Advance a side positionally — works whether or not a team is seated yet.
+  const pickSide = (matchNo: number, side: "a" | "b") => {
     setSaved(null);
-    const slot = [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ko.final].find(
-      (s) => s.matchNo === matchNo,
-    );
-    const side = slot?.a?.code === teamCode ? "a" : slot?.b?.code === teamCode ? "b" : null;
-    if (!side) return;
     setAdvance((prev) => ({ ...prev, [matchNo]: side }));
   };
 
@@ -111,8 +117,15 @@ export function KnockoutPickForm({
     setSaved(null);
     startTransition(async () => {
       const res = saveAction
-        ? await saveAction({ entryId: currentEntryId, label, tiebreak, picks })
-        : await submitPicksAction({ code: code ?? "", entryId: currentEntryId, label, tiebreak, picks });
+        ? await saveAction({ entryId: currentEntryId, label, tiebreak, picks, knockoutAdvance: advance })
+        : await submitPicksAction({
+            code: code ?? "",
+            entryId: currentEntryId,
+            label,
+            tiebreak,
+            picks,
+            knockoutAdvance: advance,
+          });
       if (res.ok) {
         setSaved("Picks saved");
         if (res.entryId) setCurrentEntryId(res.entryId);
@@ -130,16 +143,16 @@ export function KnockoutPickForm({
               <span className={LABEL}>
                 {locked
                   ? "Your bracket — locked"
-                  : progress.complete
+                  : complete
                     ? "Bracket complete"
                     : "Your bracket"}
               </span>
               <span className="font-mono text-xs tabular-nums text-ink-3">
-                {progress.overall.done}/{progress.overall.total}
+                {progress.done}/{progress.total}
               </span>
             </div>
             <div className="mt-1.5">
-              <Bar done={progress.overall.done} total={progress.overall.total} />
+              <Bar done={progress.done} total={progress.total} />
             </div>
           </div>
           {locked ? null : (
@@ -174,7 +187,7 @@ export function KnockoutPickForm({
               </button>
             ) : null}
             <span className="font-mono text-xs tabular-nums text-ink-3">
-              {progress.knockout.done}/{progress.knockout.total}
+              {progress.done}/{progress.total}
             </span>
           </div>
         </div>
@@ -197,7 +210,9 @@ export function KnockoutPickForm({
         <KnockoutCascade
           ko={ko}
           disabled={locked}
-          onPick={pickWinner}
+          onPick={() => {}}
+          onPickSide={pickSide}
+          advance={advance}
           projections={early ? projections : undefined}
         />
       </section>
@@ -234,7 +249,7 @@ export function KnockoutPickForm({
           disabled={pending}
           className="inline-flex h-12 w-full items-center justify-center rounded-full bg-pitch px-4 font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
         >
-          {pending ? "Saving…" : progress.complete ? "Save complete bracket" : "Save picks"}
+          {pending ? "Saving…" : complete ? "Save complete bracket" : "Save picks"}
         </button>
       )}
     </div>

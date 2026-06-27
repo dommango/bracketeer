@@ -145,6 +145,7 @@ export default async function PicksPage({
           code={code}
           entryId={entry?.entryId}
           initialPicks={entry?.picks ?? emptyPicks()}
+          initialAdvance={entry?.knockoutAdvance}
           initialTiebreak={entry?.tiebreak ?? ""}
           label={label}
           locked={locked}

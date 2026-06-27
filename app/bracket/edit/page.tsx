@@ -82,6 +82,7 @@ export default async function SoloBracketEditPage({
       <KnockoutPickForm
         entryId={bracket?.entryId}
         initialPicks={bracket?.picks ?? emptyPicks()}
+        initialAdvance={bracket?.knockoutAdvance}
         initialTiebreak={bracket?.tiebreak ?? ""}
         label={bracket?.label ?? user.name ?? "Player"}
         locked={locked}

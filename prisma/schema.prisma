@@ -512,6 +512,13 @@ model Entry {
   // challenge. Default false (private — scored and visible only to the owner).
   // Knockout-only; irrelevant/harmless for full-bracket entries in ordinary pools.
   enteredChallenge Boolean @default(false)
+  // Positional knockout picks: an AdvanceMap (matchNo -> "a"|"b") for brackets
+  // built early against projected/placeholder seeds. The source of truth for
+  // knockout winners on these entries — resolved to team codes against the live
+  // seed for display and against the official seed at scoring time. Null for
+  // full-bracket / CSV-imported / pre-feature entries (they score from Pick rows
+  // as before). NOT part of the CSV/Pick mirror, so import/export are unchanged.
+  knockoutAdvance Json?
   createdAt   DateTime     @default(now())
 
   tournament Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)

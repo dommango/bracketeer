@@ -8,6 +8,7 @@ import { arePicksLocked } from "@/lib/pool/lock";
 import { upsertUiEntry } from "@/lib/pool/submit-picks";
 import { validatePicks, inconsistentKnockoutPicks } from "@/lib/pool/pick-form";
 import { isKnockoutLocked, knockoutOnlyPicks } from "@/lib/pool/knockout";
+import { validateAdvanceMap, resolveAdvance, type AdvanceMap } from "@/lib/pool/knockout-advance";
 import { recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
 import { rateLimit } from "@/lib/rate-limit";
@@ -36,6 +37,8 @@ const inputSchema = z.object({
   label: z.string().max(40),
   tiebreak: z.string().max(20),
   picks: picksSchema,
+  // Positional knockout picks (matchNo -> side) from the early/projected builder.
+  knockoutAdvance: z.record(z.string(), z.enum(["a", "b"])).optional(),
 });
 
 export interface SubmitPicksResult {
@@ -52,6 +55,16 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
   const parsed = inputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid picks payload." };
   const { code, entryId, label, tiebreak, picks } = parsed.data;
+
+  // The positional AdvanceMap, when the early builder sent one. Structurally
+  // validated below; it becomes the source of truth for knockout winners.
+  let knockoutAdvance: AdvanceMap | undefined;
+  if (parsed.data.knockoutAdvance !== undefined) {
+    if (!validateAdvanceMap(parsed.data.knockoutAdvance)) {
+      return { ok: false, error: "Invalid bracket picks." };
+    }
+    knockoutAdvance = parsed.data.knockoutAdvance;
+  }
 
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "Sign in to submit your picks." };
@@ -80,12 +93,16 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
     if (isKnockoutLocked(locksAt)) {
       return { ok: false, error: "Picks are locked — the Round of 32 has kicked off." };
     }
-    // Keep only knockout + awards (drop any group data adopted from a CSV import),
-    // then reject winners that aren't actually in their match. Early (projected)
-    // saves validate against the same projected seed the builder rendered; once
-    // open, the official seed is the authority. The client is untrusted either way.
+    // Keep only knockout + awards (drop any group data adopted from a CSV import).
     picksToSave = knockoutOnlyPicks(picksToSave);
-    if (inconsistentKnockoutPicks(picksToSave, open ? seed : projectedSeed).length > 0) {
+    const activeSeed = open ? seed : projectedSeed;
+    if (knockoutAdvance) {
+      // Positional builder: the AdvanceMap is the source of truth. Materialize the
+      // display team codes server-side against the seed we control (so stored rows
+      // can't be spoofed); scoring re-resolves against the official seed later.
+      picksToSave = { ...picksToSave, knockout: resolveAdvance(knockoutAdvance, activeSeed) };
+    } else if (inconsistentKnockoutPicks(picksToSave, activeSeed).length > 0) {
+      // Legacy team-code save (no AdvanceMap): reject winners not in their match.
       return { ok: false, error: "Some picks aren't valid for this bracket — please reload." };
     }
   } else if (arePicksLocked(pool.tournament.startsAt)) {
@@ -105,6 +122,7 @@ export async function submitPicksAction(raw: unknown): Promise<SubmitPicksResult
       picks: picksToSave,
       email: user.email,
       tiebreak,
+      knockoutAdvance,
     });
   } catch (err) {
     return { ok: false, error: (err as Error).message };

@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { scorePicks, type ScoringConfig, DEFAULT_SCORING } from "@/lib/scoring/score";
 import { pickRowsToSubmission } from "@/lib/pool/picks";
+import { knockoutR32Seed } from "@/lib/pool/knockout";
+import { resolveAdvance, validateAdvanceMap } from "@/lib/pool/knockout-advance";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
 import { snapshotsToWrite, type SnapshotPoint } from "@/lib/pool/movers";
 import { assignRanks } from "@/lib/pool/rank";
@@ -77,7 +79,14 @@ export async function recomputePool(poolId: string) {
 // upsert each ScoreBreakdown. Pool-independent — shared by recomputePool, the
 // per-entry recompute, and the standalone recompute. Writes the cache only; it
 // never touches snapshots (those are a pool concern).
-type ScorableEntry = { id: string; picks: Parameters<typeof pickRowsToSubmission>[0] };
+type ScorableEntry = {
+  id: string;
+  picks: Parameters<typeof pickRowsToSubmission>[0];
+  // Positional knockout picks, when this bracket was built early. Present (non-null)
+  // only for positional entries; null/absent for full-bracket, CSV, and pre-feature
+  // entries, which score from their Pick rows exactly as before.
+  knockoutAdvance?: unknown;
+};
 
 async function scoreEntryBreakdowns(
   tx: Db,
@@ -87,6 +96,12 @@ async function scoreEntryBreakdowns(
 ): Promise<void> {
   for (const entry of entries) {
     const sub = pickRowsToSubmission(entry.picks);
+    // A positional bracket's winners come from its AdvanceMap, resolved against the
+    // OFFICIAL seed — so an early pick scores correctly however stale its Pick rows
+    // are. scorePicks still only ever sees team codes, so parity is untouched.
+    if (entry.knockoutAdvance != null && validateAdvanceMap(entry.knockoutAdvance)) {
+      sub.picks.knockout = resolveAdvance(entry.knockoutAdvance, knockoutR32Seed(answer));
+    }
     const { total, breakdown } = scorePicks(sub.picks, answer, cfg);
     await tx.scoreBreakdown.upsert({
       where: { entryId: entry.id },

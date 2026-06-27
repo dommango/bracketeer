@@ -27,6 +27,40 @@ export type AdvanceMap = Record<number, "a" | "b">;
 // R32, QF off R16, SF off QF, Final off SF, so walking this order resolves cleanly.
 const DOWNSTREAM = [...R16, ...QF, ...SF, FINAL];
 
+// Every scored knockout match (R32 → Final, 31 total; bronze excluded). The set of
+// match numbers a valid AdvanceMap may key on.
+const SCORED_MATCH_IDS = new Set<number>([...R32, ...DOWNSTREAM].map((m) => m.id));
+
+// Structural validation of an untrusted AdvanceMap (e.g. a save payload or a stored
+// JSON value): every key is a scored knockout match number and every value is a
+// side. Empty is valid (a partial draft). Positional picks are always structurally
+// valid — there is no seed to check against — so this replaces the team-code gate
+// (inconsistentKnockoutPicks) for early/projected saves.
+export function validateAdvanceMap(advance: unknown): advance is AdvanceMap {
+  if (!advance || typeof advance !== "object" || Array.isArray(advance)) return false;
+  for (const [k, v] of Object.entries(advance as Record<string, unknown>)) {
+    if (!SCORED_MATCH_IDS.has(Number(k))) return false;
+    if (v !== "a" && v !== "b") return false;
+  }
+  return true;
+}
+
+// Coerce a persisted JSON value to an AdvanceMap, falling back to empty when it's
+// missing or malformed (so a bad row degrades to "no positional picks", never throws).
+export function asAdvanceMap(value: unknown): AdvanceMap {
+  return validateAdvanceMap(value) ? value : {};
+}
+
+// Completion by *position*: how many of the 31 scored matches have a side chosen.
+// Reads fully (31/31) even before any team is known, unlike team-code progress.
+export function advanceProgress(advance: AdvanceMap): { done: number; total: number } {
+  let done = 0;
+  for (const id of SCORED_MATCH_IDS) {
+    if (advance[id] === "a" || advance[id] === "b") done++;
+  }
+  return { done, total: SCORED_MATCH_IDS.size };
+}
+
 // AdvanceMap → concrete winner team codes, resolved against the current seed.
 // R32 competitors come from the seed; later rounds from the winners we resolve as
 // we go. A match with no chosen side, or whose chosen competitor isn't seated yet

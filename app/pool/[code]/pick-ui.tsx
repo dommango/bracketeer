@@ -8,6 +8,7 @@ import { resolveKnockout, type KnockoutSlot } from "@/lib/pool/pick-form";
 import type { Picks } from "@/lib/scoring/types";
 import type { StadiumProjection, R32SlotProjection } from "@/lib/pool/stadium-projection";
 import { ROUND_ACCENT, roundCodeForMatch } from "@/lib/pool/bracket-tree";
+import { slotLabel, KNOCKOUT_SLOT_REFS } from "@/lib/pool/slot-label";
 import { kickoffFor, venueFor } from "@/lib/scoring/schedule";
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
@@ -59,33 +60,49 @@ function candidateLine(proj: R32SlotProjection): string {
 //
 // In early/projected mode the card also gets a `projection`: a side whose group
 // hasn't decided shows its POSITION ("Group A Winner") with the likely teams under
-// it instead of a concrete team — tapping still advances that side (storing the
-// current projected occupant), and it swaps to the real team once the group lands.
+// it. With `onPickSide` (the positional builder) EVERY row is tappable even with no
+// team seated — you advance the *position* ("Group A Winner" beats "Group B
+// Runner-up"), which resolves to the real team live; `pickedSide` highlights the
+// chosen side. Without it (full-bracket PickForm) the card keeps the team-code path,
+// pickable only once both teams are seated.
 export function KnockoutMatch({
   slot,
   disabled,
   onPick,
+  onPickSide,
+  pickedSide,
   projection,
 }: {
   slot: KnockoutSlot;
   disabled: boolean;
   onPick: (matchNo: number, code: string) => void;
+  // Positional pick callback — when present, rows pick by side, always enabled.
+  onPickSide?: (matchNo: number, side: "a" | "b") => void;
+  pickedSide?: "a" | "b";
   projection?: StadiumProjection;
 }) {
+  const positional = Boolean(onPickSide);
   const ready = Boolean(slot.a && slot.b);
-  const hasPick = Boolean(slot.pick);
+  const hasPick = positional ? Boolean(pickedSide) : Boolean(slot.pick);
 
-  const row = (side: KnockoutSlot["a"], proj?: R32SlotProjection) => {
-    const picked = Boolean(side && slot.pick === side.code);
+  const row = (sideKey: "a" | "b", side: KnockoutSlot["a"], proj?: R32SlotProjection) => {
+    const picked = positional ? pickedSide === sideKey : Boolean(side && slot.pick === side.code);
     const dimmed = hasPick && !picked;
     // Show the position + candidates only while the slot is genuinely undecided.
     const showProjected = Boolean(proj && !proj.decided);
-    const headline = showProjected ? proj!.label : side ? side.name : "—";
+    // Headline: concrete team where seated; else the projected position label; else
+    // (positional, no team, no projection — e.g. R16+ feeders) the structural slot.
+    const structural = slotLabel(KNOCKOUT_SLOT_REFS[slot.matchNo]?.[sideKey === "a" ? 0 : 1]);
+    const headline = showProjected ? proj!.label : side ? side.name : positional ? structural : "—";
+    const canTap = positional ? !disabled : !disabled && ready && Boolean(side);
     return (
       <button
         type="button"
-        disabled={disabled || !ready || !side}
-        onClick={() => side && onPick(slot.matchNo, side.code)}
+        disabled={!canTap}
+        onClick={() => {
+          if (onPickSide) onPickSide(slot.matchNo, sideKey);
+          else if (side) onPick(slot.matchNo, side.code);
+        }}
         aria-pressed={picked}
         className={`flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors duration-[var(--dur-2)] [transition-timing-function:var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pitch disabled:cursor-not-allowed motion-reduce:transition-none ${
           picked ? "bg-pitch-tint" : "enabled:hover:bg-surface-sunk"
@@ -148,9 +165,9 @@ export function KnockoutMatch({
           <span className="font-mono text-[10px] text-ink-3">{formatKickoff(kickoff.toISOString())}</span>
         ) : null}
       </div>
-      {row(slot.a, projection?.a)}
+      {row("a", slot.a, projection?.a)}
       <div className="my-0.5 h-px bg-line-soft" />
-      {row(slot.b, projection?.b)}
+      {row("b", slot.b, projection?.b)}
       {venue ? (
         <div className="mt-1.5 truncate text-[10px] text-ink-4">
           {venue.venue}

@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { resolveAdvance, deriveAdvance, quickFillFavorites, type AdvanceMap } from "./knockout-advance";
+import {
+  resolveAdvance,
+  deriveAdvance,
+  quickFillFavorites,
+  validateAdvanceMap,
+  asAdvanceMap,
+  advanceProgress,
+  type AdvanceMap,
+} from "./knockout-advance";
 import { resolveKnockout, scoredKnockoutNumbers } from "./pick-form";
 import { GROUPS, R32 } from "@/lib/scoring/data";
 import { resolveR32Slots, type ResolvedR32 } from "@/lib/scoring/resolve";
@@ -121,5 +129,49 @@ describe("scoring parity", () => {
     expect(a).toEqual(b);
     expect(a.breakdown.r32 + a.breakdown.r16 + a.breakdown.qf + a.breakdown.sf + a.breakdown.final)
       .toBeGreaterThan(0);
+  });
+
+  it("scores a position-only bracket once the field is final (sparse → full seed)", () => {
+    // The user filled the bracket positionally with NO team info (every side = "a");
+    // by R32 kickoff the official field is final and it materializes + scores.
+    const advance = advanceAllA();
+    const finalSeed = fullSeed();
+    const knockout = resolveAdvance(advance, finalSeed);
+    expect(Object.keys(knockout)).toHaveLength(31); // nothing dropped
+    const results: Results = { ...emptyPicks(), knockout: { ...knockout } };
+    const scored = scorePicks({ ...emptyPicks(), knockout }, results);
+    const ko = scored.breakdown;
+    expect(ko.r32 + ko.r16 + ko.qf + ko.sf + ko.final).toBeGreaterThan(0);
+  });
+});
+
+describe("validateAdvanceMap", () => {
+  it("accepts an empty map and a full all-a map", () => {
+    expect(validateAdvanceMap({})).toBe(true);
+    expect(validateAdvanceMap(advanceAllA())).toBe(true);
+  });
+
+  it("rejects bad match numbers, bad sides, and non-objects", () => {
+    expect(validateAdvanceMap({ 73: "c" })).toBe(false); // not a side
+    expect(validateAdvanceMap({ 1: "a" })).toBe(false); // group match, not knockout
+    expect(validateAdvanceMap({ 103: "a" })).toBe(false); // bronze, not scored
+    expect(validateAdvanceMap(null)).toBe(false);
+    expect(validateAdvanceMap([["73", "a"]])).toBe(false);
+  });
+});
+
+describe("asAdvanceMap", () => {
+  it("passes a valid map through and falls back to empty for junk", () => {
+    expect(asAdvanceMap({ 73: "a" })).toEqual({ 73: "a" });
+    expect(asAdvanceMap({ 73: "x" })).toEqual({});
+    expect(asAdvanceMap(undefined)).toEqual({});
+  });
+});
+
+describe("advanceProgress", () => {
+  it("counts chosen sides out of 31, regardless of seated teams", () => {
+    expect(advanceProgress({})).toEqual({ done: 0, total: 31 });
+    expect(advanceProgress(advanceAllA())).toEqual({ done: 31, total: 31 });
+    expect(advanceProgress({ 73: "a", 74: "b" })).toEqual({ done: 2, total: 31 });
   });
 });

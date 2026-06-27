@@ -9,6 +9,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { submissionToPickRows, pickRowsToSubmission, type PickRow } from "@/lib/pool/picks";
 import type { Picks, Submission } from "@/lib/scoring/types";
 import { emptyPicks } from "@/lib/scoring/types";
+import { asAdvanceMap, type AdvanceMap } from "@/lib/pool/knockout-advance";
 import type { PoolFormat } from "@/generated/prisma/enums";
 
 export interface SubmitPicksInput {
@@ -32,6 +33,11 @@ export interface SubmitPicksInput {
   picks: Picks;
   email?: string | null;
   tiebreak?: string | null;
+  // Positional knockout picks (matchNo -> "a"|"b"), for brackets built early
+  // against projected placeholders. Persisted on the Entry as the source of truth
+  // for knockout winners; `picks.knockout` carries the team codes materialized
+  // against the current seed (for display). Omit for full-bracket / non-early saves.
+  knockoutAdvance?: AdvanceMap;
 }
 
 export interface SubmitPicksResult {
@@ -151,6 +157,9 @@ async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult>
           claimEmail,
           tiebreak,
           importedFrom: "UI",
+          ...(input.knockoutAdvance !== undefined
+            ? { knockoutAdvance: input.knockoutAdvance as Prisma.InputJsonValue }
+            : {}),
           ...(existing.adopt ? { userId: input.userId } : {}),
         },
       });
@@ -170,6 +179,9 @@ async function writeUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult>
         claimEmail,
         tiebreak,
         importedFrom: "UI",
+        ...(input.knockoutAdvance !== undefined
+          ? { knockoutAdvance: input.knockoutAdvance as Prisma.InputJsonValue }
+          : {}),
       },
     });
     await tx.pick.createMany({
@@ -185,6 +197,9 @@ export interface UserEntry {
   locked: boolean;
   tiebreak: string;
   picks: Picks;
+  // Positional knockout picks if this bracket was built early; empty otherwise.
+  // The builder re-hydrates its AdvanceMap from this so early picks survive reloads.
+  knockoutAdvance: AdvanceMap;
 }
 
 export interface UserEntrySummary {
@@ -220,6 +235,7 @@ async function decodeEntry(where: Prisma.EntryWhereInput): Promise<UserEntry | n
       label: true,
       locked: true,
       tiebreak: true,
+      knockoutAdvance: true,
       picks: { select: { section: true, category: true, key: true, code: true, teamOrValue: true } },
     },
   });
@@ -234,6 +250,7 @@ async function decodeEntry(where: Prisma.EntryWhereInput): Promise<UserEntry | n
     locked: entry.locked,
     tiebreak: entry.tiebreak ?? "",
     picks,
+    knockoutAdvance: asAdvanceMap(entry.knockoutAdvance),
   };
 }
 
