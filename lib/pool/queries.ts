@@ -37,21 +37,16 @@ import {
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { buildPickAnalytics, type PickAnalytics } from "@/lib/pool/pick-analytics";
 import { buildUpsetRadar, stakedTeamCodes, type UpsetMatchInput, type UpsetRow } from "@/lib/odds/upset";
-import { matchPlayerCode } from "@/lib/odds/player-match";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
-import {
-  projectStadiums,
-  type RemainingMatch,
-  type StadiumProjection,
-} from "@/lib/pool/stadium-projection";
+import { type StadiumProjection } from "@/lib/pool/stadium-projection";
 import { overlayProvisional, provisionalGroupDelta } from "@/lib/pool/group-provisional";
 import { buildWinModel, type R32MatchInput } from "@/lib/pool/win-model";
 import { projectStandings, type ProjectionEntry } from "@/lib/pool/expected-points";
 import { buildPoolStandouts, type StandoutInput, type PoolStandouts } from "@/lib/pool/standouts";
 import { groupOverlayBreakdown, type GroupOverlayBreakdown } from "@/lib/pool/group-overlay";
-import { TEAMS, GROUPS } from "@/lib/scoring/data";
+import { GROUPS } from "@/lib/scoring/data";
 import type { ImpliedProbs, OutrightProb } from "@/lib/odds/map";
 import type { H2HSummary } from "@/lib/sports/predictions-parse";
 import type { LineupPlayer } from "@/lib/sports/lineups-parse";
@@ -69,6 +64,14 @@ import {
   type HomeNextMatch,
   type HomeStats,
 } from "@/lib/pool/home";
+import { teamName } from "./query-helpers";
+import { getChampionshipOdds } from "./queries-odds";
+import { getStadiumProjectionsForTournament } from "./queries-stadium";
+
+// Odds/scorer + stadium read queries live in their own modules now; re-export them
+// so callers keep importing everything from "@/lib/pool/queries".
+export * from "./queries-odds";
+export * from "./queries-stadium";
 
 // The WC2026 MVP runs a single tournament; admin routes default to it but accept
 // an explicit slug so the same code serves future multi-tenant tournaments.
@@ -985,9 +988,6 @@ export async function getMatchStats(matchId: string) {
   return prisma.matchStats.findUnique({ where: { matchId } });
 }
 
-const teamName = (code: string | null | undefined): string =>
-  code && TEAMS[code] ? TEAMS[code] : "TBD";
-
 export interface MatchDetailSide {
   code: string | null;
   name: string;
@@ -1233,101 +1233,6 @@ export async function getMatchDetail(
   return { ...detail, pickSplit, yourPick };
 }
 
-export interface ChampionshipOdd {
-  teamCode: string;
-  name: string;
-  winProb: number;
-  decimal: number;
-  fetchedAt: Date; // when this price was last polled (shown as an "Updated …" stamp)
-}
-
-// Tournament-winner futures, highest implied probability first. Empty when the
-// outrights poll hasn't run (or the odds integration isn't configured).
-export async function getChampionshipOdds(
-  tournamentId: string,
-  limit = 12,
-): Promise<ChampionshipOdd[]> {
-  const rows = await prisma.teamOutright.findMany({
-    where: { tournamentId },
-    orderBy: { winProb: "desc" },
-    take: limit,
-    select: { teamCode: true, winProb: true, decimal: true, fetchedAt: true },
-  });
-  return rows.map((r) => ({
-    teamCode: r.teamCode,
-    name: teamName(r.teamCode),
-    winProb: r.winProb,
-    decimal: r.decimal,
-    fetchedAt: r.fetchedAt,
-  }));
-}
-
-export interface TopScorerRow {
-  rank: number;
-  playerName: string;
-  teamCode: string;
-  teamName: string;
-  goals: number;
-  assists: number | null;
-  appearances: number | null;
-  fetchedAt: Date; // when the scorer board was last polled (shown as an "Updated …" stamp)
-}
-
-// The Golden Boot leaderboard, lowest rank first. Empty when the top-scorers poll
-// hasn't run (or the sports integration isn't configured).
-export async function getTopScorers(tournamentId: string, limit = 30): Promise<TopScorerRow[]> {
-  const rows = await prisma.topScorer.findMany({
-    where: { tournamentId },
-    orderBy: { rank: "asc" },
-    take: limit,
-    select: {
-      rank: true,
-      playerName: true,
-      teamCode: true,
-      goals: true,
-      assists: true,
-      appearances: true,
-      fetchedAt: true,
-    },
-  });
-  return rows.map((r) => ({ ...r, teamName: teamName(r.teamCode) }));
-}
-
-export interface GoalscorerOdd {
-  playerName: string;
-  winProb: number;
-  decimal: number;
-  teamCode: string | null; // resolved from the top-scorer board when the name matches
-  fetchedAt: Date; // when this price was last polled (shown as an "Updated …" stamp)
-}
-
-// Top-goalscorer (Golden Boot) futures, highest implied probability first. Each row
-// is tagged with a team code when its player can be matched to the scoring board (for
-// a flag) via the best-effort, never-guess matcher; unmatched names render without
-// one. Empty when the market isn't polled (or the odds integration isn't configured
-// / doesn't offer the market).
-export async function getGoalscorerOutrights(
-  tournamentId: string,
-  limit = 12,
-): Promise<GoalscorerOdd[]> {
-  const [rows, board] = await Promise.all([
-    prisma.goalscorerOutright.findMany({
-      where: { tournamentId },
-      orderBy: { winProb: "desc" },
-      take: limit,
-      select: { playerName: true, winProb: true, decimal: true, fetchedAt: true },
-    }),
-    prisma.topScorer.findMany({ where: { tournamentId }, select: { playerName: true, teamCode: true } }),
-  ]);
-  return rows.map((r) => ({
-    playerName: r.playerName,
-    winProb: r.winProb,
-    decimal: r.decimal,
-    teamCode: matchPlayerCode(r.playerName, board),
-    fetchedAt: r.fetchedAt,
-  }));
-}
-
 // A single entry's player profile (hit-grid, accuracy, breakdown, boldest call).
 // Returns null when the entry doesn't belong to this pool. `includeProjection`
 // (default on) controls the win-model projection — callers that only need the
@@ -1525,82 +1430,6 @@ export async function getUpsetRadar(poolId: string, userId: string | null): Prom
     }
   }
   return buildUpsetRadar(upsetMatches, staked);
-}
-
-// Neutral-site prior for group matches with no live odds yet (no home advantage):
-// a slightly draw-shy 0.375 / 0.25 / 0.375 split. Used so the projection can run
-// from day one, sharpening as real odds land.
-const NEUTRAL_GROUP_PRIOR = { homeWinProb: 0.375, drawProb: 0.25, awayWinProb: 0.375 };
-
-function usableMatchProbs(o: {
-  homeWinProb: number | null;
-  drawProb: number | null;
-  awayWinProb: number | null;
-}): o is { homeWinProb: number; drawProb: number; awayWinProb: number } {
-  if (o.homeWinProb == null || o.drawProb == null || o.awayWinProb == null) return false;
-  if (o.homeWinProb < 0 || o.drawProb < 0 || o.awayWinProb < 0) return false;
-  const sum = o.homeWinProb + o.drawProb + o.awayWinProb;
-  return sum > 0.99 && sum < 1.01;
-}
-
-// Monte-Carlo projection of which teams are likely to fill each Round-of-32 slot
-// (hence each stadium). FINAL group results are held fixed; every other group
-// match is sampled from its live odds (or the neutral prior). Display-only.
-// Tournament-scoped so both pools and the standalone/challenge bracket builder
-// (which has no pool) can share it.
-export async function getStadiumProjectionsForTournament(
-  tournamentId: string,
-): Promise<StadiumProjection[]> {
-  const matches = await prisma.match.findMany({
-    where: { tournamentId, matchNo: { lte: 72 } },
-    select: {
-      matchNo: true,
-      homeSlotRef: true,
-      awaySlotRef: true,
-      odds: { select: { homeWinProb: true, drawProb: true, awayWinProb: true } },
-      result: {
-        select: { homeTeamCode: true, awayTeamCode: true, homeScore: true, awayScore: true, status: true },
-      },
-    },
-  });
-
-  const finished: GroupResultRow[] = [];
-  const remaining: RemainingMatch[] = [];
-
-  for (const m of matches) {
-    // For group matches the result's team codes equal the seeded slot refs, and
-    // MatchOdds is stored oriented to that home code (see lib/odds/poll.ts), so
-    // odds.homeWinProb lines up with homeCode below — keep these consistent.
-    const homeCode = m.result?.homeTeamCode ?? m.homeSlotRef;
-    const awayCode = m.result?.awayTeamCode ?? m.awaySlotRef;
-    if (!homeCode || !awayCode) continue;
-
-    const res = m.result;
-    if (res && res.status === "FINAL" && res.homeScore != null && res.awayScore != null) {
-      finished.push({ homeCode, awayCode, homeScore: res.homeScore, awayScore: res.awayScore });
-    } else {
-      const o = m.odds && usableMatchProbs(m.odds) ? m.odds : NEUTRAL_GROUP_PRIOR;
-      remaining.push({
-        homeCode,
-        awayCode,
-        homeWinProb: o.homeWinProb,
-        drawProb: o.drawProb,
-        awayWinProb: o.awayWinProb,
-      });
-    }
-  }
-
-  return projectStadiums({ finished, remaining });
-}
-
-// Pool-scoped wrapper — resolves the pool's tournament, then delegates.
-export async function getStadiumProjections(poolId: string): Promise<StadiumProjection[]> {
-  const pool = await prisma.pool.findUnique({
-    where: { id: poolId },
-    select: { tournamentId: true },
-  });
-  if (!pool) return [];
-  return getStadiumProjectionsForTournament(pool.tournamentId);
 }
 
 export interface PoolProjectionRow {
