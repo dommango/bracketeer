@@ -121,6 +121,14 @@ export async function setKnockoutResultFromApi(
     });
     if (match?.result?.source === "MANUAL") return { applied: false };
 
+    // Idempotent: the whole-season feed re-reports finished knockouts on every poll.
+    // If this exact winner is already in the answer key, do nothing — otherwise every
+    // poll for the rest of the tournament would re-write the key and force a full
+    // recompute of every pool.
+    const current = await loadAnswerKey(tournamentId, tx);
+    const winner = (input.winnerCode || "").toUpperCase();
+    if ((current.knockout?.[matchNo] ?? "").toUpperCase() === winner) return { applied: false };
+
     await setKnockoutResultLocked(tx, tournamentId, matchNo, { ...input, source: "API" });
     return { applied: true };
   });
@@ -246,7 +254,7 @@ export async function upsertKnockoutDisplayFromApi(
   const [match, tournament] = await Promise.all([
     prisma.match.findUnique({
       where: { tournamentId_matchNo: { tournamentId, matchNo } },
-      select: { id: true, result: { select: { source: true, status: true } } },
+      select: { id: true },
     }),
     prisma.tournament.findUnique({
       where: { id: tournamentId },
@@ -254,10 +262,6 @@ export async function upsertKnockoutDisplayFromApi(
     }),
   ]);
   if (!match || !tournament) return { applied: false, matchId: match?.id ?? null };
-  // A manual entry is authoritative; never overwrite it.
-  if (match.result?.source === "MANUAL") return { applied: false, matchId: match.id };
-  // Monotonic: a finished match stays finished even if the feed re-reports it live.
-  if (match.result?.status === "FINAL") return { applied: false, matchId: match.id };
 
   // Orient the scoreline to the bracket's home/away so it matches the eventual FINAL
   // row. The pair map guarantees apiHomeCode is one of the two seated teams.
@@ -277,12 +281,22 @@ export async function upsertKnockoutDisplayFromApi(
     status: "LIVE" as const,
     source: "API" as const,
   };
-  await prisma.result.upsert({
-    where: { matchId: match.id },
-    update: row,
-    create: { matchId: match.id, ...row },
+  // Atomic + monotonic: only touch a row that is neither FINAL nor MANUAL, so a live
+  // tick can never regress a finished match or clobber a manual entry (the check and
+  // write are one statement — no read-then-write race with a concurrent poll).
+  const updated = await prisma.result.updateMany({
+    where: { matchId: match.id, status: { not: "FINAL" }, source: { not: "MANUAL" } },
+    data: row,
   });
-
+  if (updated.count > 0) return { applied: true, matchId: match.id };
+  // Nothing updated: either no row exists yet (create one) or a FINAL/MANUAL row
+  // guards it (leave it be).
+  const existing = await prisma.result.findUnique({
+    where: { matchId: match.id },
+    select: { id: true },
+  });
+  if (existing) return { applied: false, matchId: match.id };
+  await prisma.result.create({ data: { matchId: match.id, ...row } });
   return { applied: true, matchId: match.id };
 }
 
