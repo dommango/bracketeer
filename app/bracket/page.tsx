@@ -26,20 +26,19 @@ export default async function BracketsPage() {
   const early = !open && earlyOpen;
   const needsConsent = !accepted;
 
-  // Grouped by game so the three games never read as one list (and so the
-  // knockout-challenge cap is obvious): knockout brackets, full-tournament pool
-  // brackets, and Match Day Pickem each get their own section.
-  const knockout = brackets.filter((b) => b.format === "KNOCKOUT");
-  const pools = brackets.filter((b) => b.format === "FULL_BRACKET");
-  const matchDay = brackets.filter((b) => b.format === "MATCH_DAY_3_PICKEM");
+  // Two buckets, not one flat list: brackets that live in a pool you created or
+  // joined, vs the public Bracketeer challenges you play solo. The different game
+  // formats (knockout, Match Day Pickem) share the same path, so the only split
+  // worth surfacing is pool vs community.
+  const pooledBrackets = brackets.filter((b) => b.placement.kind === "pool");
+  const communityBrackets = brackets.filter((b) => b.placement.kind === "standalone");
 
   return (
     <section className="space-y-6">
       <header className="space-y-1">
         <h1 className="font-display text-2xl text-ink">Your brackets</h1>
         <p className="text-sm text-ink-3">
-          Every bracket you&apos;ve entered — the Knockout Challenge, your pools, and Match Day
-          Pickem.
+          The community games you play solo and the brackets in your pools, all in one place.
         </p>
         <Link
           href="/challenge/knockout/scoring"
@@ -49,7 +48,10 @@ export default async function BracketsPage() {
         </Link>
       </header>
 
-      <Section title="Knockout Challenge" subtitle="Enter up to 2 brackets on the global leaderboard.">
+      <Section
+        title="Community games"
+        subtitle="Public Bracketeer challenges you play solo — the Knockout Challenge and Match Day Pickem."
+      >
         {!buildable ? (
           <Card>
             <p className="text-sm font-semibold text-ink-2">Knockout picks open at the draw</p>
@@ -61,7 +63,7 @@ export default async function BracketsPage() {
               <Countdown target={opensAt.toISOString()} className="text-sm text-pitch-dark" />
             </div>
           </Card>
-        ) : knockout.length === 0 ? (
+        ) : communityBrackets.length === 0 ? (
           <Card>
             <p className="text-sm font-semibold text-ink-2">You haven&apos;t built a bracket yet</p>
             <p className="mt-1.5 text-sm text-ink-3">
@@ -76,7 +78,7 @@ export default async function BracketsPage() {
         ) : (
           <div className="space-y-4">
             <BracketList
-              bucket={knockout}
+              bucket={communityBrackets}
               knockoutLocked={knockoutLocked}
               needsConsent={needsConsent}
             />
@@ -92,16 +94,10 @@ export default async function BracketsPage() {
         )}
       </Section>
 
-      {pools.length > 0 ? (
-        <Section title="Pool brackets">
-          <BracketList bucket={pools} knockoutLocked={knockoutLocked} needsConsent={needsConsent} />
-        </Section>
-      ) : null}
-
-      {matchDay.length > 0 ? (
-        <Section title="Match Day Pickem">
+      {pooledBrackets.length > 0 ? (
+        <Section title="Pools" subtitle="Brackets in pools you've created or joined.">
           <BracketList
-            bucket={matchDay}
+            bucket={pooledBrackets}
             knockoutLocked={knockoutLocked}
             needsConsent={needsConsent}
           />
@@ -139,9 +135,16 @@ function Section({
   );
 }
 
-// Renders one game's brackets. Cards are titled by placement (the pool name, or
-// "Standalone bracket"); when a section holds more than one standalone bracket
-// they're numbered so the titles stay distinct.
+// The card title a standalone (community-game) bracket gets, by its game.
+function communityLabel(format: BracketSummary["format"]): string {
+  if (format === "KNOCKOUT") return "Knockout bracket";
+  if (format === "MATCH_DAY_3_PICKEM") return "Match Day Pickem";
+  return "Bracket";
+}
+
+// Renders one bucket of brackets. Pooled cards are titled by their pool; community
+// cards by their game (numbered when a bucket holds more than one of the same game)
+// so the titles stay distinct without falling back to the repeated contestant name.
 function BracketList({
   bucket,
   knockoutLocked,
@@ -151,13 +154,14 @@ function BracketList({
   knockoutLocked: boolean;
   needsConsent: boolean;
 }) {
-  const standaloneCount = bucket.filter((b) => b.placement.kind === "standalone").length;
   const titleFor = (b: BracketSummary, i: number): string => {
     if (b.placement.kind === "pool") return b.placement.poolName;
-    if (standaloneCount <= 1) return "Standalone bracket";
-    // Ordinal = how many standalone brackets up to and including this one.
-    const ordinal = bucket.slice(0, i + 1).filter((x) => x.placement.kind === "standalone").length;
-    return `Standalone bracket ${ordinal}`;
+    const base = communityLabel(b.format);
+    const sameGame = (x: BracketSummary) =>
+      x.placement.kind === "standalone" && x.format === b.format;
+    if (bucket.filter(sameGame).length <= 1) return base;
+    // Ordinal = how many same-game standalone brackets up to and including this one.
+    return `${base} ${bucket.slice(0, i + 1).filter(sameGame).length}`;
   };
   return (
     <div className="space-y-4">
