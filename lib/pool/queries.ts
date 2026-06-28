@@ -552,6 +552,24 @@ export async function getTournamentBracket(tournamentId: string): Promise<Bracke
     ]),
   );
 
+  // Win-probability split per match (oriented to our home), for the bracket cards.
+  // Empty until the odds poll runs / when the integration isn't configured.
+  const oddsRows = await prisma.matchOdds.findMany({
+    where: { match: { tournamentId, matchNo: { gte: 73 } } },
+    select: {
+      homeWinProb: true,
+      drawProb: true,
+      awayWinProb: true,
+      match: { select: { matchNo: true } },
+    },
+  });
+  const odds = new Map<number, ImpliedProbs>(
+    oddsRows.map((o) => [
+      o.match.matchNo,
+      { homeWinProb: o.homeWinProb, drawProb: o.drawProb, awayWinProb: o.awayWinProb },
+    ]),
+  );
+
   const groupRows: GroupResultRow[] = [];
   for (const r of resultRows) {
     if (r.match.matchNo > 72) continue;
@@ -570,9 +588,13 @@ export async function getTournamentBracket(tournamentId: string): Promise<Bracke
 
   // In the early-builder window, project uniquely-decided group placements into the
   // live bracket (display only) so qualifiers appear before the official key is set.
-  return buildBracketView(asResults(tournament.officialResults), scores, groupRows, {
-    projectBracket: isEarlyBuilderOpen(),
-  });
+  return buildBracketView(
+    asResults(tournament.officialResults),
+    scores,
+    groupRows,
+    { projectBracket: isEarlyBuilderOpen() },
+    odds,
+  );
 }
 
 // The live bracket + group standings for a pool's tournament.

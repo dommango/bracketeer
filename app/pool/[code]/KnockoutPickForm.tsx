@@ -12,6 +12,7 @@ import {
 import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import type { StadiumProjection } from "@/lib/pool/stadium-projection";
 import type { OutrightProb } from "@/lib/odds/map";
+import type { KnockoutCardInfo } from "@/lib/pool/queries-odds";
 import { emptyPicks, type Picks } from "@/lib/scoring/types";
 import { submitPicksAction } from "./picks/actions";
 import { Bar, LABEL } from "./pick-ui";
@@ -48,6 +49,8 @@ export function KnockoutPickForm({
   early = false,
   projections,
   outrights,
+  info,
+  titleOdds,
   saveAction,
 }: {
   code?: string;
@@ -72,6 +75,10 @@ export function KnockoutPickForm({
   projections?: Record<number, StadiumProjection>;
   // Championship odds, for the one-tap "fill favorites".
   outrights?: OutrightProb[];
+  // Per-match betting + insight signals (win-prob, O/U, model advice/form), keyed by
+  // match number, plus each team's title-winner probability — shown on every card.
+  info?: Record<number, KnockoutCardInfo>;
+  titleOdds?: Record<string, number>;
   saveAction?: SaveBracket;
 }) {
   // Picks are stored as an AdvanceMap (which SIDE of each match advances) — a
@@ -214,6 +221,8 @@ export function KnockoutPickForm({
           onPickSide={pickSide}
           advance={advance}
           projections={early ? projections : undefined}
+          info={info}
+          titleOdds={titleOdds}
         />
       </section>
 

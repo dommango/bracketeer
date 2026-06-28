@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode, getKnockoutState, getKnockoutBuilderProjections } from "@/lib/pool/queries";
+import {
+  getPoolByCode,
+  getKnockoutState,
+  getKnockoutBuilderProjections,
+  getKnockoutMatchInfo,
+} from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
 import { getUserEntry, getUserEntries } from "@/lib/pool/submit-picks";
 import { arePicksLocked } from "@/lib/pool/lock";
@@ -131,7 +136,10 @@ export default async function PicksPage({
       );
     }
     const locked = isKnockoutLocked(locksAt, entryLocked);
-    const builder = early ? await getKnockoutBuilderProjections(pool.tournament.id) : null;
+    const [builder, { info, titleOdds }] = await Promise.all([
+      early ? getKnockoutBuilderProjections(pool.tournament.id) : Promise.resolve(null),
+      getKnockoutMatchInfo(pool.tournament.id),
+    ]);
     return (
       <section className="space-y-4">
         {header}
@@ -154,6 +162,8 @@ export default async function PicksPage({
           early={early}
           projections={builder?.projections}
           outrights={builder?.outrights}
+          info={info}
+          titleOdds={titleOdds}
         />
       </section>
     );
