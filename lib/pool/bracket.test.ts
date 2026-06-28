@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveBracket, validateKnockoutWinner } from "./bracket";
+import { resolveBracket, validateKnockoutWinner, buildKnockoutPairMatchNos } from "./bracket";
 import { resolveR32Slots } from "@/lib/scoring/resolve";
 import { GROUPS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
@@ -113,5 +113,41 @@ describe("validateKnockoutWinner", () => {
     // Final with no feeders resolved: can't disprove, so don't block the admin.
     const res = validateKnockoutWinner({ ...emptyPicks(), finalGoals: null }, 104, GROUPS.A[0]);
     expect(res.ok).toBe(true);
+  });
+});
+
+describe("buildKnockoutPairMatchNos", () => {
+  it("keys each resolved R32 match by its unordered team pair", () => {
+    const results = chalkStandings();
+    const bracket = resolveBracket(results);
+    const pairs = buildKnockoutPairMatchNos(results);
+    for (const m of R32) {
+      const key = [bracket[m.id].home!, bracket[m.id].away!].sort().join("_");
+      expect(pairs.get(key)).toBe(m.id);
+    }
+  });
+
+  it("is order-independent: home/away swapped resolves to the same match", () => {
+    const results = chalkStandings();
+    const { home, away } = resolveBracket(results)[73];
+    const pairs = buildKnockoutPairMatchNos(results);
+    expect(pairs.get([home!, away!].sort().join("_"))).toBe(73);
+    expect(pairs.get([away!, home!].sort().join("_"))).toBe(73);
+  });
+
+  it("includes later rounds once their feeders have winners, and skips unresolved slots", () => {
+    // Give every R32 match a winner (its home) so all 8 R16 matches seat both sides;
+    // R16 winners are NOT set, so QF/SF/Final stay unresolved and aren't keyed.
+    const bracket0 = resolveBracket(chalkStandings());
+    const knockout = Object.fromEntries(R32.map((m) => [m.id, bracket0[m.id].home!]));
+    const results: Results = { ...chalkStandings(), knockout };
+    const pairs = buildKnockoutPairMatchNos(results);
+    const bracket = resolveBracket(results);
+    for (const m of R16) {
+      expect(pairs.get([bracket[m.id].home!, bracket[m.id].away!].sort().join("_"))).toBe(m.id);
+    }
+    // Unresolved later rounds aren't keyed.
+    expect([...pairs.values()]).not.toContain(FINAL.id);
+    expect([...pairs.values()]).not.toContain(QF[0].id);
   });
 });

@@ -226,6 +226,66 @@ export async function upsertGroupMatchResultFromApi(
   return { applied: true, matchId: match.id, newlyFinal };
 }
 
+// Upsert the display Result row for an IN-PLAY knockout match. Pure display — does
+// NOT touch officialResults (the knockout answer key is only written at full time by
+// setKnockoutResultFromApi, so a winner is never recorded mid-match and scoring is
+// untouched). Mirrors the group live path: skips a MANUAL row, never regresses a
+// FINAL row back to LIVE, and orients the API scoreline to the bracket's home/away so
+// the live row and the eventual FINAL row read the same way (no flip at the whistle).
+export async function upsertKnockoutDisplayFromApi(
+  tournamentId: string,
+  matchNo: number,
+  input: {
+    apiHomeCode: string;
+    apiAwayCode: string;
+    apiHomeScore: number | null;
+    apiAwayScore: number | null;
+    elapsed?: number | null;
+  },
+): Promise<{ applied: boolean; matchId: string | null }> {
+  const [match, tournament] = await Promise.all([
+    prisma.match.findUnique({
+      where: { tournamentId_matchNo: { tournamentId, matchNo } },
+      select: { id: true, result: { select: { source: true, status: true } } },
+    }),
+    prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { officialResults: true },
+    }),
+  ]);
+  if (!match || !tournament) return { applied: false, matchId: match?.id ?? null };
+  // A manual entry is authoritative; never overwrite it.
+  if (match.result?.source === "MANUAL") return { applied: false, matchId: match.id };
+  // Monotonic: a finished match stays finished even if the feed re-reports it live.
+  if (match.result?.status === "FINAL") return { applied: false, matchId: match.id };
+
+  // Orient the scoreline to the bracket's home/away so it matches the eventual FINAL
+  // row. The pair map guarantees apiHomeCode is one of the two seated teams.
+  const slot = resolveBracket(asResults(tournament.officialResults))[matchNo];
+  if (!slot?.home || !slot?.away) return { applied: false, matchId: match.id };
+  const apiHomeIsBracketHome = input.apiHomeCode === slot.home;
+  const homeScore = apiHomeIsBracketHome ? input.apiHomeScore : input.apiAwayScore;
+  const awayScore = apiHomeIsBracketHome ? input.apiAwayScore : input.apiHomeScore;
+
+  const row = {
+    homeTeamCode: slot.home,
+    awayTeamCode: slot.away,
+    homeScore: homeScore ?? null,
+    awayScore: awayScore ?? null,
+    winnerCode: null,
+    elapsed: input.elapsed ?? null,
+    status: "LIVE" as const,
+    source: "API" as const,
+  };
+  await prisma.result.upsert({
+    where: { matchId: match.id },
+    update: row,
+    create: { matchId: match.id, ...row },
+  });
+
+  return { applied: true, matchId: match.id };
+}
+
 // Backfill Match.scheduledAt for group-stage matches that have no scheduled time
 // yet (null). Called once per poll run; only writes where scheduledAt IS NULL.
 export async function backfillGroupMatchScheduledAt(

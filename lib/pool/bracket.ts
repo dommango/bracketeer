@@ -59,6 +59,22 @@ export function resolveBracket(results: Results): ResolvedBracket {
   return out;
 }
 
+// Unordered-team-pair → knockout match number, for every knockout match (73–104)
+// whose two teams are already resolved. Mirrors buildGroupPairMatchNos() for the
+// group stage: it lets the score poller map an API fixture to our match by the two
+// teams playing, with NO dependency on a pre-generated fixture-id map. Each knockout
+// matchup is a unique unordered pair (a team can't be in two live ties at once), so
+// the key never collides. Unresolved slots (feeders unscored) are skipped.
+export function buildKnockoutPairMatchNos(results: Results): Map<string, number> {
+  const pairs = new Map<string, number>();
+  const bracket = resolveBracket(results);
+  for (const [matchNo, m] of Object.entries(bracket)) {
+    if (!m.home || !m.away) continue;
+    pairs.set([m.home, m.away].sort().join("_"), Number(matchNo));
+  }
+  return pairs;
+}
+
 const KNOCKOUT_RANGE = (n: number) => n >= 73 && n <= 104;
 
 export interface ValidationResult {

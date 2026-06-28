@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { sportsApiEnabled } from "@/lib/env";
 import { isScoredKnockout } from "@/lib/pool/rounds";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
+import { buildKnockoutPairMatchNos } from "@/lib/pool/bracket";
+import { asResults } from "@/lib/pool/scoring";
 import {
   fetchFixtures,
   fetchMatchEvents,
@@ -18,6 +20,7 @@ import { EXTERNAL_TO_MATCHNO, EXTERNAL_TEAM_CODES } from "./fixtures-map";
 import {
   setKnockoutResultFromApi,
   upsertGroupMatchResultFromApi,
+  upsertKnockoutDisplayFromApi,
   backfillGroupMatchScheduledAt,
   promoteCompletedGroupsToOfficial,
   recomputeTournamentPools,
@@ -61,6 +64,7 @@ export interface PollSummary {
   reason?: string;
   fetched?: number;
   applied?: number;
+  koLiveApplied?: number;
   groupsApplied?: number;
   eventsWritten?: number;
   statsWritten?: number;
@@ -188,38 +192,31 @@ export async function pollScores(): Promise<PollSummary> {
 
   const fixtures = await fetchFixtures();
 
-  // --- Pass 1: knockout results via fixture-id map ---
-  let applied = 0;
-  const appliedKnockouts: { matchNo: number; winnerCode: string }[] = [];
-  for (const f of fixtures) {
-    const matchNo = EXTERNAL_TO_MATCHNO[f.externalId];
-    if (!matchNo || !isScoredKnockout(matchNo)) continue;
-    if (!f.finished) continue;
+  // The knockout answer key, used to map a fixture to our match by the two teams
+  // playing (and to orient the live scoreline). This is the fallback the static
+  // fixture-id map never had — so live/finished knockout matches map correctly even
+  // when EXTERNAL_TO_MATCHNO is empty (it ships empty until generated post-groups).
+  const [tournament, firstR32] = await Promise.all([
+    prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { officialResults: true },
+    }),
+    prisma.match.findUnique({
+      where: { tournamentId_matchNo: { tournamentId, matchNo: 73 } },
+      select: { scheduledAt: true },
+    }),
+  ]);
+  const knockoutPairMatchNos = buildKnockoutPairMatchNos(asResults(tournament?.officialResults));
+  // Only let the team-pair fallback fire for fixtures that kick off in the knockout
+  // window (R32 start minus a buffer). Two same-group teams can rematch only in the
+  // final, so without this a long-finished group fixture with that pair could mismap
+  // onto the final's slot. A fixture-id entry in the static map bypasses this gate.
+  const knockoutFrom =
+    firstR32?.scheduledAt != null ? firstR32.scheduledAt.getTime() - 12 * 60 * 60 * 1000 : null;
 
-    const winnerCode = resolveWinnerCode(f);
-    if (!winnerCode) continue;
-
-    const { applied: didApply } = await setKnockoutResultFromApi(tournamentId, matchNo, {
-      winnerCode,
-      homeScore: f.homeGoals,
-      awayScore: f.awayGoals,
-      homePens: f.homePens,
-      awayPens: f.awayPens,
-      final: true,
-    });
-    if (didApply) {
-      applied += 1;
-      appliedKnockouts.push({ matchNo, winnerCode });
-    }
-  }
-
-  // --- Pass 2: group match display scores + scheduledAt backfill ---
-  // Collect live fixtures as we go for Pass 3 enrichment.
-  const groupPairMatchNos = buildGroupPairMatchNos();
-  const scheduledAtQueue: Array<{ matchNo: number; scheduledAt: Date }> = [];
-  // Live group fixtures to enrich in Pass 3: matchId + provider team ids for
-  // correct home/away stat assignment (API response order is not guaranteed),
-  // plus the codes/score needed to format goal & card chat posts.
+  // Live fixtures (group + knockout) to enrich in Pass 3: matchId + provider team ids
+  // for correct home/away stat assignment (API order isn't guaranteed), plus the
+  // codes/score needed to format goal & card chat posts.
   const liveFixtures: Array<{
     fixtureId: number;
     matchId: string;
@@ -231,6 +228,80 @@ export async function pollScores(): Promise<PollSummary> {
     homeScore: number | null;
     awayScore: number | null;
   }> = [];
+
+  // --- Pass 1: knockout results (finished → answer key) + live display rows ---
+  let applied = 0;
+  let koLiveApplied = 0;
+  const appliedKnockouts: { matchNo: number; winnerCode: string }[] = [];
+  for (const f of fixtures) {
+    const homeCode = EXTERNAL_TEAM_CODES[f.homeExternalId];
+    const awayCode = EXTERNAL_TEAM_CODES[f.awayExternalId];
+    // Map to our match: prefer the static fixture-id map, else the two seated teams —
+    // but only let the pair fallback fire for fixtures kicking off in the knockout
+    // window (guards against a group rematch of a final's pairing).
+    const inKnockoutWindow =
+      knockoutFrom != null && f.scheduledAt != null && new Date(f.scheduledAt).getTime() >= knockoutFrom;
+    const matchNo =
+      EXTERNAL_TO_MATCHNO[f.externalId] ??
+      (homeCode && awayCode && inKnockoutWindow
+        ? knockoutPairMatchNos.get([homeCode, awayCode].sort().join("_"))
+        : undefined);
+    if (matchNo == null || matchNo < 73 || matchNo > 104) continue;
+
+    if (f.finished) {
+      // Finished → record the winner in the answer key. Scored knockouts only (bronze
+      // isn't scored). This is the only knockout write that touches scoring.
+      if (!isScoredKnockout(matchNo)) continue;
+      const winnerCode = resolveWinnerCode(f);
+      if (!winnerCode) continue;
+      const { applied: didApply } = await setKnockoutResultFromApi(tournamentId, matchNo, {
+        winnerCode,
+        homeScore: f.homeGoals,
+        awayScore: f.awayGoals,
+        homePens: f.homePens,
+        awayPens: f.awayPens,
+        final: true,
+      });
+      if (didApply) {
+        applied += 1;
+        appliedKnockouts.push({ matchNo, winnerCode });
+      }
+    } else if (f.live && homeCode && awayCode) {
+      // In-play → display-only LIVE row so the match surfaces as live on the home /
+      // challenge tabs (no answer-key or scoring change until full time).
+      const { applied: didApply, matchId } = await upsertKnockoutDisplayFromApi(
+        tournamentId,
+        matchNo,
+        {
+          apiHomeCode: homeCode,
+          apiAwayCode: awayCode,
+          apiHomeScore: f.homeGoals,
+          apiAwayScore: f.awayGoals,
+          elapsed: f.elapsed,
+        },
+      );
+      if (didApply) {
+        koLiveApplied += 1;
+        if (matchId) {
+          liveFixtures.push({
+            fixtureId: f.fixtureId,
+            matchId,
+            matchNo,
+            homeTeamId: Number(f.homeExternalId),
+            awayTeamId: Number(f.awayExternalId),
+            homeCode,
+            awayCode,
+            homeScore: f.homeGoals,
+            awayScore: f.awayGoals,
+          });
+        }
+      }
+    }
+  }
+
+  // --- Pass 2: group match display scores + scheduledAt backfill ---
+  const groupPairMatchNos = buildGroupPairMatchNos();
+  const scheduledAtQueue: Array<{ matchNo: number; scheduledAt: Date }> = [];
   // Group matches that flipped to FINAL this poll — for the one-time FT chat post.
   const finals: Array<{ matchNo: number; homeCode: string; awayCode: string; homeScore: number; awayScore: number }> = [];
   let groupsApplied = 0;
@@ -298,7 +369,11 @@ export async function pollScores(): Promise<PollSummary> {
   } else if (appliedKnockouts.length > 1) {
     push = { title: "⚽ Knockout results are in", body: "Standings just moved — check the leaderboard." };
   }
-  if (applied > 0 || groupsApplied > 0) await recomputeTournamentPools(tournamentId, push);
+  // A live knockout display update changes no score, but still recompute+notify so
+  // the home/challenge "live now" surfaces refresh over SSE (mirrors the group path).
+  if (applied > 0 || groupsApplied > 0 || koLiveApplied > 0) {
+    await recomputeTournamentPools(tournamentId, push);
+  }
 
   // Full-time chat posts for group matches that just settled (best-effort).
   for (const fin of finals) {
@@ -364,5 +439,5 @@ export async function pollScores(): Promise<PollSummary> {
     }
   }
 
-  return { fetched: fixtures.length, applied, groupsApplied, eventsWritten, statsWritten };
+  return { fetched: fixtures.length, applied, koLiveApplied, groupsApplied, eventsWritten, statsWritten };
 }
