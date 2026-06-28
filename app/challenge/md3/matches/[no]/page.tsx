@@ -8,6 +8,7 @@ import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeView } from "@/lib/pool/md3-view";
 import { isMd3MatchNo } from "@/lib/pool/match-day-3";
 import { ChallengeMatchDetail } from "@/app/challenge/ChallengeMatchDetail";
+import { ChallengeChat } from "@/app/challenge/ChallengeChat";
 
 // Live results / lineups / odds change at request time.
 export const dynamic = "force-dynamic";
@@ -41,11 +42,18 @@ export default async function Md3ChallengeMatchPage({
   }
 
   return (
-    <ChallengeMatchDetail
-      detail={detail}
-      backHref="/challenge/md3/matches"
-      basePath="/challenge/md3"
-      yourScore={yourScore}
-    />
+    <>
+      <ChallengeMatchDetail
+        detail={detail}
+        backHref="/challenge/md3/matches"
+        basePath="/challenge/md3"
+        yourScore={yourScore}
+      />
+      {detail.status === "LIVE" ? (
+        <div className="mt-4">
+          <ChallengeChat heading="Live chat" />
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -130,6 +130,7 @@ model Tournament {
   outrights        TeamOutright[]
   topScorers       TopScorer[]
   goalscorerOdds   GoalscorerOutright[]
+  chatMessages     ChatMessage[]
 }
 
 model Team {
@@ -599,7 +600,13 @@ enum AttachmentType {
 
 model ChatMessage {
   id        String   @id @default(cuid())
-  poolId    String
+  // A message is scoped to exactly ONE of: a pool (pool chat) or a tournament
+  // (the global challenge chat shared by everyone in an active challenge). Both
+  // are nullable so the same table, reactions, replies, and UI serve both; pool
+  // queries always filter by poolId and challenge queries by tournamentId, so the
+  // two scopes never bleed together.
+  poolId    String?
+  tournamentId String?
   userId    String? // null for SYSTEM messages
   kind      ChatKind @default(USER)
   body      String
@@ -612,13 +619,15 @@ model ChatMessage {
   meta      Json?
   createdAt DateTime @default(now())
 
-  pool      Pool              @relation(fields: [poolId], references: [id], onDelete: Cascade)
-  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replyTo   ChatMessage?      @relation("ChatReply", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   ChatMessage[]     @relation("ChatReply")
+  pool       Pool?             @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  tournament Tournament?       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user      User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replyTo   ChatMessage?       @relation("ChatReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[]      @relation("ChatReply")
   reactions MessageReaction[]
 
   @@index([poolId, createdAt])
+  @@index([tournamentId, createdAt])
 }
 
 model MessageReaction {
