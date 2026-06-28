@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
@@ -14,8 +13,9 @@ import { Footer } from "./Footer";
 import { YourGames, type YourGame } from "./YourGames";
 
 // Session-aware landing. Signed-out visitors get the sign-in / register panel
-// directly; signed-in visitors go straight to their pool (single membership) or
-// a pools hub. (A dedicated marketing landing page comes later.)
+// directly; signed-in visitors land on the hub — their games, available games,
+// and their pools — regardless of how many pools they're in. (A dedicated
+// marketing landing page comes later.)
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
@@ -27,11 +27,6 @@ export default async function Home() {
     orderBy: { joinedAt: "asc" },
     select: { id: true, role: true, pool: { select: { name: true, joinCode: true, format: true } } },
   });
-
-  // Exactly one pool: skip the hub and drop the returning user into it.
-  if (memberships.length === 1) {
-    redirect(`/pool/${memberships[0].pool.joinCode}`);
-  }
 
   // The public challenges this user is already playing, surfaced at the top of the
   // hub. Both challenge formats are plain Entry rows, so the bracket gallery is the
