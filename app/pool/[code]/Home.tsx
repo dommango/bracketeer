@@ -274,7 +274,6 @@ function ContextStrip({ mover }: { mover: HomeView["topMover"] }) {
 // state instead of the full-bracket flow. (The knockout pick editor lands next.)
 function KnockoutNotice({
   open,
-  code,
   opensAt,
   locksAt,
 }: {
@@ -282,14 +281,13 @@ function KnockoutNotice({
   // gates on (KnockoutState.open / isKnockoutFieldSet), so the dashboard and the
   // editor never disagree about whether the bracket is fillable.
   open: boolean;
-  code: string;
   // Fixed "picks open" target, shown as a countdown while the field is still closed.
   opensAt: string;
   // R32 kickoff — the lock. Null until the schedule lands; then counted down to.
   locksAt: string | null;
 }) {
   return (
-    <div className="rounded-2xl border border-pitch/30 bg-pitch/5 p-4">
+    <div className="rounded-2xl border border-pitch/20 bg-pitch/5 px-4 py-3">
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-pitch-dark">
         {GAME_CATALOG.KNOCKOUT.challengeName}
       </p>
@@ -313,10 +311,10 @@ function KnockoutNotice({
             )}
           </div>
           <Link
-            href={`/pool/${code}/picks`}
-            className="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-pitch px-4 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.98]"
+            href="/bracket"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-pitch transition-colors hover:text-pitch-dark hover:underline"
           >
-            Fill out your bracket →
+            Enter the Challenge →
           </Link>
         </>
       ) : (
@@ -388,7 +386,6 @@ export function Home({
       {format === "KNOCKOUT" && knockoutOpensAt ? (
         <KnockoutNotice
           open={knockoutOpen ?? false}
-          code={code}
           opensAt={knockoutOpensAt}
           locksAt={knockoutLocksAt ?? null}
         />
