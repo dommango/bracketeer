@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { sportsApiEnabled } from "@/lib/env";
 import { isScoredKnockout } from "@/lib/pool/rounds";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
+import { buildKnockoutPairMatchNos } from "@/lib/pool/bracket";
+import { asResults } from "@/lib/pool/scoring";
 import {
   fetchFixtures,
   fetchMatchEvents,
@@ -18,6 +20,7 @@ import { EXTERNAL_TO_MATCHNO, EXTERNAL_TEAM_CODES } from "./fixtures-map";
 import {
   setKnockoutResultFromApi,
   upsertGroupMatchResultFromApi,
+  upsertKnockoutDisplayFromApi,
   backfillGroupMatchScheduledAt,
   promoteCompletedGroupsToOfficial,
   recomputeTournamentPools,
@@ -35,6 +38,12 @@ import {
   type AnnouncedEvent,
 } from "@/lib/pool/chat-events";
 import type { EventType } from "@/generated/prisma/client";
+
+// How close a fixture's kickoff must be to a knockout match's scheduled time for the
+// team-pair fallback to map it there. Knockout games are days apart, so ±12h uniquely
+// identifies one — and a finished group fixture (weeks earlier) with the same pair as
+// a final can't fall inside it.
+const KO_FIXTURE_PROXIMITY_MS = 12 * 60 * 60 * 1000;
 
 // Post one auto-event line to every pool of the tournament and ping their chat
 // streams. Best-effort decoration — callers wrap it so a failure never breaks
@@ -61,6 +70,7 @@ export interface PollSummary {
   reason?: string;
   fetched?: number;
   applied?: number;
+  koLiveApplied?: number;
   groupsApplied?: number;
   eventsWritten?: number;
   statsWritten?: number;
@@ -188,38 +198,32 @@ export async function pollScores(): Promise<PollSummary> {
 
   const fixtures = await fetchFixtures();
 
-  // --- Pass 1: knockout results via fixture-id map ---
-  let applied = 0;
-  const appliedKnockouts: { matchNo: number; winnerCode: string }[] = [];
-  for (const f of fixtures) {
-    const matchNo = EXTERNAL_TO_MATCHNO[f.externalId];
-    if (!matchNo || !isScoredKnockout(matchNo)) continue;
-    if (!f.finished) continue;
-
-    const winnerCode = resolveWinnerCode(f);
-    if (!winnerCode) continue;
-
-    const { applied: didApply } = await setKnockoutResultFromApi(tournamentId, matchNo, {
-      winnerCode,
-      homeScore: f.homeGoals,
-      awayScore: f.awayGoals,
-      homePens: f.homePens,
-      awayPens: f.awayPens,
-      final: true,
-    });
-    if (didApply) {
-      applied += 1;
-      appliedKnockouts.push({ matchNo, winnerCode });
-    }
+  // The knockout answer key, used to map a fixture to our match by the two teams
+  // playing (and to orient the live scoreline). This is the fallback the static
+  // fixture-id map never had — so live/finished knockout matches map correctly even
+  // when EXTERNAL_TO_MATCHNO is empty (it ships empty until generated post-groups).
+  const [tournament, knockoutMatches] = await Promise.all([
+    prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { officialResults: true },
+    }),
+    prisma.match.findMany({
+      where: { tournamentId, matchNo: { gte: 73 } },
+      select: { matchNo: true, scheduledAt: true },
+    }),
+  ]);
+  const knockoutPairMatchNos = buildKnockoutPairMatchNos(asResults(tournament?.officialResults));
+  // Each knockout match's kickoff, to disambiguate the team-pair fallback by date
+  // (see KO_FIXTURE_PROXIMITY_MS) — a fixture maps to a knockout slot only when it
+  // kicks off near that match's scheduled time.
+  const knockoutScheduleByNo = new Map<number, Date>();
+  for (const m of knockoutMatches) {
+    if (m.scheduledAt) knockoutScheduleByNo.set(m.matchNo, m.scheduledAt);
   }
 
-  // --- Pass 2: group match display scores + scheduledAt backfill ---
-  // Collect live fixtures as we go for Pass 3 enrichment.
-  const groupPairMatchNos = buildGroupPairMatchNos();
-  const scheduledAtQueue: Array<{ matchNo: number; scheduledAt: Date }> = [];
-  // Live group fixtures to enrich in Pass 3: matchId + provider team ids for
-  // correct home/away stat assignment (API response order is not guaranteed),
-  // plus the codes/score needed to format goal & card chat posts.
+  // Live fixtures (group + knockout) to enrich in Pass 3: matchId + provider team ids
+  // for correct home/away stat assignment (API order isn't guaranteed), plus the
+  // codes/score needed to format goal & card chat posts.
   const liveFixtures: Array<{
     fixtureId: number;
     matchId: string;
@@ -231,6 +235,87 @@ export async function pollScores(): Promise<PollSummary> {
     homeScore: number | null;
     awayScore: number | null;
   }> = [];
+
+  // --- Pass 1: knockout results (finished → answer key) + live display rows ---
+  let applied = 0;
+  let koLiveApplied = 0;
+  const appliedKnockouts: { matchNo: number; winnerCode: string }[] = [];
+  for (const f of fixtures) {
+    const homeCode = EXTERNAL_TEAM_CODES[f.homeExternalId];
+    const awayCode = EXTERNAL_TEAM_CODES[f.awayExternalId];
+    // Map to our match: prefer the static fixture-id map, else the two seated teams —
+    // but accept the pair fallback only when the fixture kicks off near that knockout
+    // match's scheduled time (guards against a group rematch of a final's pairing).
+    let matchNo = EXTERNAL_TO_MATCHNO[f.externalId] as number | undefined;
+    if (matchNo == null && homeCode && awayCode) {
+      const cand = knockoutPairMatchNos.get([homeCode, awayCode].sort().join("_"));
+      const sched = cand != null ? knockoutScheduleByNo.get(cand) : undefined;
+      if (
+        cand != null &&
+        sched &&
+        f.scheduledAt != null &&
+        Math.abs(new Date(f.scheduledAt).getTime() - sched.getTime()) <= KO_FIXTURE_PROXIMITY_MS
+      ) {
+        matchNo = cand;
+      }
+    }
+    if (matchNo == null || matchNo < 73 || matchNo > 104) continue;
+
+    if (f.finished) {
+      // Finished → record the winner in the answer key. Scored knockouts only (bronze
+      // isn't scored). This is the only knockout write that touches scoring.
+      if (!isScoredKnockout(matchNo)) continue;
+      const winnerCode = resolveWinnerCode(f);
+      if (!winnerCode) continue;
+      const { applied: didApply } = await setKnockoutResultFromApi(tournamentId, matchNo, {
+        winnerCode,
+        homeScore: f.homeGoals,
+        awayScore: f.awayGoals,
+        homePens: f.homePens,
+        awayPens: f.awayPens,
+        final: true,
+      });
+      if (didApply) {
+        applied += 1;
+        appliedKnockouts.push({ matchNo, winnerCode });
+      }
+    } else if (f.live && homeCode && awayCode && isScoredKnockout(matchNo)) {
+      // In-play → display-only LIVE row so the match surfaces as live on the home /
+      // challenge tabs (no answer-key or scoring change until full time). Scored
+      // knockouts only, so bronze (never finalized via the API) can't get stuck LIVE.
+      const { applied: didApply, matchId } = await upsertKnockoutDisplayFromApi(
+        tournamentId,
+        matchNo,
+        {
+          apiHomeCode: homeCode,
+          apiAwayCode: awayCode,
+          apiHomeScore: f.homeGoals,
+          apiAwayScore: f.awayGoals,
+          elapsed: f.elapsed,
+        },
+      );
+      if (didApply) {
+        koLiveApplied += 1;
+        if (matchId) {
+          liveFixtures.push({
+            fixtureId: f.fixtureId,
+            matchId,
+            matchNo,
+            homeTeamId: Number(f.homeExternalId),
+            awayTeamId: Number(f.awayExternalId),
+            homeCode,
+            awayCode,
+            homeScore: f.homeGoals,
+            awayScore: f.awayGoals,
+          });
+        }
+      }
+    }
+  }
+
+  // --- Pass 2: group match display scores + scheduledAt backfill ---
+  const groupPairMatchNos = buildGroupPairMatchNos();
+  const scheduledAtQueue: Array<{ matchNo: number; scheduledAt: Date }> = [];
   // Group matches that flipped to FINAL this poll — for the one-time FT chat post.
   const finals: Array<{ matchNo: number; homeCode: string; awayCode: string; homeScore: number; awayScore: number }> = [];
   let groupsApplied = 0;
@@ -298,7 +383,11 @@ export async function pollScores(): Promise<PollSummary> {
   } else if (appliedKnockouts.length > 1) {
     push = { title: "⚽ Knockout results are in", body: "Standings just moved — check the leaderboard." };
   }
-  if (applied > 0 || groupsApplied > 0) await recomputeTournamentPools(tournamentId, push);
+  // A live knockout display update changes no score, but still recompute+notify so
+  // the home/challenge "live now" surfaces refresh over SSE (mirrors the group path).
+  if (applied > 0 || groupsApplied > 0 || koLiveApplied > 0) {
+    await recomputeTournamentPools(tournamentId, push);
+  }
 
   // Full-time chat posts for group matches that just settled (best-effort).
   for (const fin of finals) {
@@ -364,5 +453,5 @@ export async function pollScores(): Promise<PollSummary> {
     }
   }
 
-  return { fetched: fixtures.length, applied, groupsApplied, eventsWritten, statsWritten };
+  return { fetched: fixtures.length, applied, koLiveApplied, groupsApplied, eventsWritten, statsWritten };
 }

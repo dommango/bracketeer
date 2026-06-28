@@ -121,6 +121,14 @@ export async function setKnockoutResultFromApi(
     });
     if (match?.result?.source === "MANUAL") return { applied: false };
 
+    // Idempotent: the whole-season feed re-reports finished knockouts on every poll.
+    // If this exact winner is already in the answer key, do nothing — otherwise every
+    // poll for the rest of the tournament would re-write the key and force a full
+    // recompute of every pool.
+    const current = await loadAnswerKey(tournamentId, tx);
+    const winner = (input.winnerCode || "").toUpperCase();
+    if ((current.knockout?.[matchNo] ?? "").toUpperCase() === winner) return { applied: false };
+
     await setKnockoutResultLocked(tx, tournamentId, matchNo, { ...input, source: "API" });
     return { applied: true };
   });
@@ -224,6 +232,72 @@ export async function upsertGroupMatchResultFromApi(
   });
 
   return { applied: true, matchId: match.id, newlyFinal };
+}
+
+// Upsert the display Result row for an IN-PLAY knockout match. Pure display — does
+// NOT touch officialResults (the knockout answer key is only written at full time by
+// setKnockoutResultFromApi, so a winner is never recorded mid-match and scoring is
+// untouched). Mirrors the group live path: skips a MANUAL row, never regresses a
+// FINAL row back to LIVE, and orients the API scoreline to the bracket's home/away so
+// the live row and the eventual FINAL row read the same way (no flip at the whistle).
+export async function upsertKnockoutDisplayFromApi(
+  tournamentId: string,
+  matchNo: number,
+  input: {
+    apiHomeCode: string;
+    apiAwayCode: string;
+    apiHomeScore: number | null;
+    apiAwayScore: number | null;
+    elapsed?: number | null;
+  },
+): Promise<{ applied: boolean; matchId: string | null }> {
+  const [match, tournament] = await Promise.all([
+    prisma.match.findUnique({
+      where: { tournamentId_matchNo: { tournamentId, matchNo } },
+      select: { id: true },
+    }),
+    prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { officialResults: true },
+    }),
+  ]);
+  if (!match || !tournament) return { applied: false, matchId: match?.id ?? null };
+
+  // Orient the scoreline to the bracket's home/away so it matches the eventual FINAL
+  // row. The pair map guarantees apiHomeCode is one of the two seated teams.
+  const slot = resolveBracket(asResults(tournament.officialResults))[matchNo];
+  if (!slot?.home || !slot?.away) return { applied: false, matchId: match.id };
+  const apiHomeIsBracketHome = input.apiHomeCode === slot.home;
+  const homeScore = apiHomeIsBracketHome ? input.apiHomeScore : input.apiAwayScore;
+  const awayScore = apiHomeIsBracketHome ? input.apiAwayScore : input.apiHomeScore;
+
+  const row = {
+    homeTeamCode: slot.home,
+    awayTeamCode: slot.away,
+    homeScore: homeScore ?? null,
+    awayScore: awayScore ?? null,
+    winnerCode: null,
+    elapsed: input.elapsed ?? null,
+    status: "LIVE" as const,
+    source: "API" as const,
+  };
+  // Atomic + monotonic: only touch a row that is neither FINAL nor MANUAL, so a live
+  // tick can never regress a finished match or clobber a manual entry (the check and
+  // write are one statement — no read-then-write race with a concurrent poll).
+  const updated = await prisma.result.updateMany({
+    where: { matchId: match.id, status: { not: "FINAL" }, source: { not: "MANUAL" } },
+    data: row,
+  });
+  if (updated.count > 0) return { applied: true, matchId: match.id };
+  // Nothing updated: either no row exists yet (create one) or a FINAL/MANUAL row
+  // guards it (leave it be).
+  const existing = await prisma.result.findUnique({
+    where: { matchId: match.id },
+    select: { id: true },
+  });
+  if (existing) return { applied: false, matchId: match.id };
+  await prisma.result.create({ data: { matchId: match.id, ...row } });
+  return { applied: true, matchId: match.id };
 }
 
 // Backfill Match.scheduledAt for group-stage matches that have no scheduled time
