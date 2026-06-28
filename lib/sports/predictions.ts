@@ -29,7 +29,14 @@ const MAX_PER_RUN = 10;
 const NEAR_KO_MS = 6 * 60 * 60 * 1000;
 const FRESH_MS = 6 * 60 * 60 * 1000;
 
-export async function pollPredictions(now: Date = new Date()): Promise<PredictionsPollSummary> {
+// `force` bypasses the freshness-skip (re-fetch every in-window fixture now) and
+// `max` raises the per-run cap — for a manual one-off refresh of the whole knockout
+// slate (16 R32 fixtures > the default cap). The cron path calls with no opts, so
+// its budgeted cadence is unchanged.
+export async function pollPredictions(
+  now: Date = new Date(),
+  opts: { force?: boolean; max?: number } = {},
+): Promise<PredictionsPollSummary> {
   if (!sportsApiEnabled) return { considered: 0, skipped: 0, fetched: 0, upserted: 0 };
 
   const tournament = await prisma.tournament.findUnique({
@@ -61,7 +68,7 @@ export async function pollPredictions(now: Date = new Date()): Promise<Predictio
       prediction: { select: { fetchedAt: true } },
     },
     orderBy: { scheduledAt: "asc" },
-    take: MAX_PER_RUN,
+    take: opts.max ?? MAX_PER_RUN,
   });
 
   let skipped = 0;
@@ -74,7 +81,7 @@ export async function pollPredictions(now: Date = new Date()): Promise<Predictio
     // Skip far-from-kickoff fixtures whose prediction is still fresh (credit guard).
     const msToKO = (m.scheduledAt?.getTime() ?? 0) - now.getTime();
     const lastFetched = m.prediction?.fetchedAt?.getTime() ?? 0;
-    if (m.prediction && msToKO > NEAR_KO_MS && now.getTime() - lastFetched < FRESH_MS) {
+    if (!opts.force && m.prediction && msToKO > NEAR_KO_MS && now.getTime() - lastFetched < FRESH_MS) {
       skipped++;
       continue;
     }

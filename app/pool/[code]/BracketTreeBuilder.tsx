@@ -12,6 +12,7 @@
 import type { KnockoutModel, KnockoutSlot } from "@/lib/pool/pick-form";
 import type { StadiumProjection } from "@/lib/pool/stadium-projection";
 import type { AdvanceMap } from "@/lib/pool/knockout-advance";
+import type { KnockoutCardInfo } from "@/lib/pool/queries-odds";
 import { ROUND_ACCENT, sortByTree } from "@/lib/pool/bracket-tree";
 import { roundLabel } from "@/lib/pool/rounds";
 import { KnockoutMatch, KO_STAGES } from "./pick-ui";
@@ -21,6 +22,10 @@ type OnPickSide = (matchNo: number, side: "a" | "b") => void;
 // Per-R32-match projection (position label + ranked candidates), keyed by matchNo.
 // Present only in early/projected mode; undefined otherwise.
 type Projections = Record<number, StadiumProjection> | undefined;
+// Per-match betting/insight signals keyed by matchNo, and each team's title-winner
+// probability keyed by 3-letter code. Both optional — cards show only what's present.
+type Info = Record<number, KnockoutCardInfo> | undefined;
+type TitleOdds = Record<string, number> | undefined;
 
 const TREE_COLUMNS: { code: string; key: keyof KnockoutModel }[] = [
   { code: "R32", key: "r32" },
@@ -48,6 +53,8 @@ function BracketTreeBuilder({
   onPickSide,
   advance,
   projections,
+  info,
+  titleOdds,
 }: {
   ko: KnockoutModel;
   disabled: boolean;
@@ -55,6 +62,8 @@ function BracketTreeBuilder({
   onPickSide?: OnPickSide;
   advance?: AdvanceMap;
   projections: Projections;
+  info?: Info;
+  titleOdds?: TitleOdds;
 }) {
   const slotsFor = (key: keyof KnockoutModel): KnockoutSlot[] =>
     key === "final" ? [ko.final] : (ko[key] as KnockoutSlot[]);
@@ -83,6 +92,8 @@ function BracketTreeBuilder({
                       onPickSide={onPickSide}
                       pickedSide={advance?.[slot.matchNo]}
                       projection={projections?.[slot.matchNo]}
+                      info={info?.[slot.matchNo]}
+                      titleOdds={titleOdds}
                     />
                   </div>
                 </div>
@@ -102,6 +113,8 @@ export function KnockoutCascade({
   onPickSide,
   advance,
   projections,
+  info,
+  titleOdds,
 }: {
   ko: KnockoutModel;
   disabled: boolean;
@@ -109,6 +122,8 @@ export function KnockoutCascade({
   onPickSide?: OnPickSide;
   advance?: AdvanceMap;
   projections?: Projections;
+  info?: Info;
+  titleOdds?: TitleOdds;
 }) {
   return (
     <>
@@ -131,6 +146,8 @@ export function KnockoutCascade({
                     onPickSide={onPickSide}
                     pickedSide={advance?.[slot.matchNo]}
                     projection={projections?.[slot.matchNo]}
+                    info={info?.[slot.matchNo]}
+                    titleOdds={titleOdds}
                   />
                 ))}
               </div>
@@ -148,6 +165,8 @@ export function KnockoutCascade({
               onPick={onPick}
               onPickSide={onPickSide}
               pickedSide={advance?.[ko.final.matchNo]}
+              info={info?.[ko.final.matchNo]}
+              titleOdds={titleOdds}
             />
           </div>
         </div>
@@ -162,6 +181,8 @@ export function KnockoutCascade({
           onPickSide={onPickSide}
           advance={advance}
           projections={projections}
+          info={info}
+          titleOdds={titleOdds}
         />
       </div>
     </>

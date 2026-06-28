@@ -10,6 +10,7 @@ import { slotLabel, KNOCKOUT_SLOT_REFS } from "./slot-label";
 import { matchTag, roundLabel, type RoundCode } from "./rounds";
 import { kickoffFor, venueFor } from "@/lib/scoring/schedule";
 import type { Results } from "@/lib/scoring/types";
+import type { ImpliedProbs } from "@/lib/odds/map";
 
 // Earliest kickoff among a group's six matches. Groups are laid out A–L with six
 // matches each in matchNo order (group at index i owns matchNos i*6+1 … i*6+6),
@@ -42,6 +43,9 @@ export interface BracketMatch {
   venue: string | null;
   city: string | null;
   cityToken: string | null;
+  // Win/draw/away implied probabilities, oriented to this card's home. Null until the
+  // odds poll has a price for the match (knockout cards once the matchup is concrete).
+  odds: ImpliedProbs | null;
 }
 
 export interface BracketRound {
@@ -87,6 +91,7 @@ export function buildBracketView(
   scores: Map<number, MatchScore> = new Map(),
   groupRows: GroupResultRow[] = [],
   opts: { projectBracket?: boolean } = {},
+  odds: Map<number, ImpliedProbs> = new Map(),
 ): BracketView {
   // Always compute tables (computeGroupTables seeds all 4 teams at 0 with no rows),
   // so every group renders a full, same-size table whether it has played or not.
@@ -128,6 +133,7 @@ export function buildBracketView(
       venue: v?.venue ?? null,
       city: v?.city ?? null,
       cityToken: v?.cityToken ?? null,
+      odds: odds.get(matchNo) ?? null,
     };
   };
 

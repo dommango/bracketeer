@@ -7,6 +7,7 @@ import { hasAcceptedTerms } from "@/lib/account/consent";
 import {
   getKnockoutState,
   getKnockoutBuilderProjections,
+  getKnockoutMatchInfo,
   getTournamentIdBySlug,
 } from "@/lib/pool/queries";
 import { getStandaloneEntry } from "@/lib/pool/submit-picks";
@@ -97,11 +98,12 @@ export default async function UnifiedPicksPage() {
       </div>
     );
   } else {
-    const [bracket, builder] = await Promise.all([
+    const [bracket, builder, { info, titleOdds }] = await Promise.all([
       primary
         ? getStandaloneEntry(tournamentId, user.id, "KNOCKOUT", primary.entryId)
         : Promise.resolve(null),
       early ? getKnockoutBuilderProjections(tournamentId) : Promise.resolve(null),
+      getKnockoutMatchInfo(tournamentId),
     ]);
     const locked = isKnockoutLocked(locksAt, bracket?.locked ?? false);
     koProgress = primary?.progress
@@ -121,6 +123,8 @@ export default async function UnifiedPicksPage() {
           early={early}
           projections={builder?.projections}
           outrights={builder?.outrights}
+          info={info}
+          titleOdds={titleOdds}
           saveAction={saveSoloBracketAction}
         />
         {extras.length > 0 ? (

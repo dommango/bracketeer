@@ -6,6 +6,7 @@ import { ROUND_ACCENT, sortByTree } from "@/lib/pool/bracket-tree";
 import { Flag } from "./Flag";
 import { GROUP_CITY, GroupLetterMark, FormChips } from "./group-bits";
 import { roundLabel } from "@/lib/pool/rounds";
+import { WinProbBar } from "./WinProbBar";
 
 function Side({
   name,
@@ -103,6 +104,13 @@ function MatchCard({ m, accent }: { m: BracketMatch; accent: string }) {
         <div className="mt-1.5 truncate text-[10px] text-ink-4">
           {m.venue}
           {m.city ? <span className="text-ink-4"> · {m.city}</span> : null}
+        </div>
+      ) : null}
+      {/* Pre-match win-probability split (knockout cards once the matchup is set);
+          hidden after a result lands so the bar never competes with the final score. */}
+      {m.odds && !decided ? (
+        <div className="mt-2 border-t border-line-soft pt-2">
+          <WinProbBar odds={m.odds} homeCode={m.homeCode} awayCode={m.awayCode} />
         </div>
       ) : null}
     </div>

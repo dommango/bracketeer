@@ -43,7 +43,11 @@ async function oddsRefreshDue(
   return { due: false, snapshot: null };
 }
 
-export async function pollOdds(): Promise<OddsPollSummary> {
+// `force` bypasses the snapshot gate to spend one credit now regardless of the
+// schedule — for a manual, one-off whole-slate refresh (e.g. seeding the knockout
+// lines well before any pre-match window opens). The cron path calls with no args,
+// so its budgeted behaviour is unchanged.
+export async function pollOdds(opts: { force?: boolean } = {}): Promise<OddsPollSummary> {
   if (!oddsApiEnabled) return { fetched: 0, mapped: 0, upserted: 0, unmatched: [] };
 
   const tournament = await prisma.tournament.findUnique({
@@ -52,7 +56,9 @@ export async function pollOdds(): Promise<OddsPollSummary> {
   });
   if (!tournament) return { fetched: 0, mapped: 0, upserted: 0, unmatched: [] };
 
-  const plan = await oddsRefreshDue(tournament.id);
+  const plan = opts.force
+    ? { due: true, snapshot: "pre" as OddsSnapshot }
+    : await oddsRefreshDue(tournament.id);
   if (!plan.due) {
     return { fetched: 0, mapped: 0, upserted: 0, unmatched: [], skipped: true };
   }

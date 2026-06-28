@@ -5,6 +5,76 @@ import { prisma } from "@/lib/db";
 import { matchPlayerCode } from "@/lib/odds/player-match";
 import { teamName } from "./query-helpers";
 
+// Per-knockout-match betting + insight signals for the bracket cards (pick sheet +
+// read-only views): the win-probability split, the Over/Under goals line, and the
+// model prediction (advice + each side's recent form). Every field is optional —
+// each comes from a different poller and may be absent, so the card shows only what
+// it has.
+export interface KnockoutCardInfo {
+  homeWinProb: number;
+  drawProb: number;
+  awayWinProb: number;
+  oddsFetchedAt: Date | null;
+  totalLine: number | null;
+  overProb: number | null;
+  underProb: number | null;
+  advice: string | null;
+  homeForm: string | null;
+  awayForm: string | null;
+}
+
+// Knockout-card signals keyed by match number, plus each team's championship-winner
+// probability (`titleOdds`, keyed by 3-letter code) for the per-side title context.
+// Covers every knockout match (73–104); only those with at least one polled signal
+// appear in `info`, and a card renders the bar only once both teams are seated.
+export async function getKnockoutMatchInfo(
+  tournamentId: string,
+): Promise<{ info: Record<number, KnockoutCardInfo>; titleOdds: Record<string, number> }> {
+  const [matches, outrights] = await Promise.all([
+    prisma.match.findMany({
+      where: { tournamentId, matchNo: { gte: 73 } },
+      select: {
+        matchNo: true,
+        odds: {
+          select: {
+            homeWinProb: true,
+            drawProb: true,
+            awayWinProb: true,
+            totalLine: true,
+            overProb: true,
+            underProb: true,
+            fetchedAt: true,
+          },
+        },
+        prediction: { select: { advice: true, homeForm: true, awayForm: true } },
+      },
+    }),
+    getChampionshipOdds(tournamentId, 48),
+  ]);
+
+  const info: Record<number, KnockoutCardInfo> = {};
+  for (const m of matches) {
+    if (!m.odds && !m.prediction) continue;
+    info[m.matchNo] = {
+      homeWinProb: m.odds?.homeWinProb ?? 0,
+      drawProb: m.odds?.drawProb ?? 0,
+      awayWinProb: m.odds?.awayWinProb ?? 0,
+      oddsFetchedAt: m.odds?.fetchedAt ?? null,
+      totalLine: m.odds?.totalLine ?? null,
+      overProb: m.odds?.overProb ?? null,
+      underProb: m.odds?.underProb ?? null,
+      advice: m.prediction?.advice ?? null,
+      homeForm: m.prediction?.homeForm ?? null,
+      awayForm: m.prediction?.awayForm ?? null,
+    };
+  }
+
+  const titleOdds: Record<string, number> = {};
+  for (const o of outrights) titleOdds[o.teamCode] = o.winProb;
+
+  return { info, titleOdds };
+}
+
 export interface ChampionshipOdd {
   teamCode: string;
   name: string;

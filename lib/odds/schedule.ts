@@ -12,23 +12,33 @@
 // simultaneous kickoffs collapse into a single call, and upcoming matches stay
 // covered for free.
 
-export const PRE_WINDOW_START_MS = -30 * 60_000; // open the pre-match snapshot 30 min before kickoff…
+// An early line is captured once a match comes within ~18 h of kickoff. This seeds
+// the bracket builders with odds well before the closing-line window opens (knockout
+// picks lock at the R32 kickoff, so people fill them out the day before — the early
+// snapshot means they see prices). It costs at most one extra credit per distinct
+// kickoff: still ≤3 (early + pre + half) per match, comfortably inside 500/mo.
+export const EARLY_WINDOW_START_MS = -18 * 60 * 60_000; // open the early snapshot 18 h before kickoff…
+export const PRE_WINDOW_START_MS = -30 * 60_000; // open the pre-match (closing-line) snapshot 30 min before…
 export const PRE_WINDOW_END_MS = 0; // …closing at kickoff
 export const HALF_WINDOW_START_MS = 45 * 60_000; // halftime snapshot from 45 min after kickoff…
 export const HALF_WINDOW_END_MS = 75 * 60_000; // …through 75 min (covers the break + first-half stoppage)
 
-export type OddsSnapshot = "pre" | "half";
+export type OddsSnapshot = "early" | "pre" | "half";
 
 // Which snapshot, if any, is due for one match right now. A snapshot fires once
 // per window: when `now` is inside the window AND the match's stored odds predate
 // that window's start (null = never fetched, so it fires). Returns null when no
-// snapshot is due — including the whole gap between the two windows and after FT.
-// `pre` is checked first so a match can never be "half-due" before it's "pre-due".
+// snapshot is due — including the gaps between windows and after FT. Windows are
+// checked earliest-first so a match can never skip ahead to a later snapshot.
 export function snapshotDue(
   now: number,
   kickoffMs: number,
   oddsFetchedAtMs: number | null,
 ): OddsSnapshot | null {
+  const earlyStart = kickoffMs + EARLY_WINDOW_START_MS;
+  if (now >= earlyStart && now < kickoffMs + PRE_WINDOW_START_MS) {
+    if (oddsFetchedAtMs == null || oddsFetchedAtMs < earlyStart) return "early";
+  }
   const preStart = kickoffMs + PRE_WINDOW_START_MS;
   if (now >= preStart && now < kickoffMs + PRE_WINDOW_END_MS) {
     if (oddsFetchedAtMs == null || oddsFetchedAtMs < preStart) return "pre";
@@ -42,10 +52,10 @@ export function snapshotDue(
 
 // The kickoff range a match must fall in for *any* snapshot window to be open
 // right now — used to pre-filter the DB query so snapshotDue only runs on
-// plausible candidates. A window is open iff KO ∈ [now − 75 min, now + 30 min].
+// plausible candidates. A window is open iff KO ∈ [now − 75 min, now + 18 h].
 export function snapshotKickoffRange(now: number): { gt: Date; lt: Date } {
   return {
     gt: new Date(now - HALF_WINDOW_END_MS),
-    lt: new Date(now - PRE_WINDOW_START_MS),
+    lt: new Date(now - EARLY_WINDOW_START_MS),
   };
 }

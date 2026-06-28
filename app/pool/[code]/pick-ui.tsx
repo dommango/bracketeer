@@ -7,11 +7,13 @@
 import { resolveKnockout, type KnockoutSlot } from "@/lib/pool/pick-form";
 import type { Picks } from "@/lib/scoring/types";
 import type { StadiumProjection, R32SlotProjection } from "@/lib/pool/stadium-projection";
+import type { KnockoutCardInfo } from "@/lib/pool/queries-odds";
 import { ROUND_ACCENT, roundCodeForMatch } from "@/lib/pool/bracket-tree";
 import { slotLabel, KNOCKOUT_SLOT_REFS } from "@/lib/pool/slot-label";
 import { kickoffFor, venueFor } from "@/lib/scoring/schedule";
 import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
+import { WinProbBar } from "./WinProbBar";
 
 export const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
@@ -52,6 +54,77 @@ function candidateLine(proj: R32SlotProjection): string {
     .join(" · ");
 }
 
+// The betting + insight strip under a seated matchup: the win-probability bar, then
+// a compact meta line (Over/Under goals line, each side's title-winner %, and the
+// model's advice). Every field is gated on its own data, so the strip shows only
+// what's been polled — and the whole block is omitted when there's nothing at all.
+function MatchInsights({
+  info,
+  homeCode,
+  awayCode,
+  titleOdds,
+}: {
+  info: KnockoutCardInfo;
+  homeCode: string | null;
+  awayCode: string | null;
+  titleOdds?: Record<string, number>;
+}) {
+  const homeTitle = homeCode ? titleOdds?.[homeCode] : undefined;
+  const awayTitle = awayCode ? titleOdds?.[awayCode] : undefined;
+  const pct = (x: number) => Math.round(x * 100);
+  const hasMeta =
+    info.totalLine != null || homeTitle != null || awayTitle != null || Boolean(info.advice);
+  if (!info.oddsFetchedAt && !hasMeta) return null;
+
+  return (
+    <div className="mt-2 border-t border-line-soft pt-2">
+      {info.oddsFetchedAt ? (
+        <WinProbBar
+          odds={{
+            homeWinProb: info.homeWinProb,
+            drawProb: info.drawProb,
+            awayWinProb: info.awayWinProb,
+          }}
+          homeCode={homeCode}
+          awayCode={awayCode}
+        />
+      ) : null}
+      {hasMeta ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-ink-4">
+          {info.totalLine != null ? (
+            <span className="font-mono">O/U {info.totalLine}</span>
+          ) : null}
+          {homeTitle != null && homeCode ? (
+            <span>
+              {homeCode} title {pct(homeTitle)}%
+            </span>
+          ) : null}
+          {awayTitle != null && awayCode ? (
+            <span>
+              {awayCode} title {pct(awayTitle)}%
+            </span>
+          ) : null}
+          {info.advice ? <span className="truncate text-ink-3">{info.advice}</span> : null}
+        </div>
+      ) : null}
+      {info.homeForm || info.awayForm ? (
+        <div className="mt-0.5 flex flex-wrap gap-x-2 font-mono text-[10px] text-ink-4">
+          {info.homeForm ? (
+            <span>
+              {homeCode ?? "Home"} {info.homeForm}
+            </span>
+          ) : null}
+          {info.awayForm ? (
+            <span>
+              {awayCode ?? "Away"} {info.awayForm}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // Single-tap winner selection that mirrors the read-only matches-tab bracket card
 // (Bracket.tsx's MatchCard/Side): the same card chrome — accent left border, the
 // M-tag header, two stacked team rows (flag, name, code) split by a hairline — but
@@ -72,6 +145,8 @@ export function KnockoutMatch({
   onPickSide,
   pickedSide,
   projection,
+  info,
+  titleOdds,
 }: {
   slot: KnockoutSlot;
   disabled: boolean;
@@ -80,6 +155,10 @@ export function KnockoutMatch({
   onPickSide?: (matchNo: number, side: "a" | "b") => void;
   pickedSide?: "a" | "b";
   projection?: StadiumProjection;
+  // Betting + insight signals for this match (win-prob, O/U, model advice/form) and
+  // the title-winner odds table — rendered under the matchup once both teams seat.
+  info?: KnockoutCardInfo;
+  titleOdds?: Record<string, number>;
 }) {
   const positional = Boolean(onPickSide);
   const ready = Boolean(slot.a && slot.b);
@@ -173,6 +252,18 @@ export function KnockoutMatch({
           {venue.venue}
           {venue.city ? <span className="text-ink-4"> · {venue.city}</span> : null}
         </div>
+      ) : null}
+      {/* The odds/insights are oriented to the OFFICIAL matchup. They line up exactly
+          for R32 (real qualifiers) — the only round with prices at pick time. For R16+
+          a slot holds the user's predicted advancer, so the bar is only meaningful once
+          that pick matches the team reality eventually seats there. */}
+      {ready && info ? (
+        <MatchInsights
+          info={info}
+          homeCode={slot.a?.code ?? null}
+          awayCode={slot.b?.code ?? null}
+          titleOdds={titleOdds}
+        />
       ) : null}
     </div>
   );
