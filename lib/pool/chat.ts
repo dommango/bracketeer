@@ -69,7 +69,9 @@ function groupReactions(rows: ReactionRow[], viewerId: string | null): ReactionG
   return [...byEmoji.entries()].map(([emoji, g]) => ({ emoji, count: g.count, mine: g.mine }));
 }
 
-const messageInclude = {
+// Shared by the pool and the global-challenge readers (lib/challenge/chat.ts), so
+// both scopes decode identically.
+export const messageInclude = {
   user: { select: { name: true, email: true } },
   reactions: { select: { emoji: true, userId: true } },
   replyTo: {
@@ -83,7 +85,7 @@ const messageInclude = {
   },
 } as const;
 
-type MessageRow = {
+export type MessageRow = {
   id: string;
   kind: ChatKind;
   body: string;
@@ -105,7 +107,7 @@ type MessageRow = {
     | null;
 };
 
-function toView(m: MessageRow, viewerId: string | null): ChatView {
+export function toChatView(m: MessageRow, viewerId: string | null): ChatView {
   return {
     id: m.id,
     kind: m.kind,
@@ -139,7 +141,7 @@ export async function listMessages(
     take,
     include: messageInclude,
   });
-  return rows.reverse().map((m) => toView(m as MessageRow, viewerId));
+  return rows.reverse().map((m) => toChatView(m as MessageRow, viewerId));
 }
 
 export async function postMessage(
@@ -175,7 +177,7 @@ export async function postMessage(
     },
     include: messageInclude,
   });
-  return toView(m as MessageRow, userId);
+  return toChatView(m as MessageRow, userId);
 }
 
 // Auto-posted match event (goal, card, result). No author; `meta` carries the
@@ -189,7 +191,7 @@ export async function postSystemMessage(
     data: { poolId, userId: null, kind: "SYSTEM", body, meta: meta as object },
     include: messageInclude,
   });
-  return toView(m as MessageRow, null);
+  return toChatView(m as MessageRow, null);
 }
 
 // Toggle one (message, viewer, emoji) reaction. Returns true if it now exists.

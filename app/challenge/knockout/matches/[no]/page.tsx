@@ -5,6 +5,7 @@ import {
   getChallengeMatchDetail,
 } from "@/lib/pool/queries";
 import { ChallengeMatchDetail } from "@/app/challenge/ChallengeMatchDetail";
+import { ChallengeChat } from "@/app/challenge/ChallengeChat";
 
 // Live results / lineups / odds change at request time.
 export const dynamic = "force-dynamic";
@@ -25,10 +26,17 @@ export default async function KnockoutChallengeMatchPage({
   if (!detail) notFound();
 
   return (
-    <ChallengeMatchDetail
-      detail={detail}
-      backHref="/challenge/knockout/matches"
-      basePath="/challenge/knockout"
-    />
+    <>
+      <ChallengeMatchDetail
+        detail={detail}
+        backHref="/challenge/knockout/matches"
+        basePath="/challenge/knockout"
+      />
+      {detail.status === "LIVE" ? (
+        <div className="mt-4">
+          <ChallengeChat heading="Live chat" />
+        </div>
+      ) : null}
+    </>
   );
 }

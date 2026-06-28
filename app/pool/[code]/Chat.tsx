@@ -46,15 +46,31 @@ function timeLabel(iso: string): string {
 
 export function Chat({
   poolId,
+  apiBase,
   currentUserId,
   initialMessages,
   giphyEnabled = false,
+  canPost = true,
+  composerHint,
+  placeholder = "Message your pool…",
+  pollMs = 20000,
 }: {
-  poolId: string;
-  currentUserId: string;
+  // A pool chat passes poolId (drives the SSE stream); the global challenge chat
+  // passes apiBase and no poolId (poll-only — no pool-scoped stream).
+  poolId?: string;
+  apiBase?: string;
+  currentUserId: string | null;
   initialMessages: ChatMessage[];
   giphyEnabled?: boolean;
+  // When false, the composer + per-message actions are hidden (read-only view) and
+  // composerHint is shown instead — e.g. a signed-out or not-entered challenge viewer.
+  canPost?: boolean;
+  composerHint?: string;
+  placeholder?: string;
+  pollMs?: number;
 }) {
+  // Endpoint base: a pool's namespaced API, or the global challenge chat base.
+  const base = apiBase ?? `/api/pool/${poolId}`;
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -66,21 +82,21 @@ export function Chat({
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/pool/${poolId}/chat?limit=50`, { cache: "no-store" });
+      const res = await fetch(`${base}/chat?limit=50`, { cache: "no-store" });
       if (!res.ok) return;
       const json = await res.json();
       if (Array.isArray(json?.data?.messages)) setMessages(json.data.messages);
     } catch {
       /* transient — next signal retries */
     }
-  }, [poolId]);
+  }, [base]);
 
   usePoolStream(
-    poolId,
+    poolId ?? null,
     (signal) => {
       if (signal === "chat" || signal === "poll") void refresh();
     },
-    20000,
+    pollMs,
   );
 
   useEffect(() => {
@@ -100,7 +116,7 @@ export function Chat({
       setSending(true);
       setError(null);
       try {
-        const res = await fetch(`/api/pool/${poolId}/chat`, {
+        const res = await fetch(`${base}/chat`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ ...payload, replyToId: replyTo?.id }),
@@ -120,7 +136,7 @@ export function Chat({
         setSending(false);
       }
     },
-    [poolId, replyTo, refresh],
+    [base, replyTo, refresh],
   );
 
   async function send(e: FormEvent) {
@@ -140,7 +156,7 @@ export function Chat({
   async function react(messageId: string, emoji: string) {
     setPickerFor(null);
     try {
-      const res = await fetch(`/api/pool/${poolId}/chat/react`, {
+      const res = await fetch(`${base}/chat/react`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ messageId, emoji }),
@@ -167,6 +183,7 @@ export function Chat({
                 key={m.id}
                 m={m}
                 mine={m.userId === currentUserId}
+                interactive={canPost}
                 pickerOpen={pickerFor === m.id}
                 onReply={() => setReplyTo(m)}
                 onOpenPicker={() => setPickerFor((cur) => (cur === m.id ? null : m.id))}
@@ -178,61 +195,69 @@ export function Chat({
         <div ref={bottomRef} />
       </div>
 
-      {replyTo ? (
-        <div className="flex items-center gap-2 border-t border-line bg-surface-sunk px-3 py-2 text-xs">
-          <span className="h-7 w-0.5 shrink-0 rounded-full bg-pitch" />
-          <span className="min-w-0 flex-1">
-            <span className="font-semibold text-pitch-dark">
-              Replying to {replyTo.authorName ?? "event"}
-            </span>
-            <span className="block truncate text-ink-3">{replyTo.body || "Attachment"}</span>
-          </span>
-          <button
-            onClick={() => setReplyTo(null)}
-            aria-label="Cancel reply"
-            className="shrink-0 rounded-full px-2 py-1 font-bold text-ink-3 hover:bg-surface hover:text-ink"
-          >
-            ✕
-          </button>
-        </div>
-      ) : null}
+      {canPost ? (
+        <>
+          {replyTo ? (
+            <div className="flex items-center gap-2 border-t border-line bg-surface-sunk px-3 py-2 text-xs">
+              <span className="h-7 w-0.5 shrink-0 rounded-full bg-pitch" />
+              <span className="min-w-0 flex-1">
+                <span className="font-semibold text-pitch-dark">
+                  Replying to {replyTo.authorName ?? "event"}
+                </span>
+                <span className="block truncate text-ink-3">{replyTo.body || "Attachment"}</span>
+              </span>
+              <button
+                onClick={() => setReplyTo(null)}
+                aria-label="Cancel reply"
+                className="shrink-0 rounded-full px-2 py-1 font-bold text-ink-3 hover:bg-surface hover:text-ink"
+              >
+                ✕
+              </button>
+            </div>
+          ) : null}
 
-      {giphyEnabled && gifOpen ? (
-        <GifPicker onPick={sendGif} disabled={sending} />
-      ) : null}
+          {giphyEnabled && gifOpen ? (
+            <GifPicker onPick={sendGif} disabled={sending} />
+          ) : null}
 
-      <form onSubmit={send} className="flex items-center gap-2 border-t border-line p-3">
-        {giphyEnabled ? (
-          <button
-            type="button"
-            onClick={() => setGifOpen((v) => !v)}
-            aria-label="Add a GIF"
-            aria-pressed={gifOpen}
-            className={`h-11 shrink-0 rounded-full border px-3 text-xs font-bold tracking-wide transition-colors ${
-              gifOpen
-                ? "border-pitch bg-pitch-tint text-pitch-dark"
-                : "border-line bg-surface text-ink-2 hover:bg-surface-sunk"
-            }`}
-          >
-            GIF
-          </button>
-        ) : null}
-        <input
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          maxLength={2000}
-          placeholder={replyTo ? "Write a reply…" : "Message your pool…"}
-          className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none transition-[border-color,box-shadow] focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]"
-        />
-        <button
-          type="submit"
-          disabled={sending || !body.trim()}
-          className="h-11 rounded-full bg-pitch px-5 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.97] disabled:opacity-50"
-        >
-          Send
-        </button>
-      </form>
-      {error ? <p className="px-4 pb-3 text-xs text-[var(--negative)]">{error}</p> : null}
+          <form onSubmit={send} className="flex items-center gap-2 border-t border-line p-3">
+            {giphyEnabled ? (
+              <button
+                type="button"
+                onClick={() => setGifOpen((v) => !v)}
+                aria-label="Add a GIF"
+                aria-pressed={gifOpen}
+                className={`h-11 shrink-0 rounded-full border px-3 text-xs font-bold tracking-wide transition-colors ${
+                  gifOpen
+                    ? "border-pitch bg-pitch-tint text-pitch-dark"
+                    : "border-line bg-surface text-ink-2 hover:bg-surface-sunk"
+                }`}
+              >
+                GIF
+              </button>
+            ) : null}
+            <input
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              maxLength={2000}
+              placeholder={replyTo ? "Write a reply…" : placeholder}
+              className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none transition-[border-color,box-shadow] focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]"
+            />
+            <button
+              type="submit"
+              disabled={sending || !body.trim()}
+              className="h-11 rounded-full bg-pitch px-5 text-sm font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.97] disabled:opacity-50"
+            >
+              Send
+            </button>
+          </form>
+          {error ? <p className="px-4 pb-3 text-xs text-[var(--negative)]">{error}</p> : null}
+        </>
+      ) : composerHint ? (
+        <p className="border-t border-line px-4 py-3 text-center text-[13px] text-ink-3">
+          {composerHint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -279,6 +304,7 @@ function ReactionBar({
 function MessageRow({
   m,
   mine,
+  interactive,
   pickerOpen,
   onReply,
   onOpenPicker,
@@ -286,6 +312,8 @@ function MessageRow({
 }: {
   m: ChatMessage;
   mine: boolean;
+  // When false (read-only viewer), the react/reply controls and picker are hidden.
+  interactive: boolean;
   pickerOpen: boolean;
   onReply: () => void;
   onOpenPicker: () => void;
@@ -295,7 +323,7 @@ function MessageRow({
     <div className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
       <div className="group flex max-w-[85%] items-end gap-1.5">
         {/* Action buttons sit on the inside edge of the bubble. */}
-        {mine ? (
+        {interactive && mine ? (
           <MessageActions onReply={onReply} onOpenPicker={onOpenPicker} />
         ) : null}
         <div
@@ -339,12 +367,12 @@ function MessageRow({
             {timeLabel(m.createdAt)}
           </p>
         </div>
-        {!mine ? (
+        {interactive && !mine ? (
           <MessageActions onReply={onReply} onOpenPicker={onOpenPicker} />
         ) : null}
       </div>
 
-      {pickerOpen ? (
+      {interactive && pickerOpen ? (
         <div className="mt-1 flex gap-1 rounded-full border border-line bg-surface px-2 py-1 shadow-[var(--shadow-sm)]">
           {REACTIONS.map((emoji) => (
             <button
@@ -358,7 +386,7 @@ function MessageRow({
         </div>
       ) : null}
 
-      <ReactionBar reactions={m.reactions} onToggle={onReact} />
+      <ReactionBar reactions={m.reactions} onToggle={interactive ? onReact : () => {}} />
     </div>
   );
 }

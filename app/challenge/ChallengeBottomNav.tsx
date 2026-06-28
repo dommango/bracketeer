@@ -10,6 +10,7 @@ export { challengeBaseFromPath };
 
 const PICKS_HREF = "/challenge/picks";
 const MATCHES_HREF = "/challenge/matches";
+const CHAT_HREF = "/challenge/chat";
 
 function onUnifiedPicks(pathname: string): boolean {
   return pathname === PICKS_HREF || pathname.startsWith(`${PICKS_HREF}/`);
@@ -25,13 +26,15 @@ function onMatches(pathname: string): boolean {
   );
 }
 
-// The unified Picks / Matches surfaces have no game segment, so the sibling tabs
-// resolve to the featured game tree.
+// The unified Picks / Matches / Chat surfaces have no game segment, so the sibling
+// tabs resolve to the featured game tree (and the nav still renders there).
 function onUnifiedSurface(pathname: string): boolean {
   return (
     onUnifiedPicks(pathname) ||
     pathname === MATCHES_HREF ||
-    pathname.startsWith(`${MATCHES_HREF}/`)
+    pathname.startsWith(`${MATCHES_HREF}/`) ||
+    pathname === CHAT_HREF ||
+    pathname.startsWith(`${CHAT_HREF}/`)
   );
 }
 

@@ -9,6 +9,7 @@ import { ChallengeStanding } from "../ChallengeStanding";
 import { MatchUpdates } from "./MatchUpdates";
 import { md3CountLine } from "@/lib/pool/md3-summary";
 import { GameSwitcher } from "@/app/challenge/GameSwitcher";
+import { ChallengeRecentChat } from "@/app/challenge/ChallengeRecentChat";
 
 // Predictions, locks, and live results change at request time.
 export const dynamic = "force-dynamic";
@@ -118,6 +119,8 @@ export default async function Md3ChallengeHomePage() {
           <GroupStandings view={bracket} basePath="/challenge/md3" />
         </section>
       ) : null}
+
+      <ChallengeRecentChat />
     </section>
   );
 }

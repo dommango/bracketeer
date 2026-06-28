@@ -8,6 +8,7 @@ import { ChallengeStanding } from "../ChallengeStanding";
 // Shared presentational feed (lives in the md3 folder; used by both home boards).
 import { MatchUpdates } from "@/app/challenge/md3/MatchUpdates";
 import { GameSwitcher } from "@/app/challenge/GameSwitcher";
+import { ChallengeRecentChat } from "@/app/challenge/ChallengeRecentChat";
 
 // Picks, locks, and live results change at request time.
 export const dynamic = "force-dynamic";
@@ -105,6 +106,8 @@ export default async function KnockoutChallengeHomePage() {
           <Leaderboard rows={preview} youUserId={user?.id} linkBase="/challenge/knockout/u" compact />
         </div>
       ) : null}
+
+      <ChallengeRecentChat />
     </section>
   );
 }
