@@ -15,6 +15,7 @@ import { pickRowsToSubmission } from "@/lib/pool/picks";
 import { decodeMd3Rows, type Md3Scores } from "@/lib/pool/md3-picks";
 import { md3Fixtures, MD3_MATCH_NOS, scoreMd3 } from "@/lib/pool/match-day-3";
 import { isKnockoutEntryComplete } from "@/lib/challenge/eligibility";
+import { publicLabel } from "@/lib/challenge/public-label";
 
 // Knockout pick rows carry the match id in their CSV-mirrored category ("M73").
 const KNOCKOUT_PICK_SECTIONS = [
@@ -39,7 +40,7 @@ export async function getChallengeLeaderboard(
       tiebreak: true,
       breakdown: { select: { totalPoints: true, byCategory: true } },
       picks: { select: { section: true, category: true, key: true, code: true, teamOrValue: true } },
-      user: { select: { emailVerified: true } },
+      user: { select: { emailVerified: true, name: true, challengeDisplayName: true } },
     },
   });
   // Prize/board eligibility: a complete & valid bracket owned by a verified-email
@@ -58,7 +59,10 @@ export async function getChallengeLeaderboard(
   const rows: LeaderboardRow[] = eligible.map((e) => ({
     rank: 0,
     entryId: e.id,
-    label: e.label,
+    // Resolve the public display name from the account (challenge name → account
+    // name → a stable anonymous handle), not the stored Entry.label, so an entry
+    // saved before the user had a name doesn't show the generic "Player".
+    label: publicLabel(e.user?.challengeDisplayName ?? e.user?.name, e.userId!),
     userId: e.userId,
     total: e.breakdown?.totalPoints ?? 0,
     breakdown: e.breakdown?.byCategory ?? null,
@@ -199,7 +203,7 @@ export async function getMd3ChallengeLeaderboard(
       tiebreak: true,
       breakdown: { select: { totalPoints: true, byCategory: true } },
       picks: { select: { category: true, key: true, teamOrValue: true } },
-      user: { select: { emailVerified: true } },
+      user: { select: { emailVerified: true, name: true, challengeDisplayName: true } },
     },
   });
 
@@ -219,7 +223,9 @@ export async function getMd3ChallengeLeaderboard(
   const rows: LeaderboardRow[] = eligible.map((e) => ({
     rank: 0,
     entryId: e.id,
-    label: e.label,
+    // Public display name from the account (challenge name → account name → a
+    // stable anonymous handle), not the stored Entry.label.
+    label: publicLabel(e.user?.challengeDisplayName ?? e.user?.name, e.userId!),
     userId: e.userId,
     total: e.breakdown?.totalPoints ?? 0,
     breakdown: e.breakdown?.byCategory ?? null,
