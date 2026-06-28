@@ -275,3 +275,13 @@ export function getStandaloneEntry(
   const scope = { poolId: null, tournamentId, format, userId };
   return decodeEntry(entryId ? { id: entryId, ...scope } : scope);
 }
+
+// Any one of the user's knockout brackets by id — pooled OR standalone — decoded
+// for the builder. Backs the Knockout Challenge picks switcher, which edits every
+// bracket the user has entered in the Challenge regardless of where it lives.
+export function getUserKnockoutEntry(
+  userId: string,
+  entryId: string,
+): Promise<UserEntry | null> {
+  return decodeEntry({ id: entryId, userId, format: "KNOCKOUT" });
+}

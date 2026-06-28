@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/pool/access";
-import { saveSoloBracket, setEnteredChallenge } from "@/lib/challenge/solo";
+import { saveSoloBracket, saveKnockoutBracket, setEnteredChallenge } from "@/lib/challenge/solo";
 import { CHALLENGE_ENTRY_CAP } from "@/lib/challenge/eligibility";
 import { attachEntryToPool } from "@/lib/pool/manage";
 import { rateLimit } from "@/lib/rate-limit";
@@ -64,6 +64,50 @@ export async function saveSoloBracketAction(raw: unknown): Promise<SoloSaveResul
       knockoutAdvance: parsed.data.knockoutAdvance,
     });
     revalidatePath("/bracket");
+    revalidatePath("/challenge/knockout");
+    revalidatePath("/challenge/knockout/leaderboard");
+    return { ok: true, replaced: res.replaced, entryId: res.entryId };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
+// Like saveSchema but entryId is required: this path edits an existing bracket
+// (pooled or standalone) and never creates one.
+const saveKnockoutSchema = z.object({
+  entryId: z.string().min(1),
+  label: z.string().max(40),
+  tiebreak: z.string().max(20),
+  picks: picksSchema,
+  knockoutAdvance: z.record(z.string(), z.enum(["a", "b"])).optional(),
+});
+
+// Save an existing knockout bracket the user owns — pooled OR standalone — by id.
+// Backs the Knockout Challenge picks switcher, where every entered bracket is
+// editable in one place. Routes the save to the bracket's own scope; the pool
+// pages are force-dynamic, so no pool-specific revalidate is needed.
+export async function saveKnockoutBracketAction(raw: unknown): Promise<SoloSaveResult> {
+  const parsed = saveKnockoutSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Invalid picks payload." };
+
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "Sign in to save your bracket." };
+
+  if (!(await rateLimit(`ko-save:${user.id}`, 20, 60_000)).ok) {
+    return { ok: false, error: "You're saving too often — wait a moment and try again." };
+  }
+
+  try {
+    const res = await saveKnockoutBracket({
+      userId: user.id,
+      entryId: parsed.data.entryId,
+      label: parsed.data.label,
+      tiebreak: parsed.data.tiebreak,
+      picks: parsed.data.picks as Picks,
+      knockoutAdvance: parsed.data.knockoutAdvance,
+    });
+    revalidatePath("/bracket");
+    revalidatePath("/challenge/picks");
     revalidatePath("/challenge/knockout");
     revalidatePath("/challenge/knockout/leaderboard");
     return { ok: true, replaced: res.replaced, entryId: res.entryId };
