@@ -15,7 +15,35 @@ import { validatePicks, inconsistentKnockoutPicks } from "@/lib/pool/pick-form";
 import { validateAdvanceMap, resolveAdvance, type AdvanceMap } from "@/lib/pool/knockout-advance";
 import { CHALLENGE_ENTRY_CAP } from "@/lib/challenge/eligibility";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
+import type { ResolvedR32 } from "@/lib/scoring/resolve";
 import type { Picks } from "@/lib/scoring/types";
+
+// Shared knockout pick validation for the solo + pooled save paths. The client is
+// untrusted: keep only knockout + awards, and either materialize the positional
+// AdvanceMap (the source of truth) against the seed we control, or verify a legacy
+// team-code save against it. Returns the cleaned picks + validated advance map, or
+// throws a user-facing message. (early → projectedSeed, else the official seed.)
+function prepareKnockoutSave(
+  rawPicks: Picks,
+  rawAdvance: AdvanceMap | undefined,
+  open: boolean,
+  seed: ResolvedR32,
+  projectedSeed: ResolvedR32,
+): { picks: Picks; knockoutAdvance: AdvanceMap | undefined } {
+  const validationSeed = open ? seed : projectedSeed;
+  let picks = knockoutOnlyPicks(rawPicks);
+  let knockoutAdvance: AdvanceMap | undefined;
+  if (rawAdvance !== undefined) {
+    if (!validateAdvanceMap(rawAdvance)) throw new Error("Invalid bracket picks.");
+    knockoutAdvance = rawAdvance;
+    picks = { ...picks, knockout: resolveAdvance(knockoutAdvance, validationSeed) };
+  } else if (inconsistentKnockoutPicks(picks, validationSeed).length > 0) {
+    throw new Error("Some picks aren't valid for this bracket — please reload.");
+  }
+  const errors = validatePicks(picks);
+  if (errors.length > 0) throw new Error(errors[0]);
+  return { picks, knockoutAdvance };
+}
 
 export interface SoloBracket {
   entryId: string;
@@ -89,24 +117,13 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
     throw new Error("Picks are locked — the Round of 32 has kicked off.");
   }
 
-  // The client is untrusted. Keep only knockout + awards. A positional save carries
-  // an AdvanceMap (the source of truth): validate it structurally and materialize
-  // the display team codes server-side against the seed we control. A legacy
-  // team-code save is verified against that seed (early → projectedSeed, else official).
-  const validationSeed = open ? seed : projectedSeed;
-  let picks = knockoutOnlyPicks(input.picks);
-  let knockoutAdvance: AdvanceMap | undefined;
-  if (input.knockoutAdvance !== undefined) {
-    if (!validateAdvanceMap(input.knockoutAdvance)) {
-      throw new Error("Invalid bracket picks.");
-    }
-    knockoutAdvance = input.knockoutAdvance;
-    picks = { ...picks, knockout: resolveAdvance(knockoutAdvance, validationSeed) };
-  } else if (inconsistentKnockoutPicks(picks, validationSeed).length > 0) {
-    throw new Error("Some picks aren't valid for this bracket — please reload.");
-  }
-  const errors = validatePicks(picks);
-  if (errors.length > 0) throw new Error(errors[0]);
+  const { picks, knockoutAdvance } = prepareKnockoutSave(
+    input.picks,
+    input.knockoutAdvance,
+    open,
+    seed,
+    projectedSeed,
+  );
 
   const user = await prisma.user.findUnique({
     where: { id: input.userId },
@@ -127,6 +144,72 @@ export async function saveSoloBracket(input: SaveSoloInput): Promise<SaveSoloRes
     knockoutAdvance,
   });
 
+  await recomputeEntry(res.entryId);
+  return res;
+}
+
+export interface SaveKnockoutInput {
+  userId: string;
+  // The bracket to edit — required (this path never creates). May be pooled OR
+  // standalone; its placement is resolved from the row.
+  entryId: string;
+  label: string;
+  tiebreak: string;
+  picks: Picks;
+  knockoutAdvance?: AdvanceMap;
+}
+
+// Edit any one of the user's knockout brackets by id — pooled OR standalone. The
+// Challenge picks switcher edits every bracket a user has entered in the Knockout
+// Challenge from one surface, and a pooled entry can't go through saveSoloBracket
+// (which pins poolId null). Resolve the bracket's placement from its row, then run
+// the same knockout gate + validation + persist against that scope. Never creates.
+export async function saveKnockoutBracket(input: SaveKnockoutInput): Promise<SaveSoloResult> {
+  const entry = await prisma.entry.findFirst({
+    where: { id: input.entryId, userId: input.userId, format: "KNOCKOUT" },
+    select: { id: true, poolId: true, tournamentId: true },
+  });
+  if (!entry) throw new Error("That bracket can't be found or isn't yours to edit.");
+
+  const { open, earlyOpen, locksAt, seed, projectedSeed } = await getKnockoutState(entry.tournamentId);
+  if (!open && !earlyOpen) {
+    throw new Error("Knockout picks aren't open yet — the last 32 aren't set.");
+  }
+  if (isKnockoutLocked(locksAt)) {
+    throw new Error("Picks are locked — the Round of 32 has kicked off.");
+  }
+
+  const { picks, knockoutAdvance } = prepareKnockoutSave(
+    input.picks,
+    input.knockoutAdvance,
+    open,
+    seed,
+    projectedSeed,
+  );
+
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { email: true },
+  });
+
+  const res = await upsertUiEntry({
+    poolId: entry.poolId,
+    tournamentId: entry.tournamentId,
+    format: "KNOCKOUT",
+    userId: input.userId,
+    entryId: entry.id,
+    label: input.label,
+    picks,
+    email: user?.email,
+    tiebreak: input.tiebreak,
+    knockoutAdvance,
+  });
+
+  // Only recompute this entry — unlike the in-pool submit we skip recomputePool +
+  // notifyPool even for a pooled bracket. A knockout entry is editable only before
+  // the R32 kickoff lock, and knockout officialResults don't exist until matches
+  // play (after lock), so an editable bracket always scores 0: pool standings can't
+  // move and pre-lock picks are private, so there's nothing to broadcast.
   await recomputeEntry(res.entryId);
   return res;
 }

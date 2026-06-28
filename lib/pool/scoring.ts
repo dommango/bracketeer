@@ -111,9 +111,11 @@ export async function recomputePool(poolId: string) {
   );
 }
 
-// Recompute one entry against its own tournament. For standalone brackets (solo
-// save, Challenge toggle) where there's no pool to recompute and no snapshot to
-// capture. The entry's GameModule decides how to score it — the bracket oracle, or
+// Recompute one entry against its own tournament. Used wherever a single bracket
+// is saved without a full pool rescore — standalone brackets (solo save, Challenge
+// toggle) and pooled knockout brackets edited via the Challenge picks switcher
+// (safe pre-lock, when an editable bracket always scores 0). The entry's
+// GameModule decides how to score it — the bracket oracle, or
 // (for Match Day Pickem) live Result rows — so this works for every format without
 // a fork. No snapshots or pool advisory lock (idempotent upserts, so a concurrent
 // recomputePool can't corrupt it).

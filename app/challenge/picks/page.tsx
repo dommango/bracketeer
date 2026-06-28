@@ -10,8 +10,8 @@ import {
   getKnockoutMatchInfo,
   getTournamentIdBySlug,
 } from "@/lib/pool/queries";
-import { getStandaloneEntry } from "@/lib/pool/submit-picks";
-import { getUserBrackets } from "@/lib/bracket/gallery";
+import { getUserKnockoutEntry } from "@/lib/pool/submit-picks";
+import { getUserBrackets, type BracketSummary } from "@/lib/bracket/gallery";
 import { isKnockoutLocked } from "@/lib/pool/knockout";
 import { emptyPicks } from "@/lib/scoring/types";
 import { gameStateLine } from "@/lib/pool/games";
@@ -20,7 +20,8 @@ import { defaultOpenSection } from "@/lib/challenge/picks-summary";
 import { Md3ChallengeForm } from "@/app/challenge/md3/Md3ChallengeForm";
 import { KnockoutPickForm } from "@/app/pool/[code]/KnockoutPickForm";
 import { Countdown } from "@/app/pool/[code]/Countdown";
-import { saveSoloBracketAction } from "@/app/bracket/actions";
+import { saveSoloBracketAction, saveKnockoutBracketAction } from "@/app/bracket/actions";
+import { KnockoutBracketSwitcher, type SwitcherBracket } from "./KnockoutBracketSwitcher";
 import { PicksTabs, type PicksSection } from "./PicksTabs";
 
 // Predictions, locks, and live results change at request time.
@@ -77,11 +78,25 @@ export default async function UnifiedPicksPage() {
   const early = !open && earlyOpen;
   const buildable = open || earlyOpen;
 
-  const koStandalone = brackets.filter(
-    (b) => b.format === "KNOCKOUT" && b.placement.kind === "standalone",
+  // Every knockout bracket the user can edit from the Challenge: ones they've
+  // entered (solo OR pooled) plus any standalone draft they're building here.
+  // Pooled brackets they haven't entered are edited in their pool, not here.
+  const koEditable = brackets.filter(
+    (b) => b.format === "KNOCKOUT" && (b.enteredChallenge || b.placement.kind === "standalone"),
   );
-  const primary = koStandalone[0] ?? null;
-  const extras = koStandalone.slice(1);
+  const primary = koEditable[0] ?? null;
+
+  // Toggle label per bracket: the pool name, or "Solo" (numbered when the user
+  // keeps more than one standalone bracket) — never the repeated contestant name.
+  const koTitle = (b: BracketSummary, i: number): string => {
+    if (b.placement.kind === "pool") return b.placement.poolName;
+    const soloCount = koEditable.filter((x) => x.placement.kind === "standalone").length;
+    if (soloCount <= 1) return "Solo";
+    const ordinal = koEditable
+      .slice(0, i + 1)
+      .filter((x) => x.placement.kind === "standalone").length;
+    return `Solo ${ordinal}`;
+  };
 
   let koBody: ReactNode;
   let koProgress: string;
@@ -98,46 +113,102 @@ export default async function UnifiedPicksPage() {
       </div>
     );
   } else {
-    const [bracket, builder, { info, titleOdds }] = await Promise.all([
-      primary
-        ? getStandaloneEntry(tournamentId, user.id, "KNOCKOUT", primary.entryId)
-        : Promise.resolve(null),
+    const [loaded, builder, { info, titleOdds }] = await Promise.all([
+      Promise.all(koEditable.map((b) => getUserKnockoutEntry(user.id, b.entryId))),
       early ? getKnockoutBuilderProjections(tournamentId) : Promise.resolve(null),
       getKnockoutMatchInfo(tournamentId),
     ]);
-    const locked = isKnockoutLocked(locksAt, bracket?.locked ?? false);
-    koProgress = primary?.progress
-      ? `${primary.progress.done}/${primary.progress.total} picks`
-      : "Not started";
-    koBody = (
-      <div className="space-y-3">
-        <KnockoutPickForm
-          entryId={bracket?.entryId}
-          initialPicks={bracket?.picks ?? emptyPicks()}
-          initialAdvance={bracket?.knockoutAdvance}
-          initialTiebreak={bracket?.tiebreak ?? ""}
-          label={bracket?.label ?? user.name ?? "Player"}
-          locked={locked}
-          seed={early ? projectedSeed : seed}
-          provisional={provisional}
-          early={early}
-          projections={builder?.projections}
-          outrights={builder?.outrights}
-          info={info}
-          titleOdds={titleOdds}
-          saveAction={saveSoloBracketAction}
-        />
-        {extras.length > 0 ? (
-          <p className="text-center text-[13px] text-ink-3">
-            You have {extras.length} more bracket{extras.length > 1 ? "s" : ""} —{" "}
-            <Link href="/bracket" className="font-semibold text-pitch-dark hover:underline">
-              manage all in the gallery
-            </Link>
-            .
-          </p>
-        ) : null}
-      </div>
+    const activeSeed = early ? projectedSeed : seed;
+    // /bracket stays the home for everything else — non-entered brackets and pools.
+    const manageLink = (
+      <p className="text-center text-[13px] text-ink-3">
+        Other brackets and your pools —{" "}
+        <Link href="/bracket" className="font-semibold text-pitch-dark hover:underline">
+          manage in your brackets
+        </Link>
+        .
+      </p>
     );
+
+    if (koEditable.length === 0) {
+      // No bracket yet: build a first standalone one here (created on save).
+      koProgress = "Not started";
+      koBody = (
+        <div className="space-y-3">
+          <KnockoutPickForm
+            initialPicks={emptyPicks()}
+            initialTiebreak=""
+            label={user.name ?? "Player"}
+            locked={false}
+            seed={activeSeed}
+            provisional={provisional}
+            early={early}
+            projections={builder?.projections}
+            outrights={builder?.outrights}
+            info={info}
+            titleOdds={titleOdds}
+            saveAction={saveSoloBracketAction}
+          />
+          {manageLink}
+        </div>
+      );
+    } else {
+      const switcherBrackets: SwitcherBracket[] = koEditable.map((b, i) => {
+        const entry = loaded[i];
+        return {
+          entryId: b.entryId,
+          title: koTitle(b, i),
+          initialPicks: entry?.picks ?? emptyPicks(),
+          initialAdvance: entry?.knockoutAdvance ?? {},
+          initialTiebreak: entry?.tiebreak ?? "",
+          label: entry?.label ?? user.name ?? "Player",
+          locked: isKnockoutLocked(locksAt, entry?.locked ?? false),
+          progress: b.progress,
+        };
+      });
+      koProgress =
+        koEditable.length > 1
+          ? `${koEditable.length} brackets`
+          : primary?.progress
+            ? `${primary.progress.done}/${primary.progress.total} picks`
+            : "Not started";
+      const first = switcherBrackets[0];
+      koBody = (
+        <div className="space-y-3">
+          {switcherBrackets.length > 1 ? (
+            <KnockoutBracketSwitcher
+              brackets={switcherBrackets}
+              seed={activeSeed}
+              provisional={provisional}
+              early={early}
+              projections={builder?.projections}
+              outrights={builder?.outrights}
+              info={info}
+              titleOdds={titleOdds}
+              saveAction={saveKnockoutBracketAction}
+            />
+          ) : (
+            <KnockoutPickForm
+              entryId={first.entryId}
+              initialPicks={first.initialPicks}
+              initialAdvance={first.initialAdvance}
+              initialTiebreak={first.initialTiebreak}
+              label={first.label}
+              locked={first.locked}
+              seed={activeSeed}
+              provisional={provisional}
+              early={early}
+              projections={builder?.projections}
+              outrights={builder?.outrights}
+              info={info}
+              titleOdds={titleOdds}
+              saveAction={saveKnockoutBracketAction}
+            />
+          )}
+          {manageLink}
+        </div>
+      );
+    }
   }
 
   const md3Incomplete = gameOpen && view.openCount > 0;

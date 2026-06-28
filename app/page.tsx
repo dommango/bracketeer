@@ -1,19 +1,21 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/pool/access";
 import { signOutAction } from "@/lib/auth/actions";
 import type { PoolFormat } from "@/lib/pool/manage";
-import { resolveGamePhase } from "@/lib/pool/games";
+import { resolveGamePhase, GAME_CATALOG } from "@/lib/pool/games";
+import { getTournamentIdBySlug } from "@/lib/pool/queries";
+import { getUserBrackets, type BracketSummary } from "@/lib/bracket/gallery";
 import { PublicGames } from "./PublicGames";
 import { SignInPanel } from "./signin/SignInPanel";
 import { StartAPoolPromo } from "./StartAPoolPromo";
 import { Footer } from "./Footer";
-import { HeroCarousel } from "./HeroCarousel";
+import { YourGames, type YourGame } from "./YourGames";
 
 // Session-aware landing. Signed-out visitors get the sign-in / register panel
-// directly; signed-in visitors go straight to their pool (single membership) or
-// a pools hub. (A dedicated marketing landing page comes later.)
+// directly; signed-in visitors land on the hub — their games, available games,
+// and their pools — regardless of how many pools they're in. (A dedicated
+// marketing landing page comes later.)
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
@@ -26,10 +28,11 @@ export default async function Home() {
     select: { id: true, role: true, pool: { select: { name: true, joinCode: true, format: true } } },
   });
 
-  // Exactly one pool: skip the hub and drop the returning user into it.
-  if (memberships.length === 1) {
-    redirect(`/pool/${memberships[0].pool.joinCode}`);
-  }
+  // The public challenges this user is already playing, surfaced at the top of the
+  // hub. Both challenge formats are plain Entry rows, so the bracket gallery is the
+  // single source — no extra per-game reads.
+  const tournamentId = await getTournamentIdBySlug();
+  const games = buildYourGames(await getUserBrackets(user.id, tournamentId));
 
   return (
     <SignedInHub
@@ -39,8 +42,40 @@ export default async function Home() {
         joinCode: m.pool.joinCode,
         format: m.pool.format as PoolFormat,
       }))}
+      games={games}
     />
   );
+}
+
+// The user's active public challenges, derived from their brackets: knockout and
+// Match Day Pickem each appear once when they hold at least one bracket of that
+// game. Pool (full-bracket) entries are listed under "Your pools" instead.
+function buildYourGames(brackets: BracketSummary[]): YourGame[] {
+  const games: YourGame[] = [];
+
+  const ko = brackets.filter((b) => b.format === "KNOCKOUT");
+  if (ko.length > 0) {
+    const entered = ko.filter((b) => b.enteredChallenge).length;
+    games.push({
+      name: GAME_CATALOG.KNOCKOUT.challengeName ?? "Knockout Challenge",
+      detail:
+        entered > 0
+          ? `${entered} bracket${entered > 1 ? "s" : ""} in the Challenge`
+          : `${ko.length} bracket${ko.length > 1 ? "s" : ""} — not entered yet`,
+      href: "/challenge/picks",
+    });
+  }
+
+  const md3 = brackets.filter((b) => b.format === "MATCH_DAY_3_PICKEM");
+  if (md3.length > 0) {
+    games.push({
+      name: GAME_CATALOG.MATCH_DAY_3_PICKEM.challengeName ?? "Match Day Pickem",
+      detail: "Your predictions",
+      href: "/challenge/md3/play",
+    });
+  }
+
+  return games;
 }
 
 const SECONDARY_BTN =
@@ -58,9 +93,11 @@ function PoolStateBadge({ format, now }: { format: PoolFormat; now: Date }) {
 function SignedInHub({
   name,
   pools,
+  games,
 }: {
   name: string;
   pools: { name: string; joinCode: string; format: PoolFormat }[];
+  games: YourGame[];
 }) {
   const now = new Date();
   return (
@@ -79,9 +116,7 @@ function SignedInHub({
         </form>
       </div>
 
-      <div className="mt-4">
-        <HeroCarousel now={now} />
-      </div>
+      <YourGames games={games} />
 
       <PublicGames now={now} />
 
