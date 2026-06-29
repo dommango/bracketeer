@@ -14,6 +14,7 @@ import { MatchLineups } from "@/app/pool/[code]/matches/[no]/MatchLineups";
 import { VenueLine } from "@/app/pool/[code]/VenueLine";
 import { WinProbBar } from "@/app/pool/[code]/WinProbBar";
 import { UpsetBadge } from "@/app/pool/[code]/UpsetBadge";
+import { PickSplitCard, ConsensusCard } from "@/app/pool/[code]/matches/[no]/ConsensusCards";
 
 // One match's detail view for the public challenges — the same rich content the
 // pool match page shows (resolved teams, live status, timeline, scorers, stats,
@@ -193,6 +194,19 @@ export function ChallengeMatchDetail({
       <MatchLineups lineup={detail.lineup} home={detail.home} away={detail.away} />
       <MatchTimeline items={detail.timeline} />
       <MatchStatsBars bars={detail.stats} homeCode={detail.home.code} awayCode={detail.away.code} />
+
+      {detail.scored && detail.pickSplit ? (
+        <PickSplitCard split={detail.pickSplit} audience="field" />
+      ) : null}
+      {detail.scored && detail.pickSplit ? (
+        <ConsensusCard
+          prediction={detail.prediction}
+          pickSplit={detail.pickSplit}
+          home={detail.home}
+          away={detail.away}
+          audience="field"
+        />
+      ) : null}
     </section>
   );
 }

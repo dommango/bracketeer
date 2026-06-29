@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getKnockoutChallengeHome } from "@/lib/challenge/knockout-dashboard";
+import {
+  getChallengeAnalytics,
+  getChallengeStandouts,
+  getChallengeUpsetRadar,
+} from "@/lib/challenge/analytics";
+import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
 import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { Countdown } from "@/app/pool/[code]/Countdown";
+import { PoolAnalytics } from "@/app/pool/[code]/PoolAnalytics";
+import { UpsetRadar } from "@/app/pool/[code]/UpsetRadar";
 import { ChallengeStanding } from "../ChallengeStanding";
 import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 import { ChallengeRecentChat } from "@/app/challenge/ChallengeRecentChat";
@@ -13,8 +21,14 @@ export const dynamic = "force-dynamic";
 
 export default async function KnockoutChallengeHomePage() {
   const user = await getSessionUser();
-  const { standing, board, cards, myBrackets, open, earlyOpen, opensAt } =
-    await getKnockoutChallengeHome(user?.id ?? null);
+  const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
+  const [home, analytics, standouts, upsets] = await Promise.all([
+    getKnockoutChallengeHome(user?.id ?? null),
+    getChallengeAnalytics(tournamentId),
+    getChallengeStandouts(tournamentId),
+    getChallengeUpsetRadar(tournamentId, user?.id ?? null),
+  ]);
+  const { standing, board, cards, myBrackets, open, earlyOpen, opensAt } = home;
 
   const buildable = open || earlyOpen;
   const hasBracket = myBrackets.length > 0;
@@ -103,6 +117,12 @@ export default async function KnockoutChallengeHomePage() {
           </div>
           <Leaderboard rows={preview} youUserId={user?.id} linkBase="/challenge/knockout/u" compact />
         </div>
+      ) : null}
+
+      {upsets.length > 0 ? <UpsetRadar rows={upsets} /> : null}
+
+      {analytics ? (
+        <PoolAnalytics analytics={analytics} basePath="/challenge/knockout" standouts={standouts} />
       ) : null}
     </section>
   );

@@ -12,7 +12,15 @@ import {
   DEFAULT_TOURNAMENT_SLUG,
   getTournamentMatchInputs,
   getKnockoutState,
+  getChallengeMatchDetail,
+  type MatchDetail,
 } from "@/lib/pool/queries";
+import { buildPickSplit } from "@/lib/pool/pick-split";
+import { teamName } from "@/lib/pool/query-helpers";
+import {
+  getChallengeEntriesWithPicks,
+  getChallengeKnockoutProjection,
+} from "@/lib/challenge/analytics";
 import { getChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { buildStanding, type Standing } from "@/lib/pool/home";
 import { buildMatchCenter, type MatchCenterSection } from "@/lib/pool/match-center";
@@ -98,12 +106,41 @@ export async function getKnockoutChallengeMatchCenter(
   return buildMatchCenter(inputs, picks);
 }
 
+// One knockout match's detail for the public challenge: the tournament-generic
+// detail plus the challenge field's pick-split (scored knockout matches only) and
+// the viewer's own pick. The poolId-free twin of getMatchDetail; md3 keeps using
+// getChallengeMatchDetail directly (no winner pick-split).
+export async function getChallengeKnockoutMatchDetail(
+  matchNo: number,
+  userId: string | null,
+): Promise<MatchDetail | null> {
+  const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
+  const detail = await getChallengeMatchDetail(tournamentId, matchNo);
+  if (!detail || !detail.scored) return detail;
+
+  const [entries, mine] = await Promise.all([
+    getChallengeEntriesWithPicks(tournamentId),
+    getChallengeEntryKnockoutPicks(userId, tournamentId),
+  ]);
+  const pickSplit = buildPickSplit(
+    detail.home.code,
+    detail.away.code,
+    entries.map((e) => e.picks.knockout?.[matchNo]),
+  );
+  const code = mine[matchNo];
+  const yourPick = code
+    ? { code, name: teamName(code), correct: detail.winnerCode ? code === detail.winnerCode : null }
+    : null;
+
+  return { ...detail, pickSplit, yourPick };
+}
+
 // A single challenge bracket's profile — the poolId-free analogue of getProfile.
 // Returns null unless the entry is on the public board (KNOCKOUT, opted in, and a
 // complete/valid bracket), so an incomplete or un-entered bracket can't be viewed.
 export async function getKnockoutChallengeProfile(entryId: string): Promise<Profile | null> {
   const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
-  const [board, tournament, entries, knockoutState] = await Promise.all([
+  const [board, tournament, entries, knockoutState, projection] = await Promise.all([
     getChallengeLeaderboard(),
     prisma.tournament.findUniqueOrThrow({
       where: { id: tournamentId },
@@ -119,6 +156,7 @@ export async function getKnockoutChallengeProfile(entryId: string): Promise<Prof
       },
     }),
     getKnockoutState(tournamentId),
+    getChallengeKnockoutProjection(tournamentId),
   ]);
 
   // Same eligibility filter as the public leaderboard — only complete & valid
@@ -136,6 +174,17 @@ export async function getKnockoutChallengeProfile(entryId: string): Promise<Prof
   const row = board.find((r) => r.entryId === entryId);
   const projected = row?.projected ?? 0;
 
+  const projectionRow = projection.hasData
+    ? projection.rows.find((r) => r.entryId === entryId)
+    : undefined;
+  const entryProjection = projectionRow
+    ? {
+        expectedRemaining: projectionRow.expectedRemaining,
+        projectedTotal: projectionRow.projectedTotal,
+        projectedRank: projectionRow.projectedRank,
+      }
+    : null;
+
   return buildProfile({
     entryId: entry.id,
     label: entry.label,
@@ -148,5 +197,6 @@ export async function getKnockoutChallengeProfile(entryId: string): Promise<Prof
     breakdown: (entry.breakdown?.byCategory as Record<string, number> | null) ?? null,
     pickShareByMatch: tallyPickShare(eligible.map((e) => pickRowsToSubmission(e.picks).picks)),
     locked: isKnockoutLocked(knockoutState.locksAt),
+    projection: entryProjection,
   });
 }

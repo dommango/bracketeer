@@ -1,9 +1,6 @@
 import { notFound } from "next/navigation";
-import {
-  getTournamentIdBySlug,
-  DEFAULT_TOURNAMENT_SLUG,
-  getChallengeMatchDetail,
-} from "@/lib/pool/queries";
+import { getSessionUser } from "@/lib/pool/access";
+import { getChallengeKnockoutMatchDetail } from "@/lib/challenge/knockout-dashboard";
 import { ChallengeMatchDetail } from "@/app/challenge/ChallengeMatchDetail";
 import { ChallengeChat } from "@/app/challenge/ChallengeChat";
 
@@ -20,9 +17,10 @@ export default async function KnockoutChallengeMatchPage({
   if (!Number.isInteger(matchNo)) notFound();
 
   // Any real tournament match resolves here (team/venue drill-downs link in from
-  // across the bracket); getChallengeMatchDetail returns null for unknown numbers.
-  const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
-  const detail = await getChallengeMatchDetail(tournamentId, matchNo);
+  // across the bracket); the wrapper returns null for unknown numbers and adds the
+  // challenge field's pick-split + the viewer's own pick on scored knockout matches.
+  const user = await getSessionUser();
+  const detail = await getChallengeKnockoutMatchDetail(matchNo, user?.id ?? null);
   if (!detail) notFound();
 
   return (

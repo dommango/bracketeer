@@ -66,14 +66,18 @@ function Standouts({ standouts }: { standouts: PoolStandouts }) {
   );
 }
 
+// The team drill-down base for TeamLink — a pool path by default, or an explicit
+// basePath for non-pool callers (the public challenges).
+type TeamLinkBase = { poolCode?: string; basePath?: string };
+
 // One ranked pick with a team-colored share bar (mirrors ChampionshipOdds).
-function TallyRow({ t, code }: { t: PickTally; code: string }) {
+function TallyRow({ t, link }: { t: PickTally; link: TeamLinkBase }) {
   return (
     <div className="flex items-center gap-2.5">
-      <TeamLink poolCode={code} code={t.code}>
+      <TeamLink {...link} code={t.code}>
         <Flag code={t.code} size={18} />
       </TeamLink>
-      <TeamLink poolCode={code} code={t.code} className="min-w-0 flex-1 truncate text-sm text-ink underline-offset-2 hover:underline">
+      <TeamLink {...link} code={t.code} className="min-w-0 flex-1 truncate text-sm text-ink underline-offset-2 hover:underline">
         {t.name}
       </TeamLink>
       <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-surface-sunk sm:block">
@@ -89,18 +93,23 @@ function TallyRow({ t, code }: { t: PickTally; code: string }) {
   );
 }
 
-// Pool-wide pick consensus: who the group backed, drawn from everyone's brackets.
+// Pick consensus: who the field backed, drawn from everyone's brackets. Shared by
+// pools (pass `code`) and the public challenge (pass `basePath="/challenge/knockout"`).
 export function PoolAnalytics({
   analytics,
   code,
+  basePath,
   standouts,
 }: {
   analytics: PickAnalytics;
-  code: string;
+  code?: string;
+  basePath?: string;
   standouts?: PoolStandouts | null;
 }) {
   const { champion, finalists, groupWinners, contrarian, totalEntries } = analytics;
   if (totalEntries === 0 || !champion.top) return null;
+
+  const link: TeamLinkBase = basePath ? { basePath } : { poolCode: code };
 
   return (
     <section>
@@ -116,11 +125,11 @@ export function PoolAnalytics({
         <div>
           <p className={LABEL}>Consensus champion</p>
           <div className="mt-2 flex items-center gap-3">
-            <TeamLink poolCode={code} code={champion.top.code}>
+            <TeamLink {...link} code={champion.top.code}>
               <Flag code={champion.top.code} size={28} />
             </TeamLink>
             <div className="min-w-0 flex-1">
-              <TeamLink poolCode={code} code={champion.top.code} className="block truncate font-display text-xl text-ink underline-offset-2 hover:underline">
+              <TeamLink {...link} code={champion.top.code} className="block truncate font-display text-xl text-ink underline-offset-2 hover:underline">
                 {champion.top.name}
               </TeamLink>
               <p className="text-xs text-ink-3">
@@ -138,7 +147,7 @@ export function PoolAnalytics({
           {champion.field.length > 1 ? (
             <div className="mt-2.5 space-y-1.5">
               {champion.field.slice(0, 6).map((t) => (
-                <TallyRow key={t.code} t={t} code={code} />
+                <TallyRow key={t.code} t={t} link={link} />
               ))}
             </div>
           ) : null}
@@ -150,7 +159,7 @@ export function PoolAnalytics({
             <p className={LABEL}>Finalist favorites</p>
             <div className="mt-2 space-y-1.5">
               {finalists.slice(0, 5).map((t) => (
-                <TallyRow key={t.code} t={t} code={code} />
+                <TallyRow key={t.code} t={t} link={link} />
               ))}
             </div>
           </div>
@@ -170,10 +179,10 @@ export function PoolAnalytics({
                 </span>
                 {g.top ? (
                   <>
-                    <TeamLink poolCode={code} code={g.top.code}>
+                    <TeamLink {...link} code={g.top.code}>
                       <Flag code={g.top.code} size={16} />
                     </TeamLink>
-                    <TeamLink poolCode={code} code={g.top.code} className="min-w-0 flex-1 truncate text-xs text-ink underline-offset-2 hover:underline">
+                    <TeamLink {...link} code={g.top.code} className="min-w-0 flex-1 truncate text-xs text-ink underline-offset-2 hover:underline">
                       {g.top.name}
                     </TeamLink>
                     <span className="shrink-0 font-mono text-[10px] text-ink-4">{g.top.pct}%</span>
@@ -195,7 +204,7 @@ export function PoolAnalytics({
               {contrarian.map((t) => (
                 <TeamLink
                   key={t.code}
-                  poolCode={code}
+                  {...link}
                   code={t.code}
                   className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink hover:border-pitch"
                 >
