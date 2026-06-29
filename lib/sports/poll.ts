@@ -30,6 +30,7 @@ import { buildGroupPairMatchNos, TEAMS } from "@/lib/scoring/data";
 import { knockoutResultPush } from "@/lib/push/messages";
 import type { ApnsPayload } from "@/lib/push/apns";
 import { postSystemMessage } from "@/lib/pool/chat";
+import { postChallengeSystemMessage } from "@/lib/challenge/chat";
 import { notifyPool } from "@/lib/realtime/notify";
 import {
   formatGoalLine,
@@ -45,23 +46,32 @@ import type { EventType } from "@/generated/prisma/client";
 // a final can't fall inside it.
 const KO_FIXTURE_PROXIMITY_MS = 12 * 60 * 60 * 1000;
 
-// Post one auto-event line to every pool of the tournament and ping their chat
-// streams. Best-effort decoration — callers wrap it so a failure never breaks
-// the poll. Exported nowhere; lives here beside its only caller.
-async function announceToAllPools(
+// Post one auto-event line to every pool of the tournament AND the shared global
+// challenge chat (one thread per tournament), pinging each pool's chat stream.
+// Best-effort decoration — callers wrap it so a failure never breaks the poll, and
+// each target is isolated so one failure can't drop the rest. Exported nowhere;
+// lives here beside its only callers.
+async function announceMatchEvent(
   tournamentId: string,
   body: string,
   meta: Record<string, unknown>,
 ): Promise<void> {
   const pools = await prisma.pool.findMany({ where: { tournamentId }, select: { id: true } });
   for (const p of pools) {
-    // Isolate per-pool so one failing pool can't drop the announcement for the rest.
     try {
       await postSystemMessage(p.id, body, meta);
       await notifyPool(p.id, "chat");
     } catch (err) {
       console.error(`announce failed for pool ${p.id}:`, err);
     }
+  }
+  // The public challenge has no backing pool, so post into its tournament-scoped
+  // chat separately. Match updates show up as "Match update" SYSTEM rows there,
+  // matching the live-match feed pool members get.
+  try {
+    await postChallengeSystemMessage(tournamentId, body, meta);
+  } catch (err) {
+    console.error("challenge announce failed:", err);
   }
 }
 
@@ -392,7 +402,7 @@ export async function pollScores(): Promise<PollSummary> {
   // Full-time chat posts for group matches that just settled (best-effort).
   for (const fin of finals) {
     try {
-      await announceToAllPools(
+      await announceMatchEvent(
         tournamentId,
         formatFinalLine(fin.homeCode, fin.awayCode, fin.homeScore, fin.awayScore),
         { matchNo: fin.matchNo, kind: "final" },
@@ -424,7 +434,7 @@ export async function pollScores(): Promise<PollSummary> {
             formatCardLine(e);
           if (!line) continue;
           try {
-            await announceToAllPools(tournamentId, line, { matchNo: lf.matchNo, kind: "event" });
+            await announceMatchEvent(tournamentId, line, { matchNo: lf.matchNo, kind: "event" });
           } catch (err) {
             console.error("event announce failed:", err);
           }

@@ -5,8 +5,6 @@ import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { Countdown } from "@/app/pool/[code]/Countdown";
 import { ChallengeStanding } from "../ChallengeStanding";
-// Shared presentational feed (lives in the md3 folder; used by both home boards).
-import { MatchUpdates } from "@/app/challenge/md3/MatchUpdates";
 import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 import { ChallengeRecentChat } from "@/app/challenge/ChallengeRecentChat";
 
@@ -15,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function KnockoutChallengeHomePage() {
   const user = await getSessionUser();
-  const { standing, board, cards, myBrackets, updates, open, earlyOpen, opensAt } =
+  const { standing, board, cards, myBrackets, open, earlyOpen, opensAt } =
     await getKnockoutChallengeHome(user?.id ?? null);
 
   const buildable = open || earlyOpen;
@@ -28,7 +26,7 @@ export default async function KnockoutChallengeHomePage() {
 
   return (
     <section className="space-y-5">
-      <MatchUpdates updates={updates} />
+      <ChallengeRecentChat />
 
       <ScoreCards
         live={cards.live}
@@ -106,8 +104,6 @@ export default async function KnockoutChallengeHomePage() {
           <Leaderboard rows={preview} youUserId={user?.id} linkBase="/challenge/knockout/u" compact />
         </div>
       ) : null}
-
-      <ChallengeRecentChat />
     </section>
   );
 }

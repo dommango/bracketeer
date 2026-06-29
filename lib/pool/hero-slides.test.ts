@@ -12,18 +12,22 @@ describe("availableHeroSlides", () => {
     expect(slides.map((s) => s.format)).toEqual(["MATCH_DAY_3_PICKEM", "KNOCKOUT"]);
   });
 
-  it("shows only knockout once MD3 has locked and knockout picks are open", () => {
-    // Just after knockout picks open — MD3's last kickoff (June 27) is already past.
+  it("leads with knockout (recruiting) while MD3 plays out live", () => {
+    // Just after knockout picks open — MD3's last kickoff (June 27) is past, so MD3
+    // is live and knockout is recruiting: both slides show, knockout (featured) first.
     const now = new Date(new Date(KNOCKOUT_PICKS_OPEN_UTC).getTime() + 1000);
     const slides = availableHeroSlides(now);
-    expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT"]);
+    expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT", "MATCH_DAY_3_PICKEM"]);
   });
 
-  it("shows nothing once both games are locked", () => {
-    // After the Round of 32 kickoff (knockout lock) — both games are live/locked.
+  it("shows both live games (knockout first) once both are locked", () => {
+    // After the Round of 32 kickoff (knockout lock) — both games are live. The
+    // carousel keeps surfacing them, current stage (knockout) first, both "live".
     const r32 = kickoffFor(73);
     expect(r32).not.toBeNull();
     const now = new Date(r32!.getTime() + 1000);
-    expect(availableHeroSlides(now)).toEqual([]);
+    const slides = availableHeroSlides(now);
+    expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT", "MATCH_DAY_3_PICKEM"]);
+    expect(slides.every((s) => s.stateLine.toLowerCase().includes("live"))).toBe(true);
   });
 });

@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
-import { getMd3ChallengeHome, getMd3Bracket } from "@/lib/challenge/md3-dashboard";
+import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
 import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { Countdown } from "@/app/pool/[code]/Countdown";
-import { GroupStandings } from "@/app/pool/[code]/Bracket";
 import { ChallengeStanding } from "../ChallengeStanding";
-import { MatchUpdates } from "./MatchUpdates";
 import { md3CountLine } from "@/lib/pool/md3-summary";
 import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 import { ChallengeRecentChat } from "@/app/challenge/ChallengeRecentChat";
@@ -16,10 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Md3ChallengeHomePage() {
   const user = await getSessionUser();
-  const [{ standing, board, view, cards, updates }, bracket] = await Promise.all([
-    getMd3ChallengeHome(user?.id ?? null),
-    getMd3Bracket(),
-  ]);
+  const { standing, board, view, cards } = await getMd3ChallengeHome(user?.id ?? null);
 
   // The soonest still-open fixture's kickoff is the next lock; null once all 24
   // have kicked off (the game is fully locked).
@@ -39,7 +34,7 @@ export default async function Md3ChallengeHomePage() {
 
   return (
     <section className="space-y-5">
-      <MatchUpdates updates={updates} />
+      <ChallengeRecentChat />
 
       <ScoreCards
         live={cards.live}
@@ -102,25 +97,6 @@ export default async function Md3ChallengeHomePage() {
           />
         </div>
       ) : null}
-
-      {bracket ? (
-        <section className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
-              Group standings
-            </h2>
-            <Link
-              href="/challenge/md3/matches?view=groups"
-              className="text-xs font-semibold text-pitch hover:underline"
-            >
-              See all →
-            </Link>
-          </div>
-          <GroupStandings view={bracket} basePath="/challenge/md3" />
-        </section>
-      ) : null}
-
-      <ChallengeRecentChat />
     </section>
   );
 }
