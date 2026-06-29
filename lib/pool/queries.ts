@@ -1348,16 +1348,21 @@ export async function getPoolAnalytics(poolId: string): Promise<PickAnalytics | 
 // priced fixtures (not all 104 matches). Team codes resolve the same way the
 // Match-Center does (group teams from the slot ref, knockout from the answer-key
 // bracket); `buildUpsetRadar`'s `hasUsableOdds` is the authoritative odds gate.
-async function getUpsetMatches(poolId: string): Promise<UpsetMatchInput[]> {
-  const pool = await prisma.pool.findUnique({
-    where: { id: poolId },
-    select: { tournamentId: true, tournament: { select: { officialResults: true } } },
+// Tournament-scoped core — shared by the pool radar (below) and the public
+// challenge radar (lib/challenge/analytics). Pool-agnostic: the priced fixtures and
+// their resolved teams are identical for everyone playing the same tournament.
+export async function getUpsetMatchesForTournament(
+  tournamentId: string,
+): Promise<UpsetMatchInput[]> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { officialResults: true },
   });
-  if (!pool) return [];
+  if (!tournament) return [];
 
-  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const resolved = resolveBracket(asResults(tournament.officialResults));
   const matches = await prisma.match.findMany({
-    where: { tournamentId: pool.tournamentId, odds: { isNot: null } },
+    where: { tournamentId, odds: { isNot: null } },
     select: {
       matchNo: true,
       roundCode: true,
@@ -1394,6 +1399,16 @@ async function getUpsetMatches(poolId: string): Promise<UpsetMatchInput[]> {
     });
   }
   return inputs;
+}
+
+// Pool-scoped wrapper — resolves the pool's tournament, then delegates.
+async function getUpsetMatches(poolId: string): Promise<UpsetMatchInput[]> {
+  const pool = await prisma.pool.findUnique({
+    where: { id: poolId },
+    select: { tournamentId: true },
+  });
+  if (!pool) return [];
+  return getUpsetMatchesForTournament(pool.tournamentId);
 }
 
 export async function getHomeView(poolId: string, userId: string | null): Promise<HomeView> {

@@ -44,10 +44,11 @@ describe("unifiedPicksBase", () => {
     expect(unifiedPicksBase(duringMd3)).toBe("/challenge/md3");
   });
 
-  it("resolves to knockout once MD3 is done and knockout picks are open", () => {
-    // After the last MD3 kickoff MD3 is no longer joinable; the featured game is
-    // knockout if its picks are open by then (else it defaults to md3).
+  it("resolves to knockout once MD3 is no longer the featured game", () => {
+    // After the last MD3 kickoff MD3 is no longer joinable, so the knockout
+    // challenge becomes the default board — whether its picks are open or already
+    // live (the later stage stays the default once MD3 closes).
     const afterMd3 = new Date(lastMd3Kickoff().getTime() + 1000);
-    expect(["/challenge/md3", "/challenge/knockout"]).toContain(unifiedPicksBase(afterMd3));
+    expect(unifiedPicksBase(afterMd3)).toBe("/challenge/knockout");
   });
 });

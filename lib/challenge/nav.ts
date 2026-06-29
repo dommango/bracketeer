@@ -33,7 +33,9 @@ export function switchGameHref(pathname: string, target: GameSlug): string {
 
 // On the unified /challenge/picks surface there's no game segment, so the bottom
 // nav's sibling tabs (home/leaderboard/matches) need a concrete game tree to
-// point at. Use the featured game, defaulting to md3.
+// point at. MD3 only while it's the featured (still-joinable) game; otherwise the
+// Knockout Challenge is the live, most-relevant board — it stays the default once
+// MD3's window closes (mirrors the bare /challenge index).
 export function unifiedPicksBase(now: Date = new Date()): string {
-  return featuredGame(now) === "KNOCKOUT" ? "/challenge/knockout" : "/challenge/md3";
+  return featuredGame(now) === "MATCH_DAY_3_PICKEM" ? "/challenge/md3" : "/challenge/knockout";
 }
