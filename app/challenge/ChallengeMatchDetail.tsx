@@ -11,6 +11,7 @@ import {
 import { MatchInsights } from "@/app/pool/[code]/matches/[no]/MatchInsights";
 import { MatchInjuries } from "@/app/pool/[code]/matches/[no]/MatchInjuries";
 import { MatchLineups } from "@/app/pool/[code]/matches/[no]/MatchLineups";
+import { MatchPlayerRatings } from "@/app/pool/[code]/matches/[no]/MatchPlayerRatings";
 import { VenueLine } from "@/app/pool/[code]/VenueLine";
 import { WinProbBar } from "@/app/pool/[code]/WinProbBar";
 import { UpsetBadge } from "@/app/pool/[code]/UpsetBadge";
@@ -194,6 +195,12 @@ export function ChallengeMatchDetail({
       <MatchLineups lineup={detail.lineup} home={detail.home} away={detail.away} />
       <MatchTimeline items={detail.timeline} />
       <MatchStatsBars bars={detail.stats} homeCode={detail.home.code} awayCode={detail.away.code} />
+      <MatchPlayerRatings
+        playerRatings={detail.playerRatings}
+        playerOfMatch={detail.playerOfMatch}
+        home={detail.home}
+        away={detail.away}
+      />
 
       {detail.scored && detail.pickSplit ? (
         <PickSplitCard split={detail.pickSplit} audience="field" />

@@ -50,6 +50,7 @@ import { GROUPS } from "@/lib/scoring/data";
 import type { ImpliedProbs, OutrightProb } from "@/lib/odds/map";
 import type { H2HSummary } from "@/lib/sports/predictions-parse";
 import type { LineupPlayer } from "@/lib/sports/lineups-parse";
+import { playerOfTheMatch, type PlayerStatLine } from "@/lib/sports/fixture-players-parse";
 import type { InjuryItem } from "@/lib/sports/injuries-parse";
 import { venueFor } from "@/lib/scoring/schedule";
 import { startOfDayInZone, matchdaysAhead } from "@/lib/tz";
@@ -1062,6 +1063,11 @@ export interface MatchDetail {
   } | null;
   // Injured / suspended players (flat, each carries its teamCode); empty until polled.
   injuries: InjuryItem[];
+  // Standout performer by match rating; null until the player feed has data (live →
+  // finalized at full time).
+  playerOfMatch: { name: string; teamCode: string | null; rating: number } | null;
+  // Per-team player ratings/stats; null until the player feed has data.
+  playerRatings: { home: PlayerStatLine[]; away: PlayerStatLine[] } | null;
 }
 
 // Tournament-scoped match detail — the generic, pool-agnostic content for one
@@ -1117,6 +1123,7 @@ export async function getChallengeMatchDetail(
       lineup: {
         select: { homeFormation: true, awayFormation: true, home: true, away: true },
       },
+      playerStats: { select: { home: true, away: true } },
       injuries: { select: { players: true } },
       result: {
         select: {
@@ -1219,6 +1226,32 @@ export async function getChallengeMatchDetail(
         }
       : null,
     injuries: (match.injuries?.players as unknown as InjuryItem[] | undefined) ?? [],
+    ...playerRatingsFields(match.playerStats, homeCode, awayCode),
+  };
+}
+
+// Map the stored per-player ratings to the detail's playerRatings + derived
+// playerOfMatch (highest match rating across both sides). Null fields until the
+// player feed has data, so the UI cards stay hidden pre/early-match.
+function playerRatingsFields(
+  playerStats: { home: unknown; away: unknown } | null,
+  homeCode: string | null,
+  awayCode: string | null,
+): Pick<MatchDetail, "playerOfMatch" | "playerRatings"> {
+  if (!playerStats) return { playerOfMatch: null, playerRatings: null };
+  const home = (playerStats.home as PlayerStatLine[] | null) ?? [];
+  const away = (playerStats.away as PlayerStatLine[] | null) ?? [];
+  const potm = playerOfTheMatch(home, away);
+  return {
+    playerRatings: { home, away },
+    playerOfMatch:
+      potm && potm.player.rating != null
+        ? {
+            name: potm.player.name ?? "—",
+            teamCode: potm.side === "home" ? homeCode : awayCode,
+            rating: potm.player.rating,
+          }
+        : null,
   };
 }
 
