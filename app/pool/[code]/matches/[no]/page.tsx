@@ -13,6 +13,7 @@ import { MatchTimeline, MatchStatsBars, TeamScorers } from "./MatchLive";
 import { MatchInsights } from "./MatchInsights";
 import { MatchInjuries } from "./MatchInjuries";
 import { MatchLineups } from "./MatchLineups";
+import { MatchPlayerRatings } from "./MatchPlayerRatings";
 import { VenueLine } from "../../VenueLine";
 import { WinProbBar } from "../../WinProbBar";
 import { UpsetBadge } from "../../UpsetBadge";
@@ -203,6 +204,12 @@ export default async function MatchDetailPage({
       <MatchLineups lineup={detail.lineup} home={detail.home} away={detail.away} />
       <MatchTimeline items={detail.timeline} />
       <MatchStatsBars bars={detail.stats} homeCode={detail.home.code} awayCode={detail.away.code} />
+      <MatchPlayerRatings
+        playerRatings={detail.playerRatings}
+        playerOfMatch={detail.playerOfMatch}
+        home={detail.home}
+        away={detail.away}
+      />
 
       {detail.scored && detail.pickSplit ? <PickSplitCard split={detail.pickSplit} /> : null}
 

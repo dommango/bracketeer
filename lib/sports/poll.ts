@@ -13,9 +13,11 @@ import {
   fetchFixtures,
   fetchMatchEvents,
   fetchMatchStats,
+  fetchFixturePlayers,
   type FinishedFixture,
   type RawMatchEvent,
 } from "./client";
+import { parseFixturePlayers } from "./fixture-players-parse";
 import { EXTERNAL_TO_MATCHNO, EXTERNAL_TEAM_CODES } from "./fixtures-map";
 import {
   setKnockoutResultFromApi,
@@ -231,10 +233,10 @@ export async function pollScores(): Promise<PollSummary> {
     if (m.scheduledAt) knockoutScheduleByNo.set(m.matchNo, m.scheduledAt);
   }
 
-  // Live fixtures (group + knockout) to enrich in Pass 3: matchId + provider team ids
+  // Fixtures to enrich in Pass 3 (events + statistics): matchId + provider team ids
   // for correct home/away stat assignment (API order isn't guaranteed), plus the
   // codes/score needed to format goal & card chat posts.
-  const liveFixtures: Array<{
+  type EnrichTarget = {
     fixtureId: number;
     matchId: string;
     matchNo: number;
@@ -244,7 +246,14 @@ export async function pollScores(): Promise<PollSummary> {
     awayCode: string;
     homeScore: number | null;
     awayScore: number | null;
-  }> = [];
+  };
+  // Currently-live fixtures get the full treatment (new events announced to chat).
+  const liveFixtures: EnrichTarget[] = [];
+  // Fixtures that flipped to FINAL this poll — enriched once so every match ends with
+  // a complete event timeline + final stat line, even if it finished between ticks or
+  // its closing minutes were never seen live. No chat announce (avoids replaying a
+  // whole match's events at once).
+  const finishedFixtures: EnrichTarget[] = [];
 
   // --- Pass 1: knockout results (finished → answer key) + live display rows ---
   let applied = 0;
@@ -288,6 +297,25 @@ export async function pollScores(): Promise<PollSummary> {
       if (didApply) {
         applied += 1;
         appliedKnockouts.push({ matchNo, winnerCode });
+        // One-shot backfill target: guarantee a complete event list + final stat line
+        // for the knockout, even if its closing minutes were never polled live.
+        const m = await prisma.match.findUnique({
+          where: { tournamentId_matchNo: { tournamentId, matchNo } },
+          select: { id: true },
+        });
+        if (m) {
+          finishedFixtures.push({
+            fixtureId: f.fixtureId,
+            matchId: m.id,
+            matchNo,
+            homeTeamId: Number(f.homeExternalId),
+            awayTeamId: Number(f.awayExternalId),
+            homeCode: homeCode ?? "",
+            awayCode: awayCode ?? "",
+            homeScore: f.homeGoals,
+            awayScore: f.awayGoals,
+          });
+        }
       }
     } else if (f.live && homeCode && awayCode && isScoredKnockout(matchNo)) {
       // In-play → display-only LIVE row so the match surfaces as live on the home /
@@ -358,6 +386,19 @@ export async function pollScores(): Promise<PollSummary> {
       if (didApply) groupsApplied += 1;
       if (newlyFinal) {
         finals.push({ matchNo, homeCode, awayCode, homeScore: f.homeGoals ?? 0, awayScore: f.awayGoals ?? 0 });
+        if (matchId) {
+          finishedFixtures.push({
+            fixtureId: f.fixtureId,
+            matchId,
+            matchNo,
+            homeTeamId: Number(f.homeExternalId),
+            awayTeamId: Number(f.awayExternalId),
+            homeCode,
+            awayCode,
+            homeScore: f.homeGoals,
+            awayScore: f.awayGoals,
+          });
+        }
       }
       if (f.live && matchId) {
         liveFixtures.push({
@@ -412,47 +453,85 @@ export async function pollScores(): Promise<PollSummary> {
     }
   }
 
-  // --- Pass 3: events + stats for currently-live group fixtures ---
+  // --- Pass 3: events + stats for live fixtures (announced) and just-finished
+  // fixtures (one-shot backfill, no announce) ---
   let eventsWritten = 0;
   let statsWritten = 0;
 
-  if (liveFixtures.length > 0) {
-    const enrichResults = await Promise.allSettled(
-      liveFixtures.map(async (lf) => {
-        const { fixtureId, matchId, homeTeamId, awayTeamId } = lf;
-        const [rawEvents, rawStats] = await Promise.all([
-          fetchMatchEvents(fixtureId),
-          fetchMatchStats(fixtureId, homeTeamId, awayTeamId),
-        ]);
-
-        const { written, added } = await persistEvents(matchId, rawEvents, EXTERNAL_TEAM_CODES);
-
-        // Goal & red-card chat posts for newly-seen events (best-effort).
-        for (const e of added) {
-          const line =
-            formatGoalLine(e, lf.homeCode, lf.awayCode, lf.homeScore ?? 0, lf.awayScore ?? 0) ??
-            formatCardLine(e);
-          if (!line) continue;
-          try {
-            await announceMatchEvent(tournamentId, line, { matchNo: lf.matchNo, kind: "event" });
-          } catch (err) {
-            console.error("event announce failed:", err);
-          }
-        }
-
-        let statsCount = 0;
-        if (rawStats) {
-          await prisma.matchStats.upsert({
-            where: { matchId },
-            update: { home: rawStats.home as object, away: rawStats.away as object },
-            create: { matchId, home: rawStats.home as object, away: rawStats.away as object },
-          });
-          statsCount = 1;
-        }
-        return { events: written, stats: statsCount };
+  // Fetch + persist events and statistics for one fixture. `announce` posts newly-seen
+  // goals/cards to chat (live only); a FINAL backfill stays silent so it doesn't replay
+  // the whole match's events at once.
+  const enrich = async (lf: EnrichTarget, announce: boolean): Promise<{ events: number; stats: number }> => {
+    const { fixtureId, matchId, homeTeamId, awayTeamId } = lf;
+    // Player stats are best-effort decoration: a failure there must not drop the
+    // event timeline / stat line, so it resolves to null instead of rejecting.
+    const [rawEvents, rawStats, rawPlayers] = await Promise.all([
+      fetchMatchEvents(fixtureId),
+      fetchMatchStats(fixtureId, homeTeamId, awayTeamId),
+      fetchFixturePlayers(fixtureId).catch((err) => {
+        console.error(`player stats fetch failed for fixture ${fixtureId}:`, err);
+        return null;
       }),
-    );
+    ]);
 
+    const { written, added } = await persistEvents(matchId, rawEvents, EXTERNAL_TEAM_CODES);
+
+    if (announce) {
+      for (const e of added) {
+        const line =
+          formatGoalLine(e, lf.homeCode, lf.awayCode, lf.homeScore ?? 0, lf.awayScore ?? 0) ??
+          formatCardLine(e);
+        if (!line) continue;
+        try {
+          await announceMatchEvent(tournamentId, line, { matchNo: lf.matchNo, kind: "event" });
+        } catch (err) {
+          console.error("event announce failed:", err);
+        }
+      }
+    }
+
+    let statsCount = 0;
+    if (rawStats) {
+      await prisma.matchStats.upsert({
+        where: { matchId },
+        update: { home: rawStats.home as object, away: rawStats.away as object },
+        create: { matchId, home: rawStats.home as object, away: rawStats.away as object },
+      });
+      statsCount = 1;
+    }
+
+    // Per-player ratings/stats (assigned home/away by provider id). Best-effort.
+    if (rawPlayers) {
+      try {
+        const sides = parseFixturePlayers(rawPlayers, homeTeamId, awayTeamId);
+        if (sides) {
+          const data = {
+            home: sides.home as object,
+            away: sides.away as object,
+            raw: rawPlayers as object,
+            fetchedAt: new Date(),
+          };
+          await prisma.matchPlayerStats.upsert({
+            where: { matchId },
+            update: data,
+            create: { matchId, ...data },
+          });
+        }
+      } catch (err) {
+        console.error(`player stats persist failed for match ${matchId}:`, err);
+      }
+    }
+
+    return { events: written, stats: statsCount };
+  };
+
+  const targets: Array<{ lf: EnrichTarget; announce: boolean }> = [
+    ...liveFixtures.map((lf) => ({ lf, announce: true })),
+    ...finishedFixtures.map((lf) => ({ lf, announce: false })),
+  ];
+
+  if (targets.length > 0) {
+    const enrichResults = await Promise.allSettled(targets.map((t) => enrich(t.lf, t.announce)));
     for (const r of enrichResults) {
       if (r.status === "fulfilled") {
         eventsWritten += r.value.events;
