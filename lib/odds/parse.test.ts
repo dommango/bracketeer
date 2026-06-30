@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseOddsEvents, parseTotalsEvents, parseOutrights } from "./parse";
+import { parseOddsEvents, parseTotalsEvents, parseOutrights, parseSpreadsEvents } from "./parse";
 
 // The Odds API event shape, trimmed to the fields the parsers read.
 function totalsEvent(point: number | undefined, over: number, under: number) {
@@ -127,6 +127,72 @@ describe("parseTotalsEvents", () => {
       ],
     };
     expect(parseTotalsEvents([ev] as never)).toEqual([]);
+  });
+});
+
+describe("parseSpreadsEvents", () => {
+  // A spreads book quotes the handicap (point) on each side; the two points are
+  // negatives of each other (home -0.5 ⇄ away +0.5).
+  const book = (homeLine: number, home: number, away: number) => ({
+    markets: [
+      {
+        key: "spreads",
+        outcomes: [
+          { name: "Brazil", price: home, point: homeLine },
+          { name: "Mexico", price: away, point: -homeLine },
+        ],
+      },
+    ],
+  });
+
+  it("medians the home/away prices at the consensus home line", () => {
+    const ev = {
+      home_team: "Brazil",
+      away_team: "Mexico",
+      commence_time: "2026-06-13T19:00:00Z",
+      // Three books on -0.5, one outlier on -1.5 → consensus home line -0.5.
+      bookmakers: [book(-0.5, 1.8, 2.0), book(-0.5, 1.9, 1.95), book(-0.5, 2.0, 1.85), book(-1.5, 3.0, 1.4)],
+    };
+    const out = parseSpreadsEvents([ev] as never);
+    expect(out[0]).toMatchObject({
+      homeName: "Brazil",
+      awayName: "Mexico",
+      homeLine: -0.5,
+      decimalHome: 1.9,
+      decimalAway: 1.95,
+    });
+  });
+
+  it("skips a book whose two points are not mirror images", () => {
+    const ev = {
+      home_team: "Brazil",
+      away_team: "Mexico",
+      commence_time: "2026-06-13T19:00:00Z",
+      bookmakers: [
+        {
+          markets: [
+            {
+              key: "spreads",
+              outcomes: [
+                { name: "Brazil", price: 1.8, point: -0.5 },
+                { name: "Mexico", price: 2.0, point: 0.25 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(parseSpreadsEvents([ev] as never)).toEqual([]);
+  });
+
+  it("returns nothing when no book quotes a spreads market", () => {
+    const ev = {
+      home_team: "Brazil",
+      away_team: "Mexico",
+      commence_time: "2026-06-13T19:00:00Z",
+      bookmakers: [{ markets: [{ key: "h2h", outcomes: [] }] }],
+    };
+    expect(parseSpreadsEvents([ev] as never)).toEqual([]);
   });
 });
 

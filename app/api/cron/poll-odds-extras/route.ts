@@ -1,6 +1,7 @@
 // POST /api/cron/poll-odds-extras — slow-cadence companion to poll-odds. Fetches
-// Over/Under totals + tournament-winner outrights and persists them. Called by the
-// cron service near the top of each hour. Idempotent; no-op without ODDS_API_KEY.
+// Over/Under totals, Asian-handicap spreads, tournament-winner + top-goalscorer
+// outrights and persists them. Called by the cron service once a day. Idempotent;
+// no-op without ODDS_API_KEY.
 
 import { NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";

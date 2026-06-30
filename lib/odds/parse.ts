@@ -20,6 +20,17 @@ export interface TotalsEvent {
   decimalUnder: number;
 }
 
+// Asian-handicap (spreads) line for a single fixture, from the home side's view:
+// homeLine is the goals handicap applied to home_team (negative = home favored).
+export interface SpreadsEvent {
+  homeName: string;
+  awayName: string;
+  commenceTime: string; // ISO
+  homeLine: number; // e.g. -0.5 (home gives half a goal)
+  decimalHome: number;
+  decimalAway: number;
+}
+
 // One team's tournament-winner (outright) price.
 export interface OutrightEntry {
   teamName: string;
@@ -122,6 +133,46 @@ export function parseTotalsEvents(raw: ApiEvent[]): TotalsEvent[] {
       totalLine: best,
       decimalOver: median(overByLine.get(best)!),
       decimalUnder: median(underByLine.get(best)!),
+    });
+  }
+  return out;
+}
+
+// Consensus spreads: group prices by the home-side handicap line and use the
+// most-quoted line (ties → lower line), then median the home/away prices at that
+// line. A book is read only when its two points are mirror images (home -0.5 ⇄
+// away +0.5) — a mismatch means an alternate/garbled line and is skipped.
+export function parseSpreadsEvents(raw: ApiEvent[]): SpreadsEvent[] {
+  const out: SpreadsEvent[] = [];
+  for (const ev of raw) {
+    const homeByLine = new Map<number, number[]>();
+    const awayByLine = new Map<number, number[]>();
+    for (const bk of ev.bookmakers ?? []) {
+      const spreads = bk.markets?.find((m) => m.key === "spreads");
+      if (!spreads) continue;
+      const home = spreads.outcomes.find((o) => o.name === ev.home_team);
+      const away = spreads.outcomes.find((o) => o.name === ev.away_team);
+      if (home?.price == null || away?.price == null || home.point == null || away.point == null) continue;
+      if (away.point !== -home.point) continue; // not mirror images → skip
+      push(homeByLine, home.point, home.price);
+      push(awayByLine, home.point, away.price);
+    }
+    let best: number | null = null;
+    let bestCount = 0;
+    for (const [line, prices] of homeByLine) {
+      if (prices.length > bestCount || (prices.length === bestCount && (best == null || line < best))) {
+        best = line;
+        bestCount = prices.length;
+      }
+    }
+    if (best == null) continue;
+    out.push({
+      homeName: ev.home_team,
+      awayName: ev.away_team,
+      commenceTime: ev.commence_time,
+      homeLine: best,
+      decimalHome: median(homeByLine.get(best)!),
+      decimalAway: median(awayByLine.get(best)!),
     });
   }
   return out;

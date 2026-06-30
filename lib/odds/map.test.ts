@@ -7,7 +7,37 @@ import {
   resolveMatchNo,
   liveUpset,
   orientToHome,
+  toSpreadProbs,
+  orientSpreadToHome,
 } from "./map";
+
+describe("toSpreadProbs", () => {
+  it("normalizes the two cover prices to sum 1", () => {
+    const p = toSpreadProbs(1.9, 1.9);
+    expect(p.homeCoverProb + p.awayCoverProb).toBeCloseTo(1, 5);
+    expect(p.homeCoverProb).toBeCloseTo(0.5, 5);
+  });
+  it("guards bad prices to 0/0", () => {
+    expect(toSpreadProbs(0, 1.9)).toEqual({ homeCoverProb: 0, awayCoverProb: 0 });
+  });
+});
+
+describe("orientSpreadToHome", () => {
+  const probs = { homeCoverProb: 0.6, awayCoverProb: 0.4 };
+  it("passes through when the API home is our home", () => {
+    expect(orientSpreadToHome(-0.5, probs, "BRA", "BRA")).toEqual({ homeLine: -0.5, ...probs });
+  });
+  it("flips the line sign and swaps cover probs when sides are reversed", () => {
+    expect(orientSpreadToHome(-0.5, probs, "BRA", "MEX")).toEqual({
+      homeLine: 0.5,
+      homeCoverProb: 0.4,
+      awayCoverProb: 0.6,
+    });
+  });
+  it("passes through when the target home is unknown", () => {
+    expect(orientSpreadToHome(-0.5, probs, "BRA", null)).toEqual({ homeLine: -0.5, ...probs });
+  });
+});
 
 describe("toImpliedProbs", () => {
   it("normalizes to sum 1 and strips overround", () => {
