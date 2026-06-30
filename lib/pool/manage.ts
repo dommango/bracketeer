@@ -10,6 +10,7 @@ import { claimEntriesForUser } from "@/lib/auth/claim";
 import { recomputePool } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
 import { canAddMember, POOL_FULL_MESSAGE } from "@/lib/billing/entitlements";
+import { logEvent } from "@/lib/analytics/events";
 
 // A unique join code, retrying on the (rare) collision against the unique index.
 async function allocateJoinCode(): Promise<string> {
@@ -83,6 +84,14 @@ export async function createPool(input: CreatePoolInput): Promise<CreatedPool> {
     select: { id: true, joinCode: true },
   });
 
+  await logEvent({
+    type: "POOL_CREATE",
+    userId: input.userId,
+    poolId: pool.id,
+    tournamentId: tournament.id,
+    metadata: { format },
+  });
+
   return pool;
 }
 
@@ -123,6 +132,7 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
   // pattern as recomputePool) serializes concurrent joins so the count→insert
   // can't overshoot the cap at the boundary. Only new members are capped — an
   // existing member re-joining is idempotent and never turned away, even at cap.
+  let isNewMember = false;
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pool.id}))`;
     const existing = await tx.membership.findUnique({
@@ -130,6 +140,7 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
       select: { id: true },
     });
     if (!existing) {
+      isNewMember = true;
       const memberCount = await tx.membership.count({ where: { poolId: pool.id } });
       if (!canAddMember(pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
     }
@@ -139,6 +150,12 @@ export async function joinPool(input: JoinPoolInput): Promise<JoinedPool> {
       create: { poolId: pool.id, userId: input.userId, role: "MEMBER", displayName },
     });
   });
+
+  // Engagement: only a genuinely new membership counts as a join (a re-join is
+  // idempotent and shouldn't inflate the metric). Best-effort.
+  if (isNewMember) {
+    await logEvent({ type: "POOL_JOIN", userId: input.userId, poolId: pool.id, metadata: { via: "code" } });
+  }
 
   // Bind any imported entries matching this account's email (also enrolls the
   // user in their other pools — harmless and consistent with sign-in claiming).
