@@ -135,6 +135,53 @@ export async function getTopScorers(tournamentId: string, limit = 30): Promise<T
   return rows.map((r) => ({ ...r, teamName: teamName(r.teamCode) }));
 }
 
+export interface TodayScorer {
+  playerName: string;
+  teamCode: string | null; // resolved from the scoring board when the name matches
+  scoreProb: number; // implied P(scores) in their match, not normalized
+  matchNo: number;
+  fetchedAt: Date;
+}
+
+// "Most likely to score today": the anytime-goalscorer board flattened across the
+// current slate, highest implied chance first. Per-event scorer odds are only polled
+// at a match's snapshot moments (near kickoff), so fresh rows naturally belong to
+// today's live/imminent fixtures — we bound to the last 12h of fetches and drop
+// already-finished matches so the module always reflects what's about to be played.
+// Empty when the props poll hasn't run (or the integration isn't configured).
+export async function getTodayScorers(
+  tournamentId: string,
+  limit = 10,
+): Promise<TodayScorer[]> {
+  const cutoff = new Date(Date.now() - 12 * 60 * 60 * 1000);
+  const [rows, board] = await Promise.all([
+    prisma.matchScorerOdds.findMany({
+      where: {
+        fetchedAt: { gte: cutoff },
+        // isNot matches a null result (scheduled, no row yet) too, so imminent
+        // fixtures stay in while finished ones drop out.
+        match: { tournamentId, result: { isNot: { status: "FINAL" } } },
+      },
+      orderBy: { scoreProb: "desc" },
+      take: limit,
+      select: {
+        playerName: true,
+        scoreProb: true,
+        fetchedAt: true,
+        match: { select: { matchNo: true } },
+      },
+    }),
+    prisma.topScorer.findMany({ where: { tournamentId }, select: { playerName: true, teamCode: true } }),
+  ]);
+  return rows.map((r) => ({
+    playerName: r.playerName,
+    teamCode: matchPlayerCode(r.playerName, board),
+    scoreProb: r.scoreProb,
+    matchNo: r.match.matchNo,
+    fetchedAt: r.fetchedAt,
+  }));
+}
+
 export interface GoalscorerOdd {
   playerName: string;
   winProb: number;
