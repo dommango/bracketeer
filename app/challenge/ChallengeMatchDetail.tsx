@@ -75,6 +75,35 @@ function TotalsLine({ totals }: { totals: MatchDetail["totals"] }) {
   );
 }
 
+// Asian-handicap (spreads) market, shown beside the Over/Under line once a spread
+// has been polled. The line is home-oriented (negative = home favored), so the
+// favored side is whichever the line points to; we surface the supremacy as
+// "<favorite> -<line>" plus each side's implied cover %. Hidden when not polled.
+function SpreadLine({
+  spread,
+  home,
+  away,
+}: {
+  spread: MatchDetail["spread"];
+  home: MatchDetail["home"];
+  away: MatchDetail["away"];
+}) {
+  if (!spread || spread.line === 0) return null;
+  const homeFavored = spread.line < 0;
+  const favName = homeFavored ? home.name : away.name;
+  const handicap = -Math.abs(spread.line); // always shown from the favorite's view
+  const homePct = Math.round(spread.homeCoverProb * 100);
+  const awayPct = Math.round(spread.awayCoverProb * 100);
+  return (
+    <p className="mt-1 text-xs text-ink-3">
+      <span className="font-semibold text-ink-2">
+        Spread {favName} {handicap}
+      </span>
+      {` — ${home.name} ${homePct}% · ${away.name} ${awayPct}%`}
+    </p>
+  );
+}
+
 // The viewer's Match Day Pickem scoreline for this fixture, shown beside the live
 // or final score. `points` is null until the match is final, then green when the
 // prediction scored, muted when it missed.
@@ -187,6 +216,7 @@ export function ChallengeMatchDetail({
         </div>
         <WinProbBar odds={detail.odds} homeCode={detail.home.code} awayCode={detail.away.code} fetchedAt={detail.oddsFetchedAt} />
         <TotalsLine totals={detail.totals} />
+        <SpreadLine spread={detail.spread} home={detail.home} away={detail.away} />
         {yourScore ? <YourPrediction pick={yourScore} /> : null}
       </div>
 

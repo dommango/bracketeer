@@ -1,15 +1,23 @@
-// Slow-cadence odds poller: Over/Under totals (per match) + tournament-winner
-// outrights (per team). Run hourly, separate from the every-5-min h2h poll —
-// these markets move slowly and each is billed per call, so polling them on the
-// hot path would multiply API credit usage. Safe no-op without ODDS_API_KEY.
+// Slow-cadence odds poller: Over/Under totals + Asian-handicap spreads (per match)
+// and tournament-winner + top-goalscorer outrights. Run daily, separate from the
+// per-minute h2h poll — these markets move slowly and each featured market is billed
+// per call, so polling them on the hot path would multiply credit usage. Each is a
+// whole-slate call (1 credit). Safe no-op without ODDS_API_KEY.
 
 import { prisma } from "@/lib/db";
 import { oddsApiEnabled } from "@/lib/env";
-import { fetchTotalsEvents, fetchOutrights, fetchGoalscorerOutrights } from "@/lib/odds/client";
+import {
+  fetchTotalsEvents,
+  fetchSpreadsEvents,
+  fetchOutrights,
+  fetchGoalscorerOutrights,
+} from "@/lib/odds/client";
 import {
   normalizeTeam,
   resolveMatchNo,
   toTwoWayProbs,
+  toSpreadProbs,
+  orientSpreadToHome,
   toOutrightProbs,
   toGoalscorerProbs,
 } from "@/lib/odds/map";
@@ -18,6 +26,8 @@ import { loadCodedMatches } from "@/lib/odds/coded";
 export interface OddsExtrasSummary {
   totalsFetched: number;
   totalsUpdated: number;
+  spreadsFetched: number;
+  spreadsUpdated: number;
   outrightsFetched: number;
   outrightsUpserted: number;
   goalscorersFetched: number;
@@ -30,6 +40,8 @@ export async function pollOddsExtras(): Promise<OddsExtrasSummary> {
   const summary: OddsExtrasSummary = {
     totalsFetched: 0,
     totalsUpdated: 0,
+    spreadsFetched: 0,
+    spreadsUpdated: 0,
     outrightsFetched: 0,
     outrightsUpserted: 0,
     goalscorersFetched: 0,
@@ -65,6 +77,40 @@ export async function pollOddsExtras(): Promise<OddsExtrasSummary> {
     }
   } catch (err) {
     console.error("odds extras: totals failed:", err);
+  }
+
+  // --- Spreads: Asian-handicap line per fixture. Like totals, update existing
+  // MatchOdds rows only (the h2h poll owns row creation). Home-orient each line so
+  // spreadLine/spreadHomeProb read from our fixture's designated home side. ---
+  try {
+    const coded = await loadCodedMatches(tournament.id, tournament.officialResults);
+    const events = await fetchSpreadsEvents();
+    summary.spreadsFetched = events.length;
+    for (const ev of events) {
+      const home = normalizeTeam(ev.homeName);
+      const away = normalizeTeam(ev.awayName);
+      if (!home || !away) continue;
+      const matchNo = resolveMatchNo(home, away, coded);
+      if (matchNo == null) continue;
+      const codedMatch = coded.find((m) => m.matchNo === matchNo)!;
+      const oriented = orientSpreadToHome(
+        ev.homeLine,
+        toSpreadProbs(ev.decimalHome, ev.decimalAway),
+        home,
+        codedMatch.homeCode,
+      );
+      const res = await prisma.matchOdds.updateMany({
+        where: { matchId: codedMatch.matchId },
+        data: {
+          spreadLine: oriented.homeLine,
+          spreadHomeProb: oriented.homeCoverProb,
+          spreadAwayProb: oriented.awayCoverProb,
+        },
+      });
+      summary.spreadsUpdated += res.count;
+    }
+  } catch (err) {
+    console.error("odds extras: spreads failed:", err);
   }
 
   // --- Outrights: tournament-wide championship odds. Replace the whole set in one

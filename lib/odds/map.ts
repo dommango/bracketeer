@@ -27,6 +27,39 @@ export function toTwoWayProbs(dOver: number, dUnder: number): TwoWayProbs {
   return { overProb: rOver / total, underProb: rUnder / total };
 }
 
+export interface SpreadProbs {
+  homeCoverProb: number;
+  awayCoverProb: number;
+}
+
+// Two-outcome (home-cover / away-cover) implied probs for a spreads market,
+// normalized to sum 1. Bad prices (zero/negative/NaN) yield 0/0 so Infinity/NaN
+// never reach the DB or UI. Mirrors toTwoWayProbs but named for the spread sides.
+export function toSpreadProbs(dHome: number, dAway: number): SpreadProbs {
+  if (!(dHome > 0) || !(dAway > 0)) return { homeCoverProb: 0, awayCoverProb: 0 };
+  const rHome = 1 / dHome, rAway = 1 / dAway;
+  const total = rHome + rAway;
+  return { homeCoverProb: rHome / total, awayCoverProb: rAway / total };
+}
+
+// Reorient a spread to our fixture's designated home. The Odds API's `home_team`
+// is arbitrary at neutral World Cup venues, so when its home maps to our away side
+// the handicap is from the wrong perspective: negate the line and swap the cover
+// probs. The line is from the (reoriented) home's view, matching homeWinProb.
+export function orientSpreadToHome(
+  homeLine: number,
+  probs: SpreadProbs,
+  apiHomeCode: string,
+  targetHomeCode: string | null,
+): SpreadProbs & { homeLine: number } {
+  if (targetHomeCode == null || apiHomeCode === targetHomeCode) return { homeLine, ...probs };
+  return {
+    homeLine: -homeLine,
+    homeCoverProb: probs.awayCoverProb,
+    awayCoverProb: probs.homeCoverProb,
+  };
+}
+
 export interface OutrightProb {
   teamCode: string;
   decimal: number;
