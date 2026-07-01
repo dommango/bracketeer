@@ -8,6 +8,7 @@ import { listMessages, postMessage } from "@/lib/pool/chat";
 import { notifyPool } from "@/lib/realtime/notify";
 import { rateLimit } from "@/lib/rate-limit";
 import { apiOk, apiError } from "@/lib/api";
+import { logEvent } from "@/lib/analytics/events";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,7 @@ export async function POST(
       attachmentType: input.attachmentType,
     });
     await notifyPool(poolId, "chat");
+    await logEvent({ type: "CHAT_MESSAGE", userId: access.user.id, poolId });
     return apiOk(message, { status: 201 });
   } catch (err) {
     return apiError((err as Error).message, 422);

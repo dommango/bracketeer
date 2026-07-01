@@ -11,6 +11,7 @@ import type { Picks, Submission } from "@/lib/scoring/types";
 import { emptyPicks } from "@/lib/scoring/types";
 import { asAdvanceMap, type AdvanceMap } from "@/lib/pool/knockout-advance";
 import type { PoolFormat } from "@/generated/prisma/enums";
+import { logEvent } from "@/lib/analytics/events";
 
 export interface SubmitPicksInput {
   // The pool this bracket belongs to, or null for a standalone bracket (built
@@ -46,6 +47,20 @@ export interface SubmitPicksResult {
 }
 
 export async function upsertUiEntry(input: SubmitPicksInput): Promise<SubmitPicksResult> {
+  const result = await writeUiEntryWithRetry(input);
+  // Engagement: every in-app bracket save (new or edit) is an activity signal.
+  // Best-effort — a logging failure never breaks the submission.
+  await logEvent({
+    type: "ENTRY_SUBMIT",
+    userId: input.userId,
+    poolId: input.poolId,
+    tournamentId: input.tournamentId ?? null,
+    metadata: { replaced: result.replaced, format: input.format },
+  });
+  return result;
+}
+
+async function writeUiEntryWithRetry(input: SubmitPicksInput): Promise<SubmitPicksResult> {
   try {
     return await writeUiEntry(input);
   } catch (err) {

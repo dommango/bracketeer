@@ -18,6 +18,7 @@ import { createTransport } from "nodemailer";
 import { prisma } from "@/lib/db";
 import { env, googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { claimEntriesForUser } from "@/lib/auth/claim";
+import { logEvent } from "@/lib/analytics/events";
 
 // Magic-link email body. A well-formed multipart message (greeting, a single
 // clear CTA, an expiry/ignore note, sender identity) scores far better with spam
@@ -135,9 +136,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   events: {
     // Bind any entries imported for this email on every sign-in (idempotent).
-    async signIn({ user, account }) {
+    async signIn({ user, account, isNewUser }) {
       if (!user?.id) return;
       await claimEntriesForUser(user.id, user.email);
+      // Engagement signal: SIGN_IN every time (the DAU/WAU/MAU basis), plus a
+      // one-off SIGN_UP on the user's first sign-in. Best-effort — a logging
+      // failure never breaks sign-in.
+      await logEvent({
+        type: "SIGN_IN",
+        userId: user.id,
+        metadata: account?.provider ? { provider: account.provider } : undefined,
+      });
+      if (isNewUser) await logEvent({ type: "SIGN_UP", userId: user.id });
       // OAuth providers (Google/Facebook) only ever return a provider-verified
       // email, but the Prisma adapter doesn't populate emailVerified for them
       // (only the magic-link does). Stamp it on first OAuth sign-in so the prize
