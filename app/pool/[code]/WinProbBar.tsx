@@ -1,5 +1,5 @@
 import type { ImpliedProbs } from "@/lib/odds/map";
-import { resolvePair, NEUTRAL, DRAW_FILL } from "@/lib/teams/colors";
+import { resolvePair, DRAW_FILL } from "@/lib/teams/colors";
 import { UpdatedAt } from "./UpdatedAt";
 
 const pct = (x: number) => Math.round(x * 100);
@@ -28,10 +28,8 @@ export function WinProbBar({
   const { home, away } = hasCodes
     ? resolvePair(homeCode, awayCode)
     : { home: "var(--pitch)", away: "var(--round-r16)" };
-  // Draw share is a textured gray fill; the % label keeps the flat NEUTRAL color
-  // (a gradient can't tint text). Order is home · draw · away — draw in the middle.
+  // Draw share is a textured gray fill. Order is home · draw · away — draw middle.
   const drawFill = hasCodes ? DRAW_FILL : "var(--ink-4)";
-  const drawText = hasCodes ? NEUTRAL : "var(--ink-4)";
 
   return (
     <div className="mt-1.5">
@@ -40,10 +38,12 @@ export function WinProbBar({
         <span style={{ width: `${d}%`, background: drawFill }} />
         <span style={{ width: `${a}%`, background: away }} />
       </div>
+      {/* Percentages read in ink for legibility (team colors can be too pale to
+          meet contrast as text); the colored bar above carries the team identity. */}
       <div className="mt-0.5 flex justify-between text-[10px] font-mono">
-        <span style={{ color: home }}>{h}%</span>
-        <span style={{ color: drawText }}>D {d}%</span>
-        <span style={{ color: away }}>{a}%</span>
+        <span className="font-semibold text-ink-2">{h}%</span>
+        <span className="text-ink-3">D {d}%</span>
+        <span className="font-semibold text-ink-2">{a}%</span>
       </div>
       {fetchedAt ? (
         <div className="mt-1">

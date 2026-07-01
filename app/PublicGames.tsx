@@ -13,7 +13,7 @@ const SECONDARY_BTN =
 // so it stands apart from the neutral phase badges.
 function NewTag() {
   return (
-    <span className="shrink-0 rounded-full bg-gold-dark px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
+    <span className="shrink-0 rounded-full bg-gold px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink">
       New
     </span>
   );
@@ -94,7 +94,7 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
   return (
     <div className="relative rounded-3xl border border-gold/40 bg-gold-tint p-[22px]">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold-dark">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold-ink">
           Knockout Stage Bracket Games
         </p>
         <NewTag />
@@ -119,7 +119,7 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
             : "Opens June 28 — picks open once the last 32 are set."}
       </p>
       {teaser ? (
-        <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
+        <p className="mt-1 text-[13px] font-semibold text-gold-ink">🏆 {teaser}</p>
       ) : null}
       {r32 ? (
         <div className="mt-3">

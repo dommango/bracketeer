@@ -4,7 +4,6 @@ import { getPoolByCode } from "@/lib/pool/queries";
 import { getTeamDetail, type TeamDetail } from "@/lib/pool/team-detail";
 import { roundLabel } from "@/lib/pool/rounds";
 import { formatKickoff } from "@/lib/pool/format";
-import { teamColor } from "@/lib/teams/colors";
 import { Flag } from "../../Flag";
 
 export const dynamic = "force-dynamic";
@@ -161,13 +160,10 @@ export default async function TeamPage({
         </div>
         {detail.odds ? (
           <span className="shrink-0 text-right">
-            <span
-              className="block font-display text-2xl tabular-nums"
-              style={{ color: teamColor(detail.code) }}
-            >
+            <span className="block font-display text-2xl tabular-nums text-ink">
               {Math.round(detail.odds.winProb * 100)}%
             </span>
-            <span className="block text-[10px] font-bold uppercase tracking-[0.06em] text-ink-4">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
               to win
             </span>
           </span>

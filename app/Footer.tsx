@@ -12,7 +12,7 @@ export function Footer() {
         <span>June 11 – July 19, 2026</span>
       </div>
       <div className="flex justify-center gap-2">
-        <span>Bracketeer by Dom Mangonon | June 2026</span>
+        <span>Bracketeer by Dom Mangonon · June 2026</span>
         <span>·</span>
         <Link href="/release-notes" className="text-pitch-dark hover:underline">
           v{APP_VERSION}
