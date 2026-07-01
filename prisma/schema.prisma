@@ -130,6 +130,7 @@ model Tournament {
   outrights        TeamOutright[]
   topScorers       TopScorer[]
   statLeaders      StatLeader[]
+  teamStats        TeamStat[]
   goalscorerOdds   GoalscorerOutright[]
   chatMessages     ChatMessage[]
 }
@@ -455,6 +456,29 @@ model StatLeader {
   fetchedAt    DateTime
 
   @@unique([tournamentId, category, rank])
+}
+
+// Per-team tournament form / record, from API-Football /teams/statistics. One row
+// per team; upserted by the poller (daily — these move slowly). Powers the team
+// page's form card. `form` is the recent-results string (e.g. "WWDLW").
+model TeamStat {
+  id            String     @id @default(cuid())
+  tournamentId  String
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamCode      String // internal 3-letter code
+  played        Int
+  wins          Int
+  draws         Int
+  losses        Int
+  goalsFor      Int
+  goalsAgainst  Int
+  cleanSheets   Int
+  failedToScore Int
+  form          String? // recent results, most recent last (e.g. "WWDLW")
+  raw           Json
+  fetchedAt     DateTime
+
+  @@unique([tournamentId, teamCode])
 }
 
 // ---------------------------------------------------------------------------

@@ -265,3 +265,37 @@ export async function getStatLeaders(tournamentId: string, limit = 15): Promise<
       }));
   return { assists: pick("ASSISTS"), yellowCards: pick("YELLOW_CARDS"), redCards: pick("RED_CARDS") };
 }
+
+// A team's tournament form / record (API-Football /teams/statistics). Null until
+// the team-stats poll has run (or the sports integration isn't configured).
+export interface TeamStatRow {
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  cleanSheets: number;
+  failedToScore: number;
+  form: string | null;
+  fetchedAt: Date;
+}
+
+export async function getTeamStats(tournamentId: string, teamCode: string): Promise<TeamStatRow | null> {
+  const row = await prisma.teamStat.findUnique({
+    where: { tournamentId_teamCode: { tournamentId, teamCode } },
+    select: {
+      played: true,
+      wins: true,
+      draws: true,
+      losses: true,
+      goalsFor: true,
+      goalsAgainst: true,
+      cleanSheets: true,
+      failedToScore: true,
+      form: true,
+      fetchedAt: true,
+    },
+  });
+  return row;
+}

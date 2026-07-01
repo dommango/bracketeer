@@ -7,6 +7,7 @@ import type { ApiLineupEntry } from "@/lib/sports/lineups-parse";
 import type { ApiTopScorer } from "@/lib/sports/topscorers-parse";
 import type { ApiInjury } from "@/lib/sports/injuries-parse";
 import type { ApiFixturePlayerEntry } from "@/lib/sports/fixture-players-parse";
+import type { ApiTeamStatistics } from "@/lib/sports/team-stats-parse";
 
 export interface FinishedFixture {
   fixtureId: number; // numeric API id, used for events/stats sub-requests
@@ -264,6 +265,24 @@ export async function fetchFixturePlayers(
   if (!res.ok) throw new Error(`Sports API /fixtures/players responded ${res.status}`);
   const json = (await res.json()) as { response?: ApiFixturePlayerEntry[] };
   return json.response ?? [];
+}
+
+// Per-team tournament statistics (form, W/D/L, goals, clean sheets). Returns the
+// single stats object, or null when the provider has none yet. Parsing lives in
+// team-stats-parse.ts (env-free, unit-tested). teamId is the provider's numeric id.
+export async function fetchTeamStatistics(
+  teamId: number,
+  signal?: AbortSignal,
+): Promise<ApiTeamStatistics | null> {
+  const url = `${env.SPORTS_API_BASE}/teams/statistics?league=1&season=2026&team=${teamId}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /teams/statistics responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTeamStatistics | null };
+  return json.response ?? null;
 }
 
 export async function fetchMatchEvents(fixtureId: number): Promise<RawMatchEvent[]> {
