@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode, getTeamStats } from "@/lib/pool/queries";
+import { getPoolByCode, getTeamStats, getSquad } from "@/lib/pool/queries";
 import { getTeamDetail, type TeamDetail } from "@/lib/pool/team-detail";
 import { TeamForm } from "../../TeamForm";
+import { TeamSquad } from "../../TeamSquad";
 import { roundLabel } from "@/lib/pool/rounds";
 import { formatKickoff } from "@/lib/pool/format";
 import { teamColor } from "@/lib/teams/colors";
@@ -140,7 +141,10 @@ export default async function TeamPage({
   const detail = await getTeamDetail(pool.id, pool.tournamentId, teamCode.toUpperCase());
   if (!detail) notFound();
 
-  const teamStats = await getTeamStats(pool.tournamentId, teamCode.toUpperCase());
+  const [teamStats, squad] = await Promise.all([
+    getTeamStats(pool.tournamentId, teamCode.toUpperCase()),
+    getSquad(pool.tournamentId, teamCode.toUpperCase()),
+  ]);
 
   return (
     <section className="space-y-5">
@@ -181,6 +185,7 @@ export default async function TeamPage({
       <GroupTable detail={detail} />
       <Fixtures detail={detail} code={code} />
       <Backers detail={detail} code={code} />
+      <TeamSquad squad={squad} />
     </section>
   );
 }

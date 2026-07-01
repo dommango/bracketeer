@@ -9,6 +9,7 @@ import type { ApiInjury } from "@/lib/sports/injuries-parse";
 import type { ApiFixturePlayerEntry } from "@/lib/sports/fixture-players-parse";
 import type { ApiTeamStatistics } from "@/lib/sports/team-stats-parse";
 import type { ApiPlayer } from "@/lib/sports/players-parse";
+import type { ApiSquad } from "@/lib/sports/squad-parse";
 
 export interface FinishedFixture {
   fixtureId: number; // numeric API id, used for events/stats sub-requests
@@ -302,6 +303,20 @@ export async function fetchPlayersPage(
   if (!res.ok) throw new Error(`Sports API /players responded ${res.status}`);
   const json = (await res.json()) as { response?: ApiPlayer[]; paging?: { total?: number | null } };
   return { players: json.response ?? [], totalPages: json.paging?.total ?? 1 };
+}
+
+// A team's named squad (roster). Returns the raw response array (one team entry);
+// parsing lives in squad-parse.ts (env-free, unit-tested). teamId is the provider id.
+export async function fetchSquad(teamId: number, signal?: AbortSignal): Promise<ApiSquad[]> {
+  const url = `${env.SPORTS_API_BASE}/players/squads?team=${teamId}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /players/squads responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiSquad[] };
+  return json.response ?? [];
 }
 
 export async function fetchMatchEvents(fixtureId: number): Promise<RawMatchEvent[]> {

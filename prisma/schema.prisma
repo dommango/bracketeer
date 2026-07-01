@@ -132,6 +132,7 @@ model Tournament {
   statLeaders      StatLeader[]
   teamStats        TeamStat[]
   playerProfiles   PlayerProfile[]
+  squads           TeamSquad[]
   goalscorerOdds   GoalscorerOutright[]
   chatMessages     ChatMessage[]
 }
@@ -512,6 +513,21 @@ model PlayerProfile {
 
   @@unique([tournamentId, externalId])
   @@index([tournamentId, playerName])
+}
+
+// A national-team squad (roster), from API-Football /players/squads. One row per
+// team; `players` is the roster as JSON ([{name, number, position, age}]). Upserted
+// by the poller (daily — rosters are static once named). Powers the team roster card.
+model TeamSquad {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamCode     String // internal 3-letter code
+  players      Json // SquadPlayer[]: { name, number, position, age }
+  raw          Json
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, teamCode])
 }
 
 // ---------------------------------------------------------------------------

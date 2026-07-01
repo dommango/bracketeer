@@ -299,3 +299,20 @@ export async function getTeamStats(tournamentId: string, teamCode: string): Prom
   });
   return row;
 }
+
+// A team's named squad (roster), grouped-order already applied by the poller. Empty
+// when the squads poll hasn't run (or the sports integration isn't configured).
+export interface SquadMember {
+  name: string;
+  number: number | null;
+  position: string | null;
+  age: number | null;
+}
+
+export async function getSquad(tournamentId: string, teamCode: string): Promise<SquadMember[]> {
+  const row = await prisma.teamSquad.findUnique({
+    where: { tournamentId_teamCode: { tournamentId, teamCode } },
+    select: { players: true },
+  });
+  return (row?.players as SquadMember[] | undefined) ?? [];
+}
