@@ -129,6 +129,7 @@ model Tournament {
   entries    Entry[]
   outrights        TeamOutright[]
   topScorers       TopScorer[]
+  statLeaders      StatLeader[]
   goalscorerOdds   GoalscorerOutright[]
   chatMessages     ChatMessage[]
 }
@@ -427,6 +428,33 @@ model TopScorer {
   fetchedAt    DateTime
 
   @@unique([tournamentId, rank])
+}
+
+// Secondary stat leaderboards beyond the Golden Boot: assist leaders and the
+// disciplinary boards. One row per player per category, ranked; replaced wholesale
+// per category by the poller (mirrors TopScorer). `value` is the ranked stat for
+// the category (assists, yellow cards, or red cards). Kept in one table (vs three)
+// so the board UI and queries stay uniform.
+enum StatCategory {
+  ASSISTS
+  YELLOW_CARDS
+  RED_CARDS
+}
+
+model StatLeader {
+  id           String       @id @default(cuid())
+  tournamentId String
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  category     StatCategory
+  rank         Int // 1-based position within the category
+  playerName   String
+  teamCode     String // internal 3-letter code
+  value        Int // the category's ranked stat: assists / yellow cards / red cards
+  appearances  Int?
+  raw          Json
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, category, rank])
 }
 
 // ---------------------------------------------------------------------------

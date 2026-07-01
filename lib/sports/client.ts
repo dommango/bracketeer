@@ -210,6 +210,44 @@ export async function fetchTopScorers(signal?: AbortSignal): Promise<ApiTopScore
   return json.response ?? [];
 }
 
+// Secondary stat leaderboards — same provider shape as topscorers, one call each
+// returns the whole ranked board. Assist leaders and the two disciplinary boards.
+export async function fetchTopAssists(signal?: AbortSignal): Promise<ApiTopScorer[]> {
+  const url = `${env.SPORTS_API_BASE}/players/topassists?league=1&season=2026`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /topassists responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTopScorer[] };
+  return json.response ?? [];
+}
+
+export async function fetchTopYellowCards(signal?: AbortSignal): Promise<ApiTopScorer[]> {
+  const url = `${env.SPORTS_API_BASE}/players/topyellowcards?league=1&season=2026`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /topyellowcards responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTopScorer[] };
+  return json.response ?? [];
+}
+
+export async function fetchTopRedCards(signal?: AbortSignal): Promise<ApiTopScorer[]> {
+  const url = `${env.SPORTS_API_BASE}/players/topredcards?league=1&season=2026`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /topredcards responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTopScorer[] };
+  return json.response ?? [];
+}
+
 // Per-player match stats (ratings, minutes, goals, shots, passes) for a fixture.
 // Empty until the provider publishes them (live, finalized at full time). Parsing /
 // home-away assignment lives in fixture-players-parse.ts (env-free, unit-tested).

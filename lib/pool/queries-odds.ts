@@ -216,3 +216,52 @@ export async function getGoalscorerOutrights(
     fetchedAt: r.fetchedAt,
   }));
 }
+
+// Secondary stat leaderboards (assist + disciplinary boards), each lowest-rank
+// first. Empty when the stat-leaders poll hasn't run (or the sports integration
+// isn't configured). One query, split by category for the board UI.
+export interface StatLeaderRow {
+  rank: number;
+  playerName: string;
+  teamCode: string;
+  teamName: string;
+  value: number; // assists / yellow cards / red cards for the board it's on
+  appearances: number | null;
+  fetchedAt: Date;
+}
+
+export interface StatLeaders {
+  assists: StatLeaderRow[];
+  yellowCards: StatLeaderRow[];
+  redCards: StatLeaderRow[];
+}
+
+export async function getStatLeaders(tournamentId: string, limit = 15): Promise<StatLeaders> {
+  const rows = await prisma.statLeader.findMany({
+    where: { tournamentId },
+    orderBy: [{ category: "asc" }, { rank: "asc" }],
+    select: {
+      category: true,
+      rank: true,
+      playerName: true,
+      teamCode: true,
+      value: true,
+      appearances: true,
+      fetchedAt: true,
+    },
+  });
+  const pick = (category: "ASSISTS" | "YELLOW_CARDS" | "RED_CARDS"): StatLeaderRow[] =>
+    rows
+      .filter((r) => r.category === category)
+      .slice(0, limit)
+      .map((r) => ({
+        rank: r.rank,
+        playerName: r.playerName,
+        teamCode: r.teamCode,
+        teamName: teamName(r.teamCode),
+        value: r.value,
+        appearances: r.appearances,
+        fetchedAt: r.fetchedAt,
+      }));
+  return { assists: pick("ASSISTS"), yellowCards: pick("YELLOW_CARDS"), redCards: pick("RED_CARDS") };
+}

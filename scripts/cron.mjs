@@ -69,6 +69,7 @@ async function tick() {
   if (due("injuries", 60)) await hit("/api/cron/poll-injuries");
   if (due("tickets", 30)) await hit("/api/cron/poll-tickets");
   if (due("topscorers", 60)) await hit("/api/cron/poll-topscorers");
+  if (due("stat-leaders", 60)) await hit("/api/cron/poll-stat-leaders");
 
   // Prize resolution: record a sponsored award when a public challenge completes.
   // Idempotent and cheap when idle (a couple of indexed completion checks), so a

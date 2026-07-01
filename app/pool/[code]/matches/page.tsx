@@ -6,6 +6,7 @@ import {
   getPoolBracket,
   getChampionshipOdds,
   getTopScorers,
+  getStatLeaders,
   getGoalscorerOutrights,
   getTodayScorers,
   getUpsetRadar,
@@ -22,6 +23,7 @@ import { GroupStandings, Bracket } from "../Bracket";
 import { ChampionshipOdds } from "../ChampionshipOdds";
 import { OddsBoard } from "../OddsBoard";
 import { Scorers } from "../Scorers";
+import { StatLeaders } from "../StatLeaders";
 import { UpsetRadar } from "../UpsetRadar";
 import { StadiumProjections } from "../StadiumProjections";
 
@@ -126,13 +128,14 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [sections, bracket, groupsDone, titleOdds, scorers, favorites, todayScorers, upsets, stadiums] =
+  const [sections, bracket, groupsDone, titleOdds, scorers, statLeaders, favorites, todayScorers, upsets, stadiums] =
     await Promise.all([
       getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
       getPoolBracket(pool.id),
       isGroupStageComplete(pool.tournamentId),
       getChampionshipOdds(pool.tournamentId),
       getTopScorers(pool.tournamentId),
+      getStatLeaders(pool.tournamentId),
       getGoalscorerOutrights(pool.tournamentId),
       getTodayScorers(pool.tournamentId),
       getUpsetRadar(pool.id, sessionUser?.id ?? null),
@@ -204,7 +207,10 @@ export default async function MatchesPage({
           </div>
         </section>
       ) : active === "scorers" ? (
-        <Scorers scorers={scorers} code={code} />
+        <div className="space-y-6">
+          <Scorers scorers={scorers} code={code} />
+          <StatLeaders leaders={statLeaders} code={code} />
+        </div>
       ) : upsets.length > 0 ||
         titleOdds.length > 0 ||
         favorites.length > 0 ||
