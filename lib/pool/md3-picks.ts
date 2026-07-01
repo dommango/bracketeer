@@ -126,6 +126,43 @@ export async function getStandaloneMd3Entry(
   };
 }
 
+// Find-or-create the user's standalone MATCH_DAY_3_PICKEM entry WITHOUT touching
+// any picks. The knockout leg of the daily pick'em needs the shared entry to exist
+// before writing its daily_knockout rows, but must not disturb the group rows (or,
+// for a returning player, their already-saved knockout rows) — so it can't go
+// through upsertStandaloneMd3Picks, which replaces the entry's whole pick set.
+export async function ensureStandaloneMd3Entry(
+  tournamentId: string,
+  userId: string,
+  label: string,
+): Promise<{ entryId: string }> {
+  const clean = label.trim() || "Participant";
+  const existing = await prisma.entry.findFirst({
+    where: { tournamentId, userId, poolId: null, format: "MATCH_DAY_3_PICKEM" },
+    select: { id: true },
+  });
+  if (existing) {
+    await prisma.entry.update({
+      where: { id: existing.id },
+      data: { label: clean, enteredChallenge: true },
+    });
+    return { entryId: existing.id };
+  }
+  const created = await prisma.entry.create({
+    data: {
+      poolId: null,
+      tournamentId,
+      format: "MATCH_DAY_3_PICKEM",
+      userId,
+      label: clean,
+      importedFrom: "UI",
+      enteredChallenge: true,
+    },
+    select: { id: true },
+  });
+  return { entryId: created.id };
+}
+
 export interface UpsertStandaloneMd3Input {
   tournamentId: string;
   userId: string;

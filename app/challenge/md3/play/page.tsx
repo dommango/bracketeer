@@ -1,20 +1,24 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
-import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
-import { isMd3GameOpen } from "@/lib/pool/match-day-3";
-import { hasAcceptedTerms } from "@/lib/account/consent";
-import { GAME_CATALOG, md3DateRange } from "@/lib/pool/games";
+import { getDailyKnockoutHome } from "@/lib/challenge/daily-knockout-dashboard";
+import { isDailyKnockoutGameOpen } from "@/lib/games/daily-pickem/schedule";
+import { roundWeight } from "@/lib/games/daily-pickem/ladder";
 import { md3CountLine } from "@/lib/pool/md3-summary";
-import { Md3ChallengeForm } from "../Md3ChallengeForm";
+import { GAME_CATALOG } from "@/lib/pool/games";
+import { DailyKnockoutForm } from "../DailyKnockoutForm";
 
 // Predictions, locks, and results change at request time.
 export const dynamic = "force-dynamic";
 
-export default async function Md3ChallengePlayPage() {
+export default async function DailyKnockoutPlayPage() {
   const user = await getSessionUser();
-  const { view, standing } = await getMd3ChallengeHome(user?.id ?? null);
-  const gameOpen = isMd3GameOpen();
-  const needsConsent = user ? !(await hasAcceptedTerms(user.id)) : false;
+  const { view, standing } = await getDailyKnockoutHome(user?.id ?? null);
+  const gameOpen = isDailyKnockoutGameOpen();
+  // Weighted ladder total, to match the rank (which is ranked on the ladder).
+  const ladderTotal = view.fixtures.reduce(
+    (sum, f) => sum + (f.points ?? 0) * roundWeight(f.matchNo),
+    0,
+  );
 
   return (
     <section className="space-y-4">
@@ -23,7 +27,7 @@ export default async function Md3ChallengePlayPage() {
           <h1 className="font-display text-lg text-ink">Your picks</h1>
           <p className="text-[13px] text-ink-3">
             {md3CountLine(view)}
-            {view.scoredCount > 0 ? ` · ${view.totalPoints} pts` : ""}
+            {view.scoredCount > 0 ? ` · ${ladderTotal} pts` : ""}
             {standing ? ` · rank ${standing.rank}` : ""}
           </p>
         </div>
@@ -40,26 +44,23 @@ export default async function Md3ChallengePlayPage() {
           >
             Sign in
           </Link>{" "}
-          to enter Match Day Pickem.
+          to play the knockout pick&apos;em — it&apos;s free.
         </p>
       ) : !gameOpen ? (
         <p className="rounded-2xl border border-dashed border-line bg-surface-sunk p-4 text-center text-sm text-ink-3">
-          Match Day Pickem is locked — every fixture has kicked off.
+          The knockout pick&apos;em is locked — the Final has kicked off.
         </p>
       ) : null}
 
-      {/* One tight line: the date range + per-match lock, then how points are
-          scored (straight from the game catalog so it can't drift from the rules). */}
+      {/* One tight line: how picking works, then how points are scored (from the
+          game catalog so it can't drift from the rules). */}
       <p className="px-1 text-[13px] text-ink-3">
-        Predict the exact scorelines for Match Day 3 ({md3DateRange()}) — each locks at kickoff.
-        Scoring: {GAME_CATALOG.MATCH_DAY_3_PICKEM.scoringSummary}
+        Predict the exact scoreline of every knockout match — each locks at its own kickoff, and
+        the next round opens as its teams are decided. Scoring:{" "}
+        {GAME_CATALOG.MATCH_DAY_3_PICKEM.scoringSummary}
       </p>
 
-      <Md3ChallengeForm
-        fixtures={view.fixtures}
-        canEdit={Boolean(user) && gameOpen}
-        needsConsent={needsConsent}
-      />
+      <DailyKnockoutForm fixtures={view.fixtures} canEdit={Boolean(user) && gameOpen} />
     </section>
   );
 }

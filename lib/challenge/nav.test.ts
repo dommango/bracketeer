@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { challengeBaseFromPath, switchGameHref, unifiedPicksBase } from "./nav";
-import { firstMd3Kickoff, lastMd3Kickoff } from "@/lib/pool/match-day-3";
+import { firstMd3Kickoff } from "@/lib/pool/match-day-3";
+import { KNOCKOUT_PICKS_OPEN_UTC } from "@/lib/pool/knockout";
 
 describe("challengeBaseFromPath", () => {
   it("extracts the game base from a game tree path", () => {
@@ -38,17 +39,18 @@ describe("switchGameHref", () => {
 });
 
 describe("unifiedPicksBase", () => {
-  it("resolves to md3 while Match Day Pickem is the featured game", () => {
-    // Just before the first MD3 kickoff, MD3 is still joinable → featured.
-    const duringMd3 = new Date(firstMd3Kickoff().getTime() - 1000);
-    expect(unifiedPicksBase(duringMd3)).toBe("/challenge/md3");
+  it("resolves to md3 while the Match Day Pickem is the featured game", () => {
+    // Before the knockout bracket opens, the knockout pick'em is joinable and no
+    // bracket picks are open yet → the pick'em is featured.
+    const beforeBracketOpens = new Date(firstMd3Kickoff().getTime() - 1000);
+    expect(unifiedPicksBase(beforeBracketOpens)).toBe("/challenge/md3");
   });
 
-  it("resolves to knockout once MD3 is no longer the featured game", () => {
-    // After the last MD3 kickoff MD3 is no longer joinable, so the knockout
-    // challenge becomes the default board — whether its picks are open or already
-    // live (the later stage stays the default once MD3 closes).
-    const afterMd3 = new Date(lastMd3Kickoff().getTime() + 1000);
-    expect(unifiedPicksBase(afterMd3)).toBe("/challenge/knockout");
+  it("resolves to knockout while the bracket's picks are open", () => {
+    // Once the knockout-bracket picks open (before the R32 kickoff), the bracket is
+    // featured — it locks entirely at kickoff — so the unified picks default points
+    // at the knockout challenge.
+    const bracketOpen = new Date(new Date(KNOCKOUT_PICKS_OPEN_UTC).getTime() + 1000);
+    expect(unifiedPicksBase(bracketOpen)).toBe("/challenge/knockout");
   });
 });
