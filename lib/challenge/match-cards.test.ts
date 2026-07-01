@@ -89,6 +89,66 @@ describe("buildScoreCardInputs", () => {
     expect(next?.yourPick).toEqual({ code: "MEX", name: "Mexico" });
   });
 
+  it("drops a stuck-LIVE match (kickoff long past) off `live` and surfaces it as `last`", () => {
+    const { live, last } = buildScoreCardInputs(
+      [
+        m({
+          matchNo: 73,
+          roundCode: "R32",
+          homeCode: "MEX",
+          awayCode: "BRA",
+          resultStatus: "LIVE",
+          homeScore: 1,
+          awayScore: 0,
+          // ~18h before NOW — a match can't still be live this long after kickoff.
+          scheduledAt: new Date("2026-06-25T18:00:00.000Z"),
+        }),
+      ],
+      {},
+      NOW,
+    );
+    expect(live).toEqual([]);
+    expect(last?.matchNo).toBe(73);
+    expect(last?.status).toBe("FINAL");
+  });
+
+  it("keeps a recently-kicked-off LIVE match on `live`", () => {
+    const { live } = buildScoreCardInputs(
+      [
+        m({
+          matchNo: 73,
+          roundCode: "R32",
+          homeCode: "MEX",
+          awayCode: "BRA",
+          resultStatus: "LIVE",
+          // 1h before NOW — still plausibly in play.
+          scheduledAt: new Date("2026-06-26T11:00:00.000Z"),
+        }),
+      ],
+      {},
+      NOW,
+    );
+    expect(live.map((r) => r.matchNo)).toEqual([73]);
+  });
+
+  it("does not pick a stuck-LIVE match as `next` via the fallback", () => {
+    const { next } = buildScoreCardInputs(
+      [
+        m({
+          matchNo: 73,
+          roundCode: "R32",
+          homeCode: "MEX",
+          awayCode: "BRA",
+          resultStatus: "LIVE",
+          scheduledAt: new Date("2026-06-25T18:00:00.000Z"),
+        }),
+      ],
+      {},
+      NOW,
+    );
+    expect(next).toBeNull();
+  });
+
   it("returns nulls when everything is already decided", () => {
     const { live, next } = buildScoreCardInputs(
       [m({ matchNo: 33, roundCode: "GROUP", resultStatus: "FINAL", winnerCode: "MEX" })],
