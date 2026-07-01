@@ -18,7 +18,7 @@ function chatTime(iso: string): string {
 // full chat page. Renders nothing when the chat is empty.
 export async function ChallengeRecentChat() {
   const tournamentId = await getTournamentIdBySlug();
-  const messages = await listChallengeMessages(tournamentId, 5, null);
+  const messages = await listChallengeMessages(tournamentId, 3, null);
 
   const header = (
     <div className="flex items-center justify-between px-1">

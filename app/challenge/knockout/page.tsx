@@ -32,7 +32,6 @@ export default async function KnockoutChallengeHomePage() {
 
   const buildable = open || earlyOpen;
   const hasBracket = myBrackets.length > 0;
-  const entered = myBrackets.some((b) => b.enteredChallenge);
 
   const top = board.slice(0, 5);
   const mine = user?.id ? board.find((r) => r.userId === user.id) : null;
@@ -70,26 +69,7 @@ export default async function KnockoutChallengeHomePage() {
             <Countdown target={opensAt.toISOString()} className="text-sm font-mono text-pitch-dark" />
           </div>
         </div>
-      ) : (
-        <Link
-          href="/bracket"
-          className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk"
-        >
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold text-ink">
-              {hasBracket ? "Your bracket" : "Build your bracket"}
-            </span>
-            <span className="mt-0.5 block text-[13px] text-ink-3">
-              {hasBracket
-                ? entered
-                  ? "On the global leaderboard — edit until the Round of 32 kicks off."
-                  : "Enter it into the challenge to climb the global leaderboard."
-                : "Pick every knockout winner from the Round of 32 to the final."}
-            </span>
-          </span>
-          <span className="shrink-0 font-display text-pitch-dark">→</span>
-        </Link>
-      )}
+      ) : null}
 
       <Link
         href="/challenge/knockout/scoring"
