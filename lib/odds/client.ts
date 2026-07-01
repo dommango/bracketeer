@@ -9,14 +9,16 @@ import {
   parseTotalsEvents,
   parseOutrights,
   parseGoalscorerOutrights,
+  parseSpreadsEvents,
   type ApiEvent,
   type OddsEvent,
   type TotalsEvent,
+  type SpreadsEvent,
   type OutrightEntry,
   type GoalscorerEntry,
 } from "@/lib/odds/parse";
 
-export type { OddsEvent, TotalsEvent, OutrightEntry, GoalscorerEntry } from "@/lib/odds/parse";
+export type { OddsEvent, TotalsEvent, SpreadsEvent, OutrightEntry, GoalscorerEntry } from "@/lib/odds/parse";
 
 // The Odds API exposes tournament outrights as dedicated sport keys. This is the
 // top-goalscorer market's key; verify it against the live catalogue at execution
@@ -47,6 +49,20 @@ export async function fetchTotalsEvents(signal?: AbortSignal): Promise<TotalsEve
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected totals response shape");
   return parseTotalsEvents(json as ApiEvent[]);
+}
+
+// Asian-handicap (spreads) for the upcoming slate. Featured market, so one call
+// returns the whole slate for 1 credit — same slow cadence as totals (handicap
+// lines move slowly and each market is billed per call).
+export async function fetchSpreadsEvents(signal?: AbortSignal): Promise<SpreadsEvent[]> {
+  const url =
+    `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds` +
+    `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=spreads&oddsFormat=decimal`;
+  const res = await fetch(url, { cache: "no-store", signal });
+  if (!res.ok) throw new Error(`Odds API (spreads) responded ${res.status}`);
+  const json = await res.json();
+  if (!Array.isArray(json)) throw new Error("Odds API: unexpected spreads response shape");
+  return parseSpreadsEvents(json as ApiEvent[]);
 }
 
 // Tournament-winner futures. Uses the dedicated winner sport key, which returns a

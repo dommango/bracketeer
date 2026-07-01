@@ -1042,6 +1042,8 @@ export interface MatchDetail {
   oddsFetchedAt: Date | null; // when the match odds were last polled (freshness stamp)
   // Over/Under total-goals market; null until a totals line has been polled.
   totals: { line: number; overProb: number; underProb: number } | null;
+  // Asian-handicap (spreads) market, home-oriented; null until a line has been polled.
+  spread: { line: number; homeCoverProb: number; awayCoverProb: number } | null;
   // Lowest price + official buy link (Ticketmaster); null when not configured.
   tickets: { minPrice: number | null; currency: string | null; url: string | null } | null;
   // Pre-match insights (model win %, advice, form, h2h); null until polled.
@@ -1105,6 +1107,9 @@ export async function getChallengeMatchDetail(
           totalLine: true,
           overProb: true,
           underProb: true,
+          spreadLine: true,
+          spreadHomeProb: true,
+          spreadAwayProb: true,
           fetchedAt: true,
         },
       },
@@ -1203,6 +1208,16 @@ export async function getChallengeMatchDetail(
             line: match.odds.totalLine,
             overProb: match.odds.overProb,
             underProb: match.odds.underProb,
+          }
+        : null,
+    spread:
+      match.odds?.spreadLine != null &&
+      match.odds.spreadHomeProb != null &&
+      match.odds.spreadAwayProb != null
+        ? {
+            line: match.odds.spreadLine,
+            homeCoverProb: match.odds.spreadHomeProb,
+            awayCoverProb: match.odds.spreadAwayProb,
           }
         : null,
     tickets: match.tickets ?? null,
