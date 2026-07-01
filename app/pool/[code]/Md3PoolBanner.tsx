@@ -21,7 +21,7 @@ export function Md3PoolBanner({ now }: { now: Date }) {
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <span className="text-sm font-semibold text-ink">Match Day Pickem</span>
-          <span className="rounded-full bg-pitch px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
+          <span className="rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
             Live now
           </span>
         </span>

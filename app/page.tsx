@@ -110,7 +110,7 @@ function SignedInHub({
         <form action={signOutAction}>
           <button
             type="submit"
-            className="shrink-0 rounded-full bg-surface-sunk px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-line-soft"
+            className="inline-flex min-h-[44px] shrink-0 items-center rounded-full bg-surface-sunk px-4 text-xs font-semibold text-ink-2 hover:bg-line-soft"
           >
             Sign out
           </button>
