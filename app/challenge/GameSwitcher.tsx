@@ -34,7 +34,7 @@ export function GameSwitcher({ now }: { now: Date }) {
             key={s.slug}
             href={switchGameHref(pathname, s.slug)}
             aria-current={isActive ? "page" : undefined}
-            className={`flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors ${
+            className={`inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors ${
               isActive
                 ? "bg-pitch-tint text-pitch-dark shadow-[inset_0_0_0_1px_var(--color-gold)]"
                 : "text-ink-3 hover:text-ink"
