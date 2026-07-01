@@ -63,7 +63,7 @@ function buildYourGames(brackets: BracketSummary[]): YourGame[] {
         entered > 0
           ? `${entered} bracket${entered > 1 ? "s" : ""} in the Challenge`
           : `${ko.length} bracket${ko.length > 1 ? "s" : ""} — not entered yet`,
-      href: "/challenge/picks",
+      href: "/challenge/knockout",
     });
   }
 
@@ -72,7 +72,7 @@ function buildYourGames(brackets: BracketSummary[]): YourGame[] {
     games.push({
       name: GAME_CATALOG.MATCH_DAY_3_PICKEM.challengeName ?? "Match Day Pickem",
       detail: "Your predictions",
-      href: "/challenge/md3/play",
+      href: "/challenge/md3",
     });
   }
 
