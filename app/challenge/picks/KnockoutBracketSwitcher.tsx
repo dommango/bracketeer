@@ -59,16 +59,19 @@ export function KnockoutBracketSwitcher({
         <p className="px-1 pb-1.5 text-[11px] font-semibold text-ink-3">
           Editing — switch between your entered brackets
         </p>
-        <div className="flex gap-1 rounded-full border border-line bg-surface p-1">
+        <div role="tablist" className="flex gap-1 rounded-full border border-line bg-surface p-1">
           {brackets.map((b) => {
             const isActive = b.entryId === selected.entryId;
             return (
               <button
                 key={b.entryId}
                 type="button"
+                role="tab"
+                id={`ko-bracket-tab-${b.entryId}`}
+                aria-selected={isActive}
+                aria-controls="ko-bracket-tabpanel"
                 onClick={() => setSelectedId(b.entryId)}
-                aria-current={isActive ? "true" : undefined}
-                className={`flex-1 rounded-full px-3 py-1.5 text-center text-[13px] font-semibold transition-colors ${
+                className={`inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full px-3 py-1.5 text-center text-[13px] font-semibold transition-colors ${
                   isActive
                     ? "bg-pitch-tint text-pitch-dark shadow-[inset_0_0_0_1px_var(--color-gold)]"
                     : "text-ink-3 hover:text-ink"
@@ -85,23 +88,29 @@ export function KnockoutBracketSwitcher({
           })}
         </div>
       </div>
-      <KnockoutPickForm
-        key={selected.entryId}
-        entryId={selected.entryId}
-        initialPicks={selected.initialPicks}
-        initialAdvance={selected.initialAdvance}
-        initialTiebreak={selected.initialTiebreak}
-        label={selected.label}
-        locked={selected.locked}
-        seed={seed}
-        provisional={provisional}
-        early={early}
-        projections={projections}
-        outrights={outrights}
-        info={info}
-        titleOdds={titleOdds}
-        saveAction={saveAction}
-      />
+      <div
+        id="ko-bracket-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`ko-bracket-tab-${selected.entryId}`}
+      >
+        <KnockoutPickForm
+          key={selected.entryId}
+          entryId={selected.entryId}
+          initialPicks={selected.initialPicks}
+          initialAdvance={selected.initialAdvance}
+          initialTiebreak={selected.initialTiebreak}
+          label={selected.label}
+          locked={selected.locked}
+          seed={seed}
+          provisional={provisional}
+          early={early}
+          projections={projections}
+          outrights={outrights}
+          info={info}
+          titleOdds={titleOdds}
+          saveAction={saveAction}
+        />
+      </div>
     </div>
   );
 }

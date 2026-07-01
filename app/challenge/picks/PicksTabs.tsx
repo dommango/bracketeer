@@ -31,16 +31,19 @@ export function PicksTabs({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 rounded-full border border-line bg-surface p-1">
+      <div role="tablist" className="flex gap-1 rounded-full border border-line bg-surface p-1">
         {sections.map((s) => {
           const isActive = s.key === current.key;
           return (
             <button
               key={s.key}
               type="button"
+              role="tab"
+              id={`picks-tab-${s.key}`}
+              aria-selected={isActive}
+              aria-controls="picks-tabpanel"
               onClick={() => setActive(s.key)}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors ${
+              className={`inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors ${
                 isActive
                   ? "bg-pitch-tint text-pitch-dark shadow-[inset_0_0_0_1px_var(--color-gold)]"
                   : "text-ink-3 hover:text-ink"
@@ -54,7 +57,13 @@ export function PicksTabs({
       <p className="px-1 text-[13px] text-ink-3">
         {current.progress} · {current.stateLine}
       </p>
-      <div>{current.body}</div>
+      <div
+        id="picks-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`picks-tab-${current.key}`}
+      >
+        {current.body}
+      </div>
     </div>
   );
 }

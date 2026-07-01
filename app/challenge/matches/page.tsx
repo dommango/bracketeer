@@ -64,8 +64,10 @@ function Toggle({ active }: { active: FixturesView }) {
       <Link
         href={`${SELF}?view=${view}`}
         aria-current={on ? "page" : undefined}
-        className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors ${
-          on ? "bg-pitch text-white shadow-[var(--shadow-xs)]" : "text-ink-2 hover:text-ink"
+        className={`inline-flex min-h-[44px] flex-1 items-center justify-center whitespace-nowrap rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors ${
+          on
+            ? "bg-pitch-tint text-pitch-dark shadow-[inset_0_0_0_1px_var(--color-gold)]"
+            : "text-ink-3 hover:text-ink"
         }`}
       >
         {label}
@@ -75,7 +77,7 @@ function Toggle({ active }: { active: FixturesView }) {
   const range = active === "groups" ? GROUP_RANGE : active === "knockouts" ? KNOCKOUT_RANGE : null;
   return (
     <div>
-      <div className="flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
+      <div className="flex gap-1 rounded-full border border-line bg-surface p-1">
         {tab("groups", "Groups")}
         {tab("knockouts", "Knockouts")}
         {tab("scorers", "Scorers")}
@@ -95,8 +97,10 @@ function GroupingToggle({ active }: { active: FixtureGrouping }) {
       <Link
         href={`${SELF}?view=groups&fx=${fx}#group-fixtures`}
         aria-current={on ? "page" : undefined}
-        className={`flex-1 rounded-full px-3 py-1.5 text-center text-[13px] font-semibold transition-colors ${
-          on ? "bg-surface text-ink shadow-[var(--shadow-xs)]" : "text-ink-3 hover:text-ink"
+        className={`inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full px-3 py-1.5 text-center text-[13px] font-semibold transition-colors ${
+          on
+            ? "bg-pitch-tint text-pitch-dark shadow-[inset_0_0_0_1px_var(--color-gold)]"
+            : "text-ink-3 hover:text-ink"
         }`}
       >
         {label}
@@ -104,7 +108,7 @@ function GroupingToggle({ active }: { active: FixtureGrouping }) {
     );
   };
   return (
-    <div className="flex gap-1 rounded-full border border-line bg-surface-sunk p-1">
+    <div className="flex gap-1 rounded-full border border-line bg-surface p-1">
       {tab("group", "By group")}
       {tab("day", "By day")}
       {tab("city", "By city")}
