@@ -165,7 +165,10 @@ export function PoolAnalytics({
           </div>
         ) : null}
 
-        {/* Most popular group winners */}
+        {/* Most popular group winners — only when the field actually picked them
+            (full-bracket pools). Knockout brackets have no group-winner picks, so
+            this is empty there and the section is hidden rather than showing dashes. */}
+        {groupWinners.some((g) => g.top) ? (
         <div>
           <p className={LABEL}>Group winner favorites</p>
           <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -194,6 +197,7 @@ export function PoolAnalytics({
             ))}
           </div>
         </div>
+        ) : null}
 
         {/* Contrarian champion calls */}
         {contrarian.length > 0 ? (

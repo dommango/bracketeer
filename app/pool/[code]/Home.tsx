@@ -310,12 +310,6 @@ function KnockoutNotice({
               <span className="text-sm text-pitch-dark">at the Round of 32 kickoff</span>
             )}
           </div>
-          <Link
-            href="/bracket"
-            className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-pitch transition-colors hover:text-pitch-dark hover:underline"
-          >
-            Enter the Challenge →
-          </Link>
         </>
       ) : (
         <>

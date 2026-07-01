@@ -22,7 +22,7 @@ export async function ChallengeRecentChat() {
 
   const header = (
     <div className="flex items-center justify-between px-1">
-      <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Challenge chat</h2>
+      <h2 className="text-xs font-bold tracking-[0.02em] text-ink-3">Latest from the chat:</h2>
       <Link href="/challenge/chat" className="text-xs font-semibold text-pitch hover:underline">
         Open chat →
       </Link>

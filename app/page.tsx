@@ -7,6 +7,7 @@ import { resolveGamePhase, GAME_CATALOG } from "@/lib/pool/games";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
 import { getUserBrackets, type BracketSummary } from "@/lib/bracket/gallery";
 import { PublicGames } from "./PublicGames";
+import { HeroCarousel } from "./HeroCarousel";
 import { SignInPanel } from "./signin/SignInPanel";
 import { StartAPoolPromo } from "./StartAPoolPromo";
 import { Footer } from "./Footer";
@@ -114,6 +115,10 @@ function SignedInHub({
             Sign out
           </button>
         </form>
+      </div>
+
+      <div className="mt-4">
+        <HeroCarousel now={now} />
       </div>
 
       <YourGames games={games} />
