@@ -92,6 +92,12 @@ export default async function AdminPage() {
         >
           Challenge prizes →
         </Link>
+        <Link
+          href="/admin/analytics"
+          className="rounded-full border border-black/15 bg-white px-4 py-2 text-sm font-medium hover:bg-black/5"
+        >
+          Analytics →
+        </Link>
       </nav>
 
       {/* GROUP STANDINGS */}

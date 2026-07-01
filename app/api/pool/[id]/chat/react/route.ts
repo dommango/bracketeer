@@ -7,6 +7,7 @@ import { toggleReaction } from "@/lib/pool/chat";
 import { notifyPool } from "@/lib/realtime/notify";
 import { rateLimit } from "@/lib/rate-limit";
 import { apiOk, apiError } from "@/lib/api";
+import { logEvent } from "@/lib/analytics/events";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,8 @@ export async function POST(
   try {
     const active = await toggleReaction(poolId, input.messageId, access.user.id, input.emoji);
     await notifyPool(poolId, "chat");
+    // Count only added reactions (not un-reacts) as engagement. Best-effort.
+    if (active) await logEvent({ type: "REACTION", userId: access.user.id, poolId, metadata: { emoji: input.emoji } });
     return apiOk({ active });
   } catch (err) {
     return apiError((err as Error).message, 422);

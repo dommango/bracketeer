@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { canAddMember, POOL_FULL_MESSAGE } from "@/lib/billing/entitlements";
 import { claimEntriesForUser } from "@/lib/auth/claim";
 import { generateInviteToken, isInviteValid } from "@/lib/pool/invite-token";
+import { logEvent } from "@/lib/analytics/events";
 
 // Invites expire after two weeks by default — long enough to chase a friend,
 // short enough that a leaked link doesn't live forever. Pass ttlMs: null to
@@ -89,6 +90,7 @@ export async function acceptInvite(input: {
   // Enforce the member cap atomically inside the accept transaction, serialized
   // by a per-pool advisory lock so concurrent invite accepts can't overshoot the
   // cap. Only a genuinely new member is capped.
+  let isNewMember = false;
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${invite.poolId}))`;
     const existing = await tx.membership.findUnique({
@@ -96,6 +98,7 @@ export async function acceptInvite(input: {
       select: { id: true },
     });
     if (!existing) {
+      isNewMember = true;
       const memberCount = await tx.membership.count({ where: { poolId: invite.poolId } });
       if (!canAddMember(invite.pool.tier, memberCount)) throw new Error(POOL_FULL_MESSAGE);
     }
@@ -109,6 +112,11 @@ export async function acceptInvite(input: {
       data: { acceptedAt: new Date(), acceptedById: input.userId },
     });
   });
+
+  // Engagement: only a genuinely new membership counts as a join. Best-effort.
+  if (isNewMember) {
+    await logEvent({ type: "POOL_JOIN", userId: input.userId, poolId: invite.poolId, metadata: { via: "invite" } });
+  }
 
   const claimed = await claimEntriesForUser(input.userId, user?.email);
   return { poolId: invite.poolId, joinCode: invite.pool.joinCode, claimed };

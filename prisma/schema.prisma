@@ -736,3 +736,36 @@ model RateLimit {
 
   @@index([expiresAt])
 }
+
+// Product-analytics event log powering the platform super-admin dashboard
+// (app/admin/analytics). Append-only and audit-style: like PrizeAward/Feedback,
+// the foreign ids are plain nullable strings (no relations / no cascade) so the
+// table is fully additive and a later user/pool deletion never touches these
+// rows. One row per tracked engagement action; writes are best-effort and must
+// never block the action that triggered them (lib/analytics/events.ts), and the
+// dashboard rolls these up by type and UTC day (lib/analytics/aggregate.ts).
+enum AnalyticsEventType {
+  SIGN_IN
+  SIGN_UP
+  POOL_CREATE
+  POOL_JOIN
+  ENTRY_SUBMIT
+  CHAT_MESSAGE
+  REACTION
+}
+
+model AnalyticsEvent {
+  id           String             @id @default(cuid())
+  type         AnalyticsEventType
+  userId       String?
+  poolId       String?
+  tournamentId String?
+  // Optional small context blob (e.g. { provider }, { format }, { replaced }).
+  metadata     Json?
+  createdAt    DateTime           @default(now())
+
+  // Trend queries scan by day; the type/user composites serve breakdowns + DAU.
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([userId, createdAt])
+}
