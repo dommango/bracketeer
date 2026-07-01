@@ -131,6 +131,7 @@ model Tournament {
   topScorers       TopScorer[]
   statLeaders      StatLeader[]
   teamStats        TeamStat[]
+  playerProfiles   PlayerProfile[]
   goalscorerOdds   GoalscorerOutright[]
   chatMessages     ChatMessage[]
 }
@@ -479,6 +480,38 @@ model TeamStat {
   fetchedAt     DateTime
 
   @@unique([tournamentId, teamCode])
+}
+
+// Per-player tournament profile (bio + season stat line), from API-Football
+// /players. Upserted by the poller's paginated sweep, keyed by the provider player
+// id. Powers the profile card on the player drill-down page; joined by name.
+model PlayerProfile {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  externalId   Int // provider player id
+  playerName   String
+  teamCode     String? // internal 3-letter code when resolvable
+  firstName    String?
+  lastName     String?
+  age          Int?
+  nationality  String?
+  height       String? // e.g. "185 cm"
+  position     String?
+  photoUrl     String?
+  appearances  Int?
+  minutes      Int?
+  goals        Int?
+  assists      Int?
+  shots        Int?
+  rating       Float? // average match rating
+  yellowCards  Int?
+  redCards     Int?
+  raw          Json
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, externalId])
+  @@index([tournamentId, playerName])
 }
 
 // ---------------------------------------------------------------------------

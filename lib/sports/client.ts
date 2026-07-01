@@ -8,6 +8,7 @@ import type { ApiTopScorer } from "@/lib/sports/topscorers-parse";
 import type { ApiInjury } from "@/lib/sports/injuries-parse";
 import type { ApiFixturePlayerEntry } from "@/lib/sports/fixture-players-parse";
 import type { ApiTeamStatistics } from "@/lib/sports/team-stats-parse";
+import type { ApiPlayer } from "@/lib/sports/players-parse";
 
 export interface FinishedFixture {
   fixtureId: number; // numeric API id, used for events/stats sub-requests
@@ -283,6 +284,24 @@ export async function fetchTeamStatistics(
   if (!res.ok) throw new Error(`Sports API /teams/statistics responded ${res.status}`);
   const json = (await res.json()) as { response?: ApiTeamStatistics | null };
   return json.response ?? null;
+}
+
+// One page of the tournament player list (bio + season stats). API-Football paginates
+// at 20/page; the poller sweeps `total` pages. Returns the rows plus the page count.
+// Parsing lives in players-parse.ts (env-free, unit-tested).
+export async function fetchPlayersPage(
+  page: number,
+  signal?: AbortSignal,
+): Promise<{ players: ApiPlayer[]; totalPages: number }> {
+  const url = `${env.SPORTS_API_BASE}/players?league=1&season=2026&page=${page}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /players responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiPlayer[]; paging?: { total?: number | null } };
+  return { players: json.response ?? [], totalPages: json.paging?.total ?? 1 };
 }
 
 export async function fetchMatchEvents(fixtureId: number): Promise<RawMatchEvent[]> {

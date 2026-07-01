@@ -65,6 +65,7 @@ async function tick() {
   // plenty and keeps these per-call-billed markets well inside the quota.
   if (due("odds-extras", 1440)) await hit("/api/cron/poll-odds-extras");
   if (due("team-stats", 1440)) await hit("/api/cron/poll-team-stats");
+  if (due("players", 1440)) await hit("/api/cron/poll-players");
   if (due("lineups", 15)) await hit("/api/cron/poll-lineups");
   if (due("predictions", 60)) await hit("/api/cron/poll-predictions");
   if (due("injuries", 60)) await hit("/api/cron/poll-injuries");

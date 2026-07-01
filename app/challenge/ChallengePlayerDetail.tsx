@@ -3,6 +3,7 @@ import type { PlayerDetail } from "@/lib/pool/player-detail";
 import { roundLabel } from "@/lib/pool/rounds";
 import { Flag } from "@/app/pool/[code]/Flag";
 import { TeamLink } from "@/app/pool/[code]/TeamLink";
+import { PlayerProfileCard } from "@/app/pool/[code]/PlayerProfileCard";
 
 // Player drill-down for the public challenges — the same Golden Boot profile the
 // pool shows (team, goal tally, title odds, goal-by-goal log), drilling down via
@@ -103,6 +104,8 @@ export function ChallengePlayerDetail({
           </span>
         ) : null}
       </div>
+
+      <PlayerProfileCard profile={detail.profile} />
 
       {detail.odds ? (
         <section>
