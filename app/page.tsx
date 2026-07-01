@@ -12,6 +12,7 @@ import { SignInPanel } from "./signin/SignInPanel";
 import { StartAPoolPromo } from "./StartAPoolPromo";
 import { Footer } from "./Footer";
 import { YourGames, type YourGame } from "./YourGames";
+import { SECONDARY_BUTTON } from "@/lib/ui/buttons";
 
 // Session-aware landing. Signed-out visitors get the sign-in / register panel
 // directly; signed-in visitors land on the hub — their games, available games,
@@ -78,9 +79,6 @@ function buildYourGames(brackets: BracketSummary[]): YourGame[] {
 
   return games;
 }
-
-const SECONDARY_BTN =
-  "inline-flex h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-[18px] font-semibold text-pitch-dark transition-colors hover:bg-surface-sunk active:scale-[0.97]";
 
 function PoolStateBadge({ format, now }: { format: PoolFormat; now: Date }) {
   const label = resolveGamePhase(format, now).label;
@@ -151,10 +149,10 @@ function SignedInHub({
           </ul>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Link href="/join" className={SECONDARY_BTN}>
+            <Link href="/join" className={SECONDARY_BUTTON}>
               Join a pool
             </Link>
-            <Link href="/pool/create" className={SECONDARY_BTN}>
+            <Link href="/pool/create" className={SECONDARY_BUTTON}>
               Create a pool
             </Link>
           </div>

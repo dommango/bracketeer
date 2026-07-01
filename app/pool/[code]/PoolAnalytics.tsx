@@ -3,8 +3,7 @@ import { TeamLink } from "./TeamLink";
 import { teamColor } from "@/lib/teams/colors";
 import type { PickAnalytics, PickTally } from "@/lib/pool/pick-analytics";
 import type { PoolStandouts, StandoutRow } from "@/lib/pool/standouts";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+import { LABEL } from "@/lib/ui/labels";
 
 // One decimal, trailing ".0" dropped — EV points are fractional.
 function fmtEv(n: number): string {

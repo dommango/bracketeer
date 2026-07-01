@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { acceptInviteAction, type AcceptInviteState } from "./actions";
+import { PRIMARY_BUTTON } from "@/lib/ui/buttons";
 
 // Accept via a POST action (not a link) so route prefetching can never auto-join.
 export function AcceptButton({ token }: { token: string }) {
@@ -16,7 +17,7 @@ export function AcceptButton({ token }: { token: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-pitch px-5 font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+        className={`${PRIMARY_BUTTON} disabled:opacity-60`}
       >
         {pending ? "Joining…" : "Accept invite & join"}
       </button>

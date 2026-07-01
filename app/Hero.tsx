@@ -1,21 +1,11 @@
+import { HeroShell } from "./HeroShell";
+
 // Shared marketing hero. The frosted plate hugs its (now single-line) copy and
 // sits top-left, and the bottom-only darken is kept light, so the "26" + trophy
 // in the centre of the brand artwork stay visible instead of being boxed out.
 export function Hero() {
   return (
-    <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "url(/brand-26-pattern.avif)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-2/5"
-        style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%)" }}
-      />
+    <HeroShell overlay="bottom">
       <div className="relative">
         <div
           className="inline-block max-w-full rounded-2xl px-4 py-3"
@@ -39,6 +29,6 @@ export function Hero() {
           <span>June 11 – July 19</span>
         </div>
       </div>
-    </div>
+    </HeroShell>
   );
 }

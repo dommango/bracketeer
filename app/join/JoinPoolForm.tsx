@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { joinPoolAction, type JoinPoolState } from "./actions";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+import { PRIMARY_BUTTON } from "@/lib/ui/buttons";
+import { LABEL } from "@/lib/ui/labels";
 
 export function JoinPoolForm({
   defaultCode = "",
@@ -61,7 +61,7 @@ export function JoinPoolForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+        className={`${PRIMARY_BUTTON} disabled:opacity-60`}
       >
         {pending ? "Joining…" : "Join pool"}
       </button>

@@ -3,11 +3,7 @@ import { GAME_CATALOG, resolveGamePhase, gameStateLine, prizeTeaser, koPickemDat
 import { isEarlyBuilderOpen } from "@/lib/pool/knockout";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { R32Countdown } from "./pool/[code]/R32Countdown";
-
-const PRIMARY_BTN =
-  "inline-flex h-11 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.97]";
-const SECONDARY_BTN =
-  "inline-flex h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-[18px] font-semibold text-pitch-dark transition-colors hover:bg-surface-sunk active:scale-[0.97]";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/lib/ui/buttons";
 
 // Highlight pill flagging a game that's new this run, styled off the gold accent
 // so it stands apart from the neutral phase badges.
@@ -71,10 +67,10 @@ function Md3PromoCard({ now }: { now: Date }) {
       </p>
       <p className="mt-1 text-[13px] font-semibold text-pitch-dark">Free to play</p>
       <div className="relative z-10 mt-3 grid grid-cols-2 gap-2">
-        <Link href="/challenge/md3/play" className={PRIMARY_BTN}>
+        <Link href="/challenge/md3/play" className={PRIMARY_BUTTON}>
           Play
         </Link>
-        <Link href="/challenge/md3/leaderboard" className={SECONDARY_BTN}>
+        <Link href="/challenge/md3/leaderboard" className={SECONDARY_BUTTON}>
           Leaderboard
         </Link>
       </div>
@@ -126,7 +122,7 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
           <R32Countdown target={r32.toISOString()} label="Round of 32 kicks off in" />
         </div>
       ) : null}
-      <Link href="/bracket" className={`relative z-10 mt-3 ${PRIMARY_BTN}`}>
+      <Link href="/bracket" className={`relative z-10 mt-3 ${PRIMARY_BUTTON}`}>
         Build your bracket →
       </Link>
       <p className="relative z-10 mt-2 text-center text-[12px] text-ink-3">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Hero } from "./Hero";
+import { HeroShell } from "./HeroShell";
 import { availableHeroSlides } from "@/lib/pool/hero-slides";
 
 const ADVANCE_MS = 5000;
@@ -34,25 +35,13 @@ export function HeroCarousel({ now }: { now: Date }) {
   const slide = slides[Math.min(index, count - 1)];
 
   return (
-    <div
-      className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]"
+    <HeroShell
+      overlay="bottom"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "url(/brand-26-pattern.avif)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-2/5"
-        style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%)" }}
-      />
       <div className="relative">
         <div
           className="inline-block max-w-full rounded-2xl px-4 py-3"
@@ -105,6 +94,6 @@ export function HeroCarousel({ now }: { now: Date }) {
           </div>
         ) : null}
       </div>
-    </div>
+    </HeroShell>
   );
 }
