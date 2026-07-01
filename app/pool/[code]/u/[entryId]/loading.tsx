@@ -1,9 +1,13 @@
-import { Skeleton } from "../../Skeleton";
+import { Skeleton, SkeletonTabNav } from "../../Skeleton";
 
 export default function ProfileLoading() {
   return (
     <section className="space-y-4" aria-busy>
-      <Skeleton className="ml-1 h-3 w-28" />
+      <SkeletonTabNav />
+      <div className="flex items-center justify-between">
+        <Skeleton className="ml-1 h-3 w-28" />
+        <Skeleton className="h-3 w-24" />
+      </div>
       <div className="rounded-2xl border border-line bg-surface p-5">
         <Skeleton className="h-3 w-16" />
         <Skeleton className="mt-2 h-7 w-1/2" />
