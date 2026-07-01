@@ -3,6 +3,7 @@ import {
   getTournamentIdBySlug,
   DEFAULT_TOURNAMENT_SLUG,
   getTopScorers,
+  getStatLeaders,
   getChampionshipOdds,
   getGoalscorerOutrights,
   isGroupStageComplete,
@@ -19,6 +20,7 @@ import { GroupStandings } from "@/app/pool/[code]/Bracket";
 import { ChampionshipOdds } from "@/app/pool/[code]/ChampionshipOdds";
 import { OddsBoard } from "@/app/pool/[code]/OddsBoard";
 import { Scorers } from "@/app/pool/[code]/Scorers";
+import { StatLeaders } from "@/app/pool/[code]/StatLeaders";
 
 // Live results change at request time.
 export const dynamic = "force-dynamic";
@@ -129,7 +131,7 @@ export default async function ChallengeMatchesPage({
   const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
   // Combined pick overlay: MD3 scoreline picks ride along the group fixtures, the
   // knockout match center carries the viewer's winner picks.
-  const [sections, knockoutSections, bracket, groupsDone, titleOdds, scorers, favorites] =
+  const [sections, knockoutSections, bracket, groupsDone, titleOdds, scorers, statLeaders, favorites] =
     await Promise.all([
       getMd3FullMatchCenter(user?.id ?? null),
       getKnockoutChallengeMatchCenter(user?.id ?? null),
@@ -137,6 +139,7 @@ export default async function ChallengeMatchesPage({
       isGroupStageComplete(tournamentId),
       getChampionshipOdds(tournamentId),
       getTopScorers(tournamentId),
+      getStatLeaders(tournamentId),
       getGoalscorerOutrights(tournamentId),
     ]);
 
@@ -210,7 +213,10 @@ export default async function ChallengeMatchesPage({
           </div>
         </section>
       ) : active === "scorers" ? (
-        <Scorers scorers={scorers} basePath={SUB} />
+        <div className="space-y-6">
+          <Scorers scorers={scorers} basePath={SUB} />
+          <StatLeaders leaders={statLeaders} basePath={SUB} />
+        </div>
       ) : titleOdds.length > 0 || favorites.length > 0 ? (
         <div className="space-y-5">
           {titleOdds.length > 0 ? <ChampionshipOdds odds={titleOdds} basePath={SUB} /> : null}

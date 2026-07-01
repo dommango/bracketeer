@@ -216,3 +216,103 @@ export async function getGoalscorerOutrights(
     fetchedAt: r.fetchedAt,
   }));
 }
+
+// Secondary stat leaderboards (assist + disciplinary boards), each lowest-rank
+// first. Empty when the stat-leaders poll hasn't run (or the sports integration
+// isn't configured). One query, split by category for the board UI.
+export interface StatLeaderRow {
+  rank: number;
+  playerName: string;
+  teamCode: string;
+  teamName: string;
+  value: number; // assists / yellow cards / red cards for the board it's on
+  appearances: number | null;
+  fetchedAt: Date;
+}
+
+export interface StatLeaders {
+  assists: StatLeaderRow[];
+  yellowCards: StatLeaderRow[];
+  redCards: StatLeaderRow[];
+}
+
+export async function getStatLeaders(tournamentId: string, limit = 15): Promise<StatLeaders> {
+  const rows = await prisma.statLeader.findMany({
+    where: { tournamentId },
+    orderBy: [{ category: "asc" }, { rank: "asc" }],
+    select: {
+      category: true,
+      rank: true,
+      playerName: true,
+      teamCode: true,
+      value: true,
+      appearances: true,
+      fetchedAt: true,
+    },
+  });
+  const pick = (category: "ASSISTS" | "YELLOW_CARDS" | "RED_CARDS"): StatLeaderRow[] =>
+    rows
+      .filter((r) => r.category === category)
+      .slice(0, limit)
+      .map((r) => ({
+        rank: r.rank,
+        playerName: r.playerName,
+        teamCode: r.teamCode,
+        teamName: teamName(r.teamCode),
+        value: r.value,
+        appearances: r.appearances,
+        fetchedAt: r.fetchedAt,
+      }));
+  return { assists: pick("ASSISTS"), yellowCards: pick("YELLOW_CARDS"), redCards: pick("RED_CARDS") };
+}
+
+// A team's tournament form / record (API-Football /teams/statistics). Null until
+// the team-stats poll has run (or the sports integration isn't configured).
+export interface TeamStatRow {
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  cleanSheets: number;
+  failedToScore: number;
+  form: string | null;
+  fetchedAt: Date;
+}
+
+export async function getTeamStats(tournamentId: string, teamCode: string): Promise<TeamStatRow | null> {
+  const row = await prisma.teamStat.findUnique({
+    where: { tournamentId_teamCode: { tournamentId, teamCode } },
+    select: {
+      played: true,
+      wins: true,
+      draws: true,
+      losses: true,
+      goalsFor: true,
+      goalsAgainst: true,
+      cleanSheets: true,
+      failedToScore: true,
+      form: true,
+      fetchedAt: true,
+    },
+  });
+  return row;
+}
+
+// A team's named squad (roster), grouped-order already applied by the poller. Empty
+// when the squads poll hasn't run (or the sports integration isn't configured).
+export interface SquadMember {
+  name: string;
+  number: number | null;
+  position: string | null;
+  age: number | null;
+}
+
+export async function getSquad(tournamentId: string, teamCode: string): Promise<SquadMember[]> {
+  const row = await prisma.teamSquad.findUnique({
+    where: { tournamentId_teamCode: { tournamentId, teamCode } },
+    select: { players: true },
+  });
+  return (row?.players as SquadMember[] | undefined) ?? [];
+}

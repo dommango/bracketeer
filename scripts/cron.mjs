@@ -64,11 +64,15 @@ async function tick() {
   // Futures (tournament winner, golden boot, totals) barely move — once a day is
   // plenty and keeps these per-call-billed markets well inside the quota.
   if (due("odds-extras", 1440)) await hit("/api/cron/poll-odds-extras");
+  if (due("team-stats", 1440)) await hit("/api/cron/poll-team-stats");
+  if (due("players", 1440)) await hit("/api/cron/poll-players");
+  if (due("squads", 1440)) await hit("/api/cron/poll-squads");
   if (due("lineups", 15)) await hit("/api/cron/poll-lineups");
   if (due("predictions", 60)) await hit("/api/cron/poll-predictions");
   if (due("injuries", 60)) await hit("/api/cron/poll-injuries");
   if (due("tickets", 30)) await hit("/api/cron/poll-tickets");
   if (due("topscorers", 60)) await hit("/api/cron/poll-topscorers");
+  if (due("stat-leaders", 60)) await hit("/api/cron/poll-stat-leaders");
 
   // Prize resolution: record a sponsored award when a public challenge completes.
   // Idempotent and cheap when idle (a couple of indexed completion checks), so a

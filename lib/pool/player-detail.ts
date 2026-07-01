@@ -17,6 +17,23 @@ export interface PlayerDetail {
   assists: number | null;
   odds: { winProb: number; decimal: number } | null; // Golden-Boot market
   goalEvents: PlayerGoal[];
+  // Tournament bio + season stat line (API-Football /players); null until polled or
+  // when the name matches no profile row.
+  profile: {
+    age: number | null;
+    nationality: string | null;
+    height: string | null;
+    position: string | null;
+    photoUrl: string | null;
+    appearances: number | null;
+    minutes: number | null;
+    goals: number | null;
+    assists: number | null;
+    shots: number | null;
+    rating: number | null;
+    yellowCards: number | null;
+    redCards: number | null;
+  } | null;
 }
 
 // One player's drill-down. Returns null when the name matches nothing the app
@@ -58,6 +75,27 @@ export async function getPlayerDetail(
 
   const boardPlayer = resolveBoardPlayer(name, board);
   const oddsRow = oddsRows.find((o) => normPlayer(o.playerName) === target) ?? null;
+
+  // Supplemental bio/stat profile, matched by the provider's exact player name
+  // (both this and the boards come from API-Football, so the spellings line up).
+  const profileRow = await prisma.playerProfile.findFirst({
+    where: { tournamentId, playerName: { in: [boardPlayer?.playerName ?? name, name] } },
+    select: {
+      age: true,
+      nationality: true,
+      height: true,
+      position: true,
+      photoUrl: true,
+      appearances: true,
+      minutes: true,
+      goals: true,
+      assists: true,
+      shots: true,
+      rating: true,
+      yellowCards: true,
+      redCards: true,
+    },
+  });
   const goalEvents = buildPlayerGoals(
     goalRows.map((e) => ({
       playerName: e.playerName,
@@ -73,7 +111,7 @@ export async function getPlayerDetail(
     boardPlayer?.playerName ?? name,
   );
 
-  if (!boardPlayer && !oddsRow && goalEvents.length === 0) return null;
+  if (!boardPlayer && !oddsRow && goalEvents.length === 0 && !profileRow) return null;
 
   // Borrow a team code from the board when the name didn't line up exactly (the
   // never-guess matcher only returns one on an unambiguous surname).
@@ -92,5 +130,6 @@ export async function getPlayerDetail(
     assists: boardPlayer?.assists ?? null,
     odds: oddsRow ? { winProb: oddsRow.winProb, decimal: oddsRow.decimal } : null,
     goalEvents,
+    profile: profileRow,
   };
 }
