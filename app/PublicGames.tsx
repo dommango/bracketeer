@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GAME_CATALOG, resolveGamePhase, gameStateLine, prizeTeaser, md3DateRange } from "@/lib/pool/games";
+import { GAME_CATALOG, resolveGamePhase, gameStateLine, prizeTeaser, koPickemDateRange } from "@/lib/pool/games";
 import { isEarlyBuilderOpen } from "@/lib/pool/knockout";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { R32Countdown } from "./pool/[code]/R32Countdown";
@@ -41,10 +41,10 @@ export function PublicGames({ now }: { now: Date }) {
   );
 }
 
-// Match Day Pickem — the live group-stage scoreline game. Public challenge, so it's
-// play / leaderboard rather than create / join.
+// Match Day Pickem — the live knockout scoreline game. Public challenge, so it's
+// play / leaderboard rather than create / join. Free to play (no prize teaser).
 function Md3PromoCard({ now }: { now: Date }) {
-  const teaser = prizeTeaser("MATCH_DAY_3_PICKEM");
+  const range = koPickemDateRange();
   return (
     <div className="relative rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
       <div className="flex items-center justify-between gap-2">
@@ -60,18 +60,16 @@ function Md3PromoCard({ now }: { now: Date }) {
           href="/challenge/md3"
           className="after:absolute after:inset-0 after:rounded-3xl hover:underline"
         >
-          Predict every Match Day 3 scoreline
+          Predict every knockout scoreline
         </Link>
       </h2>
       <p className="mt-1 text-[13px] text-ink-3">
-        Final group-stage games · {md3DateRange()}
+        Round of 32 to the Final{range ? ` · ${range}` : ""}
       </p>
       <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">
         {gameStateLine("MATCH_DAY_3_PICKEM", now)}
       </p>
-      {teaser ? (
-        <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
-      ) : null}
+      <p className="mt-1 text-[13px] font-semibold text-pitch-dark">Free to play</p>
       <div className="relative z-10 mt-3 grid grid-cols-2 gap-2">
         <Link href="/challenge/md3/play" className={PRIMARY_BTN}>
           Play

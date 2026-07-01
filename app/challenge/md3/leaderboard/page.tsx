@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
-import { getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
-import { isMd3Participant } from "@/lib/challenge/md3-entry";
-import { isMd3GameOpen } from "@/lib/pool/match-day-3";
+import { getDailyKnockoutLeaderboard } from "@/lib/challenge/leaderboard";
+import { isDailyKnockoutParticipant } from "@/lib/challenge/daily-knockout-entry";
+import { isDailyKnockoutGameOpen } from "@/lib/games/daily-pickem/schedule";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 
 export const dynamic = "force-dynamic";
 
-export default async function Md3ChallengeLeaderboardPage() {
+export default async function DailyKnockoutLeaderboardPage() {
   const user = await getSessionUser();
   // Participants-only: you need at least one saved prediction to see the board,
   // so a non-player can't scout the field. Don't even load it otherwise.
-  const participant = await isMd3Participant(user?.id ?? null);
-  const rows = participant ? await getMd3ChallengeLeaderboard() : [];
+  const participant = await isDailyKnockoutParticipant(user?.id ?? null);
+  const rows = participant ? await getDailyKnockoutLeaderboard() : [];
 
   return (
     <section className="space-y-4">
@@ -21,7 +21,7 @@ export default async function Md3ChallengeLeaderboardPage() {
       <header className="px-1">
         <h1 className="font-display text-xl text-ink">Leaderboard</h1>
         <p className="mt-0.5 text-[13px] text-ink-3">
-          Every Match Day Pickem entry, ranked together.
+          Every knockout pick&apos;em entry, ranked on the weighted ladder (later rounds worth more).
         </p>
       </header>
 
@@ -49,7 +49,7 @@ export default async function Md3ChallengeLeaderboardPage() {
             rows={rows}
             youUserId={user?.id}
             linkBase="/challenge/md3/u"
-            showMedals={!isMd3GameOpen()}
+            showMedals={!isDailyKnockoutGameOpen()}
             showLiveNote={false}
           />
           {/* Tiebreak order lives in full on the rules page; keep the board light. */}

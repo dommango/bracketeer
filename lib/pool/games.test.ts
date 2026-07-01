@@ -3,13 +3,13 @@ import { GAME_CATALOG, resolveGamePhase, featuredGame, prizeTeaser } from "./gam
 import type { PoolFormat } from "@/lib/pool/manage";
 
 // Fixed schedule anchors mirrored from lib/scoring/schedule + lib/pool/knockout.
-const MD3_FIRST = "2026-06-24T19:00:00Z";
-// The latest round-3 kickoff is match 57/58 (Group J) at 02:00 Jun 28 — which
-// coincides exactly with the knockout open instant, so MD3 hands straight off to
-// the Knockout Challenge with no gap between them.
-const MD3_LAST = "2026-06-28T02:00:00Z";
-const KO_OPEN = "2026-06-28T02:00:00Z";
-const KO_LOCK = "2026-06-28T19:00:00Z";
+// Match Day Pickem is now the knockout daily pick'em: it opens until the Round of
+// 32 kicks off, plays out ("closing") through the knockout rounds, and locks once
+// the Final kicks off.
+const KO_PICKEM_FIRST = "2026-06-28T19:00:00Z"; // R32 kickoff (match 73)
+const KO_PICKEM_LAST = "2026-07-19T19:00:00Z"; // Final kickoff (match 104)
+const KO_OPEN = "2026-06-28T02:00:00Z"; // Knockout-bracket picks open
+const KO_LOCK = "2026-06-28T19:00:00Z"; // Knockout-bracket lock == R32 kickoff
 const FULL_START = "2026-06-11T19:00:00Z";
 
 const at = (iso: string) => new Date(iso);
@@ -39,23 +39,23 @@ describe("GAME_CATALOG", () => {
   });
 });
 
-describe("resolveGamePhase — MD3", () => {
-  it("is PICKS_OPEN before the first lock", () => {
+describe("resolveGamePhase — MD3 (knockout pick'em)", () => {
+  it("is PICKS_OPEN before the Round of 32 kicks off", () => {
     const s = resolveGamePhase("MATCH_DAY_3_PICKEM", at("2026-06-22T00:00:00Z"));
     expect(s.phase).toBe("PICKS_OPEN");
     expect(s.creatable).toBe(true);
     expect(s.joinable).toBe(true);
   });
-  it("flips to PICKS_CLOSING exactly at the first lock", () => {
-    expect(resolveGamePhase("MATCH_DAY_3_PICKEM", at(MD3_FIRST)).phase).toBe("PICKS_CLOSING");
+  it("flips to PICKS_CLOSING exactly at the Round-of-32 kickoff", () => {
+    expect(resolveGamePhase("MATCH_DAY_3_PICKEM", at(KO_PICKEM_FIRST)).phase).toBe("PICKS_CLOSING");
   });
-  it("is still joinable while closing", () => {
-    const s = resolveGamePhase("MATCH_DAY_3_PICKEM", at("2026-06-26T00:00:00Z"));
+  it("is still joinable while the knockout rounds play out", () => {
+    const s = resolveGamePhase("MATCH_DAY_3_PICKEM", at("2026-07-05T00:00:00Z"));
     expect(s.phase).toBe("PICKS_CLOSING");
     expect(s.joinable).toBe(true);
   });
-  it("is LOCKED_LIVE at and after the last lock", () => {
-    const s = resolveGamePhase("MATCH_DAY_3_PICKEM", at(MD3_LAST));
+  it("is LOCKED_LIVE at and after the Final kickoff", () => {
+    const s = resolveGamePhase("MATCH_DAY_3_PICKEM", at(KO_PICKEM_LAST));
     expect(s.phase).toBe("LOCKED_LIVE");
     expect(s.joinable).toBe(false);
     expect(s.creatable).toBe(false);
@@ -84,32 +84,30 @@ describe("resolveGamePhase — FULL_BRACKET", () => {
   });
 });
 
-describe("featuredGame across the Jun 22→28 window", () => {
-  it("spotlights MD3 today (Jun 22)", () => {
+describe("featuredGame across the knockout window", () => {
+  it("spotlights the Match Day Pickem before the knockout bracket opens (Jun 22)", () => {
     expect(featuredGame(at("2026-06-22T12:00:00Z"))).toBe("MATCH_DAY_3_PICKEM");
   });
-  it("still spotlights MD3 while closing (Jun 26)", () => {
-    expect(featuredGame(at("2026-06-26T12:00:00Z"))).toBe("MATCH_DAY_3_PICKEM");
-  });
-  it("still spotlights MD3 right up to the last kickoff (Jun 28 01:00)", () => {
-    expect(featuredGame(at("2026-06-27T22:00:00Z"))).toBe("MATCH_DAY_3_PICKEM");
-    expect(featuredGame(at("2026-06-28T01:00:00Z"))).toBe("MATCH_DAY_3_PICKEM");
-  });
-  it("hands off to Knockout exactly when MD3 closes / KO opens (Jun 28 02:00)", () => {
+  it("hands the spotlight to the Knockout bracket while its picks are open (Jun 28 02:00–19:00)", () => {
     expect(featuredGame(at("2026-06-28T02:00:00Z"))).toBe("KNOCKOUT");
-    expect(featuredGame(at("2026-06-28T03:00:00Z"))).toBe("KNOCKOUT");
+    expect(featuredGame(at("2026-06-28T12:00:00Z"))).toBe("KNOCKOUT");
   });
-  it("spotlights nothing once knockout locks", () => {
-    expect(featuredGame(at(KO_LOCK))).toBeNull();
+  it("returns to the Match Day Pickem once the bracket locks at the R32 kickoff", () => {
+    // R32 kickoff: the bracket is LOCKED_LIVE, the pick'em plays on through the rounds.
+    expect(featuredGame(at(KO_LOCK))).toBe("MATCH_DAY_3_PICKEM");
+    expect(featuredGame(at("2026-07-05T12:00:00Z"))).toBe("MATCH_DAY_3_PICKEM");
+  });
+  it("spotlights nothing once the Final kicks off (both games locked)", () => {
+    expect(featuredGame(at(KO_PICKEM_LAST))).toBeNull();
   });
 });
 
 describe("prizeTeaser", () => {
-  it("returns a teaser for challenge formats and null for full bracket", () => {
-    // Teasers lead with the call to action; Knockout is a scaled prize (advertises
-    // the guaranteed floor "$50+"), MD3 is fixed ("$50").
+  it("returns a teaser for the knockout bracket, null for the free pick'em and full bracket", () => {
+    // Knockout is a scaled prize (advertises the guaranteed floor "$50+"); the Match
+    // Day Pickem is now the free knockout game (no prize); full bracket has none.
     expect(prizeTeaser("KNOCKOUT")).toMatch(/top the challenge.*\$50\+ gift card/i);
-    expect(prizeTeaser("MATCH_DAY_3_PICKEM")).toMatch(/top the challenge.*\$50 gift card/i);
+    expect(prizeTeaser("MATCH_DAY_3_PICKEM")).toBeNull();
     expect(prizeTeaser("FULL_BRACKET")).toBeNull();
   });
 });

@@ -10,6 +10,7 @@
 import type { PoolFormat } from "@/lib/pool/manage";
 import { KNOCKOUT_PICKS_OPEN_UTC } from "@/lib/pool/knockout";
 import { firstMd3Kickoff, lastMd3Kickoff } from "@/lib/pool/match-day-3";
+import { firstKnockoutKickoff, lastKnockoutKickoff } from "@/lib/games/daily-pickem/schedule";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { PRIZES, isChallengeFormat } from "@/lib/challenge/prizes-config";
 import { formatPrize } from "@/lib/challenge/format-prize";
@@ -37,10 +38,11 @@ export interface GameCatalogEntry {
 export const GAME_CATALOG: Record<PoolFormat, GameCatalogEntry> = {
   MATCH_DAY_3_PICKEM: {
     challengeName: "Match Day Pickem",
-    tagline: "Predict the scorelines for the Match Day 3 games (June 24–27).",
+    tagline: "Predict the scoreline of every knockout match — free to play.",
     blurb:
-      "Predict the exact scoreline of every final group-stage match. Each pick locks at its own kickoff, so later fixtures stay open after earlier ones start.",
-    scoringSummary: "Exact score 5 · right result & goal difference 3 · right result 1.",
+      "Predict the exact scoreline of every knockout match, round by round. Each pick locks at its own kickoff and the next round opens as its teams are decided. Later rounds are worth more (R32 ×1 → Final ×16), so comebacks stay alive to the Final. Free to play — no prize, just bragging rights.",
+    scoringSummary:
+      "Exact score 5 · right result & goal difference 3 · right result 1 · +1 correct advancer — then ×round (R32 ×1 → Final ×16).",
   },
   KNOCKOUT: {
     poolName: "Knockout Stage Pool",
@@ -86,11 +88,13 @@ export interface GameState {
   joinable: boolean;
 }
 
-// Fixed schedule anchors, derived once. MD3 first/last lock are the kickoffs of
-// the earliest/latest round-3 fixtures; knockout open is the fixed constant and
+// Fixed schedule anchors, derived once. The Match Day Pickem (now the knockout
+// daily pick'em) opens at the Round-of-32 kickoff (its first scored fixture) and
+// runs until the Final kicks off; knockout-bracket open is the fixed constant and
 // its lock is the Round-of-32 kickoff (match 73).
-const MD3_FIRST_LOCK = firstMd3Kickoff();
-const MD3_LAST_LOCK = lastMd3Kickoff();
+const KO_PICKEM_FIRST = firstKnockoutKickoff() ?? new Date(KNOCKOUT_PICKS_OPEN_UTC);
+const KO_PICKEM_LAST =
+  lastKnockoutKickoff() ?? kickoffFor(104) ?? new Date("2026-07-19T19:00:00Z");
 const KNOCKOUT_OPEN = new Date(KNOCKOUT_PICKS_OPEN_UTC);
 const KNOCKOUT_LOCK = kickoffFor(73) ?? new Date(KNOCKOUT_PICKS_OPEN_UTC);
 const FULL_START = kickoffFor(1) ?? new Date("2026-06-11T19:00:00Z");
@@ -100,20 +104,22 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
   const t = now.getTime();
 
   if (format === "MATCH_DAY_3_PICKEM") {
-    if (t < MD3_FIRST_LOCK.getTime()) {
+    // The knockout daily pick'em: open now until the Round of 32 kicks off, then
+    // "live" (rounds keep opening as teams are decided) until the Final kickoff.
+    if (t < KO_PICKEM_FIRST.getTime()) {
       return {
         phase: "PICKS_OPEN",
         label: "Open now",
-        deadline: MD3_FIRST_LOCK,
+        deadline: KO_PICKEM_FIRST,
         creatable: true,
         joinable: true,
       };
     }
-    if (t < MD3_LAST_LOCK.getTime()) {
+    if (t < KO_PICKEM_LAST.getTime()) {
       return {
         phase: "PICKS_CLOSING",
-        label: "Closing — some fixtures locked",
-        deadline: MD3_LAST_LOCK,
+        label: "Live — pick each round",
+        deadline: KO_PICKEM_LAST,
         creatable: true,
         joinable: true,
       };
@@ -179,19 +185,22 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
 }
 
 // Which single game the hub should spotlight right now, or null when there's
-// nothing to promote (everything is live / leaderboards-only). MD3 while it's
-// still joinable; otherwise the Knockout Challenge once its picks are open. The
-// gap between the last MD3 lock and knockout open spotlights nothing (the banner
-// renders a "Knockout opens soon" teaser separately via resolveGamePhase).
+// nothing to promote (everything is live / leaderboards-only). The Knockout
+// Challenge bracket leads while its picks are open — it locks entirely at the
+// Round-of-32 kickoff, so its window is brief and time-sensitive. Otherwise the
+// long-running knockout Match Day Pickem leads while it's still joinable (through
+// the knockout rounds, until the Final kicks off).
 export function featuredGame(now: Date = new Date()): PoolFormat | null {
-  if (resolveGamePhase("MATCH_DAY_3_PICKEM", now).joinable) return "MATCH_DAY_3_PICKEM";
   if (resolveGamePhase("KNOCKOUT", now).phase === "PICKS_OPEN") return "KNOCKOUT";
+  if (resolveGamePhase("MATCH_DAY_3_PICKEM", now).joinable) return "MATCH_DAY_3_PICKEM";
   return null;
 }
 
 // The headline prize teaser for a challenge format. Null for formats without a
 // prize (the amount/award itself lives in PRIZES; copy stays deliberately generic).
 export function prizeTeaser(format: PoolFormat): string | null {
+  // The Match Day Pickem is now the free knockout pick'em — no prize to advertise.
+  if (format === "MATCH_DAY_3_PICKEM") return null;
   if (!isChallengeFormat(format)) return null;
   const prize = PRIZES[format];
   // Scaled prizes advertise the guaranteed floor ("$50+") so we never over-promise
@@ -217,8 +226,21 @@ function dayLabel(d: Date): string {
 // match the rest of this module's date labels (gameStateLine). Same-month spans
 // collapse the second month, e.g. "June 24–27"; cross-month stays "June 24 – July 2".
 export function md3DateRange(): string {
-  const first = firstMd3Kickoff();
-  const last = lastMd3Kickoff();
+  return spanLabel(firstMd3Kickoff(), lastMd3Kickoff());
+}
+
+// The calendar span of the knockout Match Day Pickem (Round of 32 → Final), for the
+// promo card / hero copy. Same UTC framing as md3DateRange.
+export function koPickemDateRange(): string {
+  const first = firstKnockoutKickoff();
+  const last = lastKnockoutKickoff();
+  if (!first || !last) return "";
+  return spanLabel(first, last);
+}
+
+// Collapse a first→last span into a compact label. Same-day → one date; same-month
+// → "June 24–27"; cross-month → "July 3 – July 19".
+function spanLabel(first: Date, last: Date): string {
   if (first.getUTCMonth() === last.getUTCMonth() && first.getUTCDate() === last.getUTCDate()) {
     return dayLabel(first);
   }
@@ -238,11 +260,10 @@ export function gameStateLine(format: PoolFormat, now: Date = new Date()): strin
   if (format === "MATCH_DAY_3_PICKEM") {
     switch (state.phase) {
       case "PICKS_OPEN":
-        return "Open now · picks close at the start of each match";
       case "PICKS_CLOSING":
-        return "Open now · picks close at the start of each match";
+        return "Open now · each match locks at kickoff";
       default:
-        return "Closed — Match Day Pickem has finished";
+        return "Closed — the knockout pick'em has finished";
     }
   }
 

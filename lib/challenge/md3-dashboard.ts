@@ -13,6 +13,7 @@ import {
 import { getRecentTournamentUpdates, BOARD_MATCH_NOS } from "@/lib/challenge/recent-updates";
 import { getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
 import { getMd3ChallengeView, type Md3View } from "@/lib/pool/md3-view";
+import { getDailyKnockoutView, type DailyKnockoutView } from "@/lib/pool/daily-knockout-view";
 import { buildStanding, type Standing } from "@/lib/pool/home";
 import {
   buildGroupCenterSections,
@@ -100,18 +101,45 @@ export async function getMd3MatchCenter(
   return buildGroupCenterSections(inputs, {}, md3ScorePicks(inputs, view));
 }
 
+// The viewer's knockout scoreline predictions, oriented onto each match card —
+// the knockout analogue of md3ScorePicks. Group (≤72) and knockout (≥73) match
+// numbers never collide, so the two maps merge cleanly into one overlay.
+function dailyKnockoutScorePicks(
+  inputs: MatchInput[],
+  view: DailyKnockoutView,
+): Record<number, YourScore> {
+  const inputByNo = new Map(inputs.map((i) => [i.matchNo, i]));
+  const scorePicks: Record<number, YourScore> = {};
+  for (const f of view.fixtures) {
+    if (!f.pred || !f.homeCode || !f.awayCode) continue;
+    const input = inputByNo.get(f.matchNo);
+    const oriented = orientScorePrediction(
+      f.pred,
+      f.homeCode,
+      f.awayCode,
+      input?.homeCode ?? f.homeCode,
+      input?.awayCode ?? f.awayCode,
+    );
+    scorePicks[f.matchNo] = { home: oriented.home, away: oriented.away, points: f.points };
+  }
+  return scorePicks;
+}
+
 // The full tournament match center (all 104 matches: every group + knockout
-// fixture) with the viewer's MD3 scoreline overlay where they predicted. Powers
-// the challenge Matches tab's pool-parity view (group fixtures + the bracket).
+// fixture) with the viewer's scoreline overlay where they predicted — group picks
+// from the MD3 view, knockout picks from the daily-knockout view. Powers the
+// challenge Matches tab's pool-parity view (group fixtures + the bracket).
 export async function getMd3FullMatchCenter(
   userId: string | null,
 ): Promise<MatchCenterSection[]> {
   const tournamentId = await getTournamentIdBySlug(DEFAULT_TOURNAMENT_SLUG);
-  const [inputs, view] = await Promise.all([
+  const [inputs, view, koView] = await Promise.all([
     getTournamentMatchInputs(tournamentId),
     getMd3ChallengeView(tournamentId, userId),
+    getDailyKnockoutView(tournamentId, userId),
   ]);
-  return buildGroupCenterSections(inputs, {}, md3ScorePicks(inputs, view));
+  const scorePicks = { ...md3ScorePicks(inputs, view), ...dailyKnockoutScorePicks(inputs, koView) };
+  return buildGroupCenterSections(inputs, {}, scorePicks);
 }
 
 // The tournament's live bracket + group standings, for the challenge Matches tab.
