@@ -8,6 +8,17 @@ export const dynamic = "force-dynamic";
 // package.json on each release.
 const RELEASES: { version: string; date: string; title: string; notes: string[] }[] = [
   {
+    version: "0.15.0",
+    date: "June 30, 2026",
+    title: "More betting markets & player ratings",
+    notes: [
+      "New markets on every knockout match: an Asian-handicap (spread) line, both-teams-to-score, and an anytime-goalscorer board with flags.",
+      "The Matches → Insights tab now has a “Most likely to score today” module, alongside the upset radar, Golden Boot and title odds.",
+      "Finished fixtures now show player ratings and a Player of the Match.",
+      "Fixed the venue and kickoff time shown for a few Round of 32 matches.",
+    ],
+  },
+  {
     version: "0.14.0",
     date: "June 27, 2026",
     title: "One home for Match Day Pickem and the Knockout Challenge",

@@ -55,6 +55,12 @@ async function tick() {
   // poll-scores, and bounds spend inside The Odds API's 500/mo free quota.
   await hit("/api/cron/poll-odds");
 
+  // Per-event props (BTTS + anytime goalscorer): same per-minute call + snapshot
+  // self-throttle as poll-odds, but billed per event (2 credits/match/snapshot), so
+  // it only fetches at a match's pre-kickoff + halftime moments. Cheap when idle
+  // (one indexed query, zero Odds API calls until a snapshot is due).
+  await hit("/api/cron/poll-odds-props");
+
   // Futures (tournament winner, golden boot, totals) barely move — once a day is
   // plenty and keeps these per-call-billed markets well inside the quota.
   if (due("odds-extras", 1440)) await hit("/api/cron/poll-odds-extras");

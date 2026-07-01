@@ -37,6 +37,7 @@ import {
 import { buildProfile, tallyPickShare, type Profile } from "@/lib/pool/profile";
 import { buildPickAnalytics, type PickAnalytics } from "@/lib/pool/pick-analytics";
 import { buildUpsetRadar, stakedTeamCodes, type UpsetMatchInput, type UpsetRow } from "@/lib/odds/upset";
+import { matchPlayerCode } from "@/lib/odds/player-match";
 import { roundLabel, isScoredKnockout } from "@/lib/pool/rounds";
 import { liveLeaders, projectedLivePoints } from "@/lib/pool/projected";
 import { computeGroupTables, provisionalStandings, type GroupResultRow } from "@/lib/pool/group-table";
@@ -1044,6 +1045,12 @@ export interface MatchDetail {
   totals: { line: number; overProb: number; underProb: number } | null;
   // Asian-handicap (spreads) market, home-oriented; null until a line has been polled.
   spread: { line: number; homeCoverProb: number; awayCoverProb: number } | null;
+  // Both-teams-to-score market; null until the per-event props poll has data.
+  btts: { yesProb: number; noProb: number } | null;
+  // Anytime-goalscorer board for this match, highest implied chance first; each row
+  // carries a team code when its name matches the scoring board (for a flag). Empty
+  // until the per-event props poll has data.
+  scorers: { playerName: string; scoreProb: number; teamCode: string | null }[];
   // Lowest price + official buy link (Ticketmaster); null when not configured.
   tickets: { minPrice: number | null; currency: string | null; url: string | null } | null;
   // Pre-match insights (model win %, advice, form, h2h); null until polled.
@@ -1113,6 +1120,11 @@ export async function getChallengeMatchDetail(
           fetchedAt: true,
         },
       },
+      props: { select: { bttsYesProb: true, bttsNoProb: true } },
+      scorerOdds: {
+        select: { playerName: true, scoreProb: true },
+        orderBy: { scoreProb: "desc" },
+      },
       tickets: { select: { minPrice: true, currency: true, url: true } },
       prediction: {
         select: {
@@ -1177,6 +1189,22 @@ export async function getChallengeMatchDetail(
     );
   }
 
+  // Resolve a flag for each anytime-scorer by matching the bookmaker's name against
+  // the tournament scoring board (best-effort, never-guess) — same approach as the
+  // Golden Boot futures. Only hit the board when there are scorers to tag.
+  let scorers: MatchDetail["scorers"] = [];
+  if (match.scorerOdds.length > 0) {
+    const board = await prisma.topScorer.findMany({
+      where: { tournamentId },
+      select: { playerName: true, teamCode: true },
+    });
+    scorers = match.scorerOdds.map((s) => ({
+      playerName: s.playerName,
+      scoreProb: s.scoreProb,
+      teamCode: matchPlayerCode(s.playerName, board),
+    }));
+  }
+
   return {
     matchNo,
     roundCode: match.roundCode,
@@ -1220,6 +1248,11 @@ export async function getChallengeMatchDetail(
             awayCoverProb: match.odds.spreadAwayProb,
           }
         : null,
+    btts:
+      match.props?.bttsYesProb != null && match.props.bttsNoProb != null
+        ? { yesProb: match.props.bttsYesProb, noProb: match.props.bttsNoProb }
+        : null,
+    scorers,
     tickets: match.tickets ?? null,
     prediction: match.prediction
       ? {

@@ -7,6 +7,7 @@ import {
   getChampionshipOdds,
   getTopScorers,
   getGoalscorerOutrights,
+  getTodayScorers,
   getUpsetRadar,
   getStadiumProjections,
   isGroupStageComplete,
@@ -125,7 +126,7 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [sections, bracket, groupsDone, titleOdds, scorers, favorites, upsets, stadiums] =
+  const [sections, bracket, groupsDone, titleOdds, scorers, favorites, todayScorers, upsets, stadiums] =
     await Promise.all([
       getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
       getPoolBracket(pool.id),
@@ -133,6 +134,7 @@ export default async function MatchesPage({
       getChampionshipOdds(pool.tournamentId),
       getTopScorers(pool.tournamentId),
       getGoalscorerOutrights(pool.tournamentId),
+      getTodayScorers(pool.tournamentId),
       getUpsetRadar(pool.id, sessionUser?.id ?? null),
       getStadiumProjections(pool.id),
     ]);
@@ -203,10 +205,28 @@ export default async function MatchesPage({
         </section>
       ) : active === "scorers" ? (
         <Scorers scorers={scorers} code={code} />
-      ) : upsets.length > 0 || titleOdds.length > 0 || favorites.length > 0 || stadiumsOpen ? (
+      ) : upsets.length > 0 ||
+        titleOdds.length > 0 ||
+        favorites.length > 0 ||
+        todayScorers.length > 0 ||
+        stadiumsOpen ? (
         <div className="space-y-5">
           <UpsetRadar rows={upsets} />
           <StadiumProjections projections={stadiums} code={code} />
+          {todayScorers.length > 0 ? (
+            <OddsBoard
+              title="Most likely to score today"
+              subtitle="Market-implied chance to score anytime in today's fixtures."
+              fetchedAt={todayScorers[0]?.fetchedAt}
+              rows={todayScorers.map((s) => ({
+                key: `${s.matchNo}-${s.playerName}`,
+                code: s.teamCode,
+                primary: s.playerName,
+                winProb: s.scoreProb,
+                href: `/pool/${code}/players/${encodeURIComponent(s.playerName)}`,
+              }))}
+            />
+          ) : null}
           {titleOdds.length > 0 ? <ChampionshipOdds odds={titleOdds} code={code} /> : null}
           {favorites.length > 0 ? (
             <OddsBoard

@@ -184,6 +184,8 @@ model Match {
   lineup     MatchLineup?
   playerStats MatchPlayerStats?
   injuries   MatchInjury?
+  props       MatchProps?
+  scorerOdds  MatchScorerOdds[]
 
   @@unique([tournamentId, matchNo])
   @@index([tournamentId])
@@ -263,6 +265,39 @@ model MatchOdds {
   raw         Json     // raw decimal prices, for audit / re-derivation
   source      String   // "the-odds-api"
   fetchedAt   DateTime
+}
+
+// Per-match additional ("props") markets from The Odds API's per-event endpoint:
+// both-teams-to-score. Separate row from MatchOdds because it's filled by a distinct
+// per-event poller on its own snapshot cadence — its fetchedAt gates that poller
+// independently of the h2h fetchedAt. Optional integration; absent = no data.
+model MatchProps {
+  id          String   @id @default(cuid())
+  matchId     String   @unique
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  bttsYesProb Float? // implied P(both teams score) after stripping the two-way overround
+  bttsNoProb  Float? // implied P(not both score)
+  source      String   // "the-odds-api"
+  fetchedAt   DateTime
+}
+
+// Per-match anytime-goalscorer prices: one row per player quoted to score in a
+// given match. Replaced wholesale per match each poll (like the Golden Boot board,
+// but match-scoped). scoreProb is the raw inverse price (NOT normalized across
+// players — multiple can score). Player names are the bookmaker's verbatim spelling;
+// a flag is resolved at read time via the never-guess matcher. Optional; absent = none.
+model MatchScorerOdds {
+  id         String   @id @default(cuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerName String
+  scoreProb  Float // implied P(scores) = clamp(1/decimal), not normalized
+  decimal    Float // raw decimal price, for audit / re-derivation
+  source     String // "the-odds-api"
+  fetchedAt  DateTime
+
+  @@unique([matchId, playerName])
+  @@index([matchId])
 }
 
 // Tournament-winner futures (outrights): one row per team with the market's
