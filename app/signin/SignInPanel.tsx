@@ -2,7 +2,6 @@ import Link from "next/link";
 import { signIn } from "@/auth";
 import { googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { PublicGames } from "@/app/PublicGames";
-import { StartAPoolPromo } from "@/app/StartAPoolPromo";
 
 // Only same-origin relative paths are honored as a post-sign-in destination, so
 // a crafted ?callbackUrl can't turn sign-in into an open redirect. Reject
@@ -149,8 +148,6 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
       </p>
 
       <PublicGames now={now} />
-
-      <StartAPoolPromo now={now} />
     </main>
   );
 }

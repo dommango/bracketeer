@@ -245,7 +245,7 @@ export default async function UnifiedPicksPage() {
 function Header() {
   return (
     <div className="px-1">
-      <h1 className="font-display text-lg text-ink">Your picks</h1>
+      <h1 className="font-display text-xl text-ink">Your picks</h1>
       <p className="mt-0.5 text-[13px] text-ink-3">Both public challenges in one place.</p>
     </div>
   );
