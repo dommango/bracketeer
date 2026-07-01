@@ -44,10 +44,14 @@ function TeamRow({
         {side.code ? <span className="ml-2 font-mono text-xs text-ink-3">{side.code}</span> : null}
       </TeamLink>
       {pens != null ? (
-        <span className="font-mono text-xs font-semibold tabular-nums text-ink-3">({pens} pens)</span>
+        <span className="w-14 shrink-0 text-right font-mono text-xs font-semibold tabular-nums text-ink-3">
+          ({pens} pens)
+        </span>
       ) : null}
+      {/* Fixed-width, right-aligned score cell so the home/away scores form a clean
+          vertical column (parity with the ScoreCards / MatchCenter cards). */}
       {side.score !== null ? (
-        <span className="font-display text-2xl tabular-nums">{side.score}</span>
+        <span className="w-8 shrink-0 text-right font-display text-2xl tabular-nums">{side.score}</span>
       ) : null}
     </div>
   );
