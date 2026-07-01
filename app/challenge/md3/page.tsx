@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/pool/access";
 import { getDailyKnockoutHome } from "@/lib/challenge/daily-knockout-dashboard";
+import { ScoreCards } from "@/app/pool/[code]/ScoreCards";
 import { Leaderboard } from "@/app/pool/[code]/Leaderboard";
 import { Countdown } from "@/app/pool/[code]/Countdown";
 import { ChallengeStanding } from "../ChallengeStanding";
@@ -97,7 +98,7 @@ function YourCrowns({
 
 export default async function DailyKnockoutHomePage() {
   const user = await getSessionUser();
-  const { standing, board, view, byRound, byDay, champions } = await getDailyKnockoutHome(
+  const { standing, board, view, cards, byRound, byDay, champions } = await getDailyKnockoutHome(
     user?.id ?? null,
   );
 
@@ -127,6 +128,13 @@ export default async function DailyKnockoutHomePage() {
   return (
     <section className="space-y-5">
       <ChallengeRecentChat />
+
+      <ScoreCards
+        live={cards.live}
+        last={cards.last}
+        next={cards.next}
+        hrefForMatch={(no) => `/challenge/md3/matches/${no}`}
+      />
 
       <GameSwitcher now={new Date()} />
 
@@ -159,6 +167,19 @@ export default async function DailyKnockoutHomePage() {
           ) : null}
         </div>
       </div>
+
+      <Link
+        href="/challenge/md3/scoring"
+        className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk"
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-ink">How scoring works</span>
+          <span className="mt-0.5 block text-[13px] text-ink-3">
+            Scoreline points, the round-weighted ladder, and the day crowns.
+          </span>
+        </span>
+        <span className="shrink-0 font-display text-pitch-dark">→</span>
+      </Link>
 
       <YourCrowns champions={champions} byDay={byDay} myEntryId={myEntryId} />
 

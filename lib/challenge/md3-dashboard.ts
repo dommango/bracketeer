@@ -104,7 +104,7 @@ export async function getMd3MatchCenter(
 // The viewer's knockout scoreline predictions, oriented onto each match card —
 // the knockout analogue of md3ScorePicks. Group (≤72) and knockout (≥73) match
 // numbers never collide, so the two maps merge cleanly into one overlay.
-function dailyKnockoutScorePicks(
+export function dailyKnockoutScorePicks(
   inputs: MatchInput[],
   view: DailyKnockoutView,
 ): Record<number, YourScore> {
