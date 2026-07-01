@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Countdown } from "./Countdown";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+import { LABEL } from "@/lib/ui/labels";
 
 // A slim "Round of 32 kicks off in …" banner for full-bracket pools. Self-hides
 // once the target passes (ticks on the client), so it disappears the moment the

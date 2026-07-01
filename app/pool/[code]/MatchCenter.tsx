@@ -5,17 +5,7 @@ import { Flag } from "./Flag";
 import { VenueLine } from "./VenueLine";
 import { WinProbBar } from "./WinProbBar";
 import { UpsetBadge } from "./UpsetBadge";
-
-// Same chromatic round sweep as the bracket (group green → gold final).
-const ROUND_ACCENT: Record<string, string> = {
-  GROUP: "var(--pitch)",
-  R32: "var(--round-r32)",
-  R16: "var(--round-r16)",
-  QF: "var(--round-qf)",
-  SF: "var(--round-sf)",
-  BRONZE: "var(--gold-dark)",
-  FINAL: "var(--round-final)",
-};
+import { ROUND_ACCENT } from "@/lib/pool/round-accent";
 
 function StatusBadge({ status }: { status: MatchCenterRow["status"] }) {
   if (status === "LIVE") {

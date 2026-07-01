@@ -6,6 +6,7 @@ import { saveMd3ChallengeEntry, type SaveMd3ChallengeState } from "./actions";
 import type { Md3FixtureVM } from "@/lib/pool/md3-view";
 import { Flag } from "@/app/pool/[code]/Flag";
 import { WinProbBar } from "@/app/pool/[code]/WinProbBar";
+import { LiveBadge } from "@/app/pool/[code]/LiveBadge";
 
 // Group fixtures by kickoff day for light visual chunking.
 function dayLabel(iso: string): string {
@@ -26,15 +27,6 @@ const SCORE_BOX =
 // Group-stage accent — matches the ScoreCards / MatchCenter round accent so the
 // pickem cards read as the same family of fixtures.
 const GROUP_ACCENT = "var(--pitch)";
-
-function LiveBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
-      <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-      Live
-    </span>
-  );
-}
 
 function FixtureCard({ f, disabled }: { f: Md3FixtureVM; disabled: boolean }) {
   const final = f.result?.final ?? false;

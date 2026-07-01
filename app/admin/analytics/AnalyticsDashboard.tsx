@@ -1,8 +1,7 @@
 import type { AdminAnalytics } from "@/lib/analytics/queries";
 import type { AnalyticsEventType } from "@/generated/prisma/enums";
 import type { DayBucket } from "@/lib/analytics/aggregate";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+import { LABEL } from "@/lib/ui/labels";
 
 // Friendly names for the raw event enum, used in the breakdown.
 const TYPE_LABEL: Record<AnalyticsEventType, string> = {

@@ -15,7 +15,9 @@ import { formatKickoff } from "@/lib/pool/format";
 import { Flag } from "./Flag";
 import { WinProbBar } from "./WinProbBar";
 
-export const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+// Re-exported from the shared module so the bracket builders can keep importing it
+// from here while the single source of truth lives in lib/ui/labels.ts.
+export { LABEL } from "@/lib/ui/labels";
 
 // The four scored awards + the four knockout cascade stages (Final is rendered
 // separately), shared by both bracket builders so their copy can't drift.
