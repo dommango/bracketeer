@@ -15,6 +15,7 @@ import { UpsetRadar } from "@/app/pool/[code]/UpsetRadar";
 import { ChallengeStanding } from "../ChallengeStanding";
 import { GameSwitcher } from "@/app/challenge/GameSwitcher";
 import { ChallengeRecentChat } from "@/app/challenge/ChallengeRecentChat";
+import { KnockoutMd3Banner } from "./KnockoutMd3Banner";
 
 // Picks, locks, and live results change at request time.
 export const dynamic = "force-dynamic";
@@ -39,6 +40,8 @@ export default async function KnockoutChallengeHomePage() {
 
   return (
     <section className="space-y-5">
+      <KnockoutMd3Banner now={new Date()} />
+
       <ChallengeRecentChat />
 
       <ScoreCards
