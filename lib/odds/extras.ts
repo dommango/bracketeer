@@ -23,6 +23,7 @@ import {
 } from "@/lib/odds/map";
 import { loadCodedMatches } from "@/lib/odds/coded";
 import { extrasPollDue } from "@/lib/odds/schedule";
+import { quotaExhausted, quotaSnapshot } from "@/lib/odds/quota";
 
 export interface OddsExtrasSummary {
   // True when the run spent no credits because the last extras poll is recent
@@ -37,6 +38,7 @@ export interface OddsExtrasSummary {
   outrightsUpserted: number;
   goalscorersFetched: number;
   goalscorersUpserted: number;
+  quotaBlocked?: boolean; // remaining Odds API credits below the floor → held off
 }
 
 // Each market is isolated: a failure fetching outrights must not lose the totals
@@ -60,6 +62,13 @@ export async function pollOddsExtras(): Promise<OddsExtrasSummary> {
   });
   if (!tournament) return summary;
 
+  // Hard stop: this poll makes four whole-slate calls (totals, spreads, winner +
+  // goalscorer outrights). Hold off once remaining credits fall below the floor.
+  // Checked first — it's a cheap in-memory read, no DB round-trip.
+  if (quotaExhausted()) {
+    console.warn(`[odds] extras poll held: quota below floor (${quotaSnapshot().remaining} left)`);
+    return { ...summary, quotaBlocked: true };
+  }
   // Restart-proof daily throttle: the outright rows carry the last run's
   // fetchedAt, so a cron redeploy/crash-loop (which resets the in-memory daily
   // bucket) can't re-spend the 4+ metered credits until the interval elapses.

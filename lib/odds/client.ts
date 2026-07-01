@@ -23,6 +23,17 @@ import {
   type EventBtts,
   type EventScorer,
 } from "@/lib/odds/event-parse";
+import { recordQuota } from "@/lib/odds/quota";
+
+// Single fetch path for every Odds API call so the usage headers
+// (x-requests-remaining / x-requests-used) are recorded once, centrally — the
+// quota guard reads what this records. Headers are present on non-2xx too, so we
+// record before the caller's own status check throws.
+async function oddsFetch(url: string, signal?: AbortSignal): Promise<Response> {
+  const res = await fetch(url, { cache: "no-store", signal });
+  recordQuota(res.headers);
+  return res;
+}
 
 export type { OddsEvent, TotalsEvent, SpreadsEvent, OutrightEntry, GoalscorerEntry } from "@/lib/odds/parse";
 export type { EventBtts, EventScorer } from "@/lib/odds/event-parse";
@@ -47,7 +58,7 @@ export async function fetchOddsEvents(signal?: AbortSignal): Promise<OddsEvent[]
   const url =
     `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds` +
     `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=h2h&oddsFormat=decimal`;
-  const res = await fetch(url, { cache: "no-store", signal });
+  const res = await oddsFetch(url, signal);
   if (!res.ok) throw new Error(`Odds API responded ${res.status}`);
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected response shape");
@@ -60,7 +71,7 @@ export async function fetchTotalsEvents(signal?: AbortSignal): Promise<TotalsEve
   const url =
     `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds` +
     `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=totals&oddsFormat=decimal`;
-  const res = await fetch(url, { cache: "no-store", signal });
+  const res = await oddsFetch(url, signal);
   if (!res.ok) throw new Error(`Odds API (totals) responded ${res.status}`);
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected totals response shape");
@@ -74,7 +85,7 @@ export async function fetchSpreadsEvents(signal?: AbortSignal): Promise<SpreadsE
   const url =
     `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds` +
     `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=spreads&oddsFormat=decimal`;
-  const res = await fetch(url, { cache: "no-store", signal });
+  const res = await oddsFetch(url, signal);
   if (!res.ok) throw new Error(`Odds API (spreads) responded ${res.status}`);
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected spreads response shape");
@@ -87,7 +98,7 @@ export async function fetchOutrights(signal?: AbortSignal): Promise<OutrightEntr
   const url =
     `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup_winner/odds` +
     `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=outrights&oddsFormat=decimal`;
-  const res = await fetch(url, { cache: "no-store", signal });
+  const res = await oddsFetch(url, signal);
   if (!res.ok) throw new Error(`Odds API (outrights) responded ${res.status}`);
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected outrights response shape");
@@ -101,7 +112,7 @@ export async function fetchGoalscorerOutrights(signal?: AbortSignal): Promise<Go
   const url =
     `${env.ODDS_API_BASE}/sports/${GOALSCORER_SPORT_KEY}/odds` +
     `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}&markets=outrights&oddsFormat=decimal`;
-  const res = await fetch(url, { cache: "no-store", signal });
+  const res = await oddsFetch(url, signal);
   if (!res.ok) throw new Error(`Odds API (goalscorer) responded ${res.status}`);
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected goalscorer response shape");
@@ -115,7 +126,7 @@ export async function fetchEventList(signal?: AbortSignal): Promise<EventListIte
   const url =
     `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/events` +
     `?apiKey=${env.ODDS_API_KEY}`;
-  const res = await fetch(url, { cache: "no-store", signal });
+  const res = await oddsFetch(url, signal);
   if (!res.ok) throw new Error(`Odds API (events) responded ${res.status}`);
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected events response shape");
@@ -135,7 +146,7 @@ export async function fetchEventMarkets(
     `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/events/${eventId}/odds` +
     `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}` +
     `&markets=btts,player_goal_scorer_anytime&oddsFormat=decimal`;
-  const res = await fetch(url, { cache: "no-store", signal });
+  const res = await oddsFetch(url, signal);
   if (!res.ok) throw new Error(`Odds API (event markets) responded ${res.status}`);
   const json = (await res.json()) as ApiEvent;
   return { btts: parseEventBtts(json), scorers: parseEventScorers(json) };
