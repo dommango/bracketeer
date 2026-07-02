@@ -17,8 +17,24 @@ import {
   type OutrightEntry,
   type GoalscorerEntry,
 } from "@/lib/odds/parse";
+import {
+  parseEventBtts,
+  parseEventScorers,
+  type EventBtts,
+  type EventScorer,
+} from "@/lib/odds/event-parse";
 
 export type { OddsEvent, TotalsEvent, SpreadsEvent, OutrightEntry, GoalscorerEntry } from "@/lib/odds/parse";
+export type { EventBtts, EventScorer } from "@/lib/odds/event-parse";
+
+// One upcoming fixture from the free `/events` listing — used to resolve The Odds
+// API's opaque event id for a fixture before requesting its per-event markets.
+export interface EventListItem {
+  id: string;
+  homeName: string;
+  awayName: string;
+  commenceTime: string; // ISO
+}
 
 // The Odds API exposes tournament outrights as dedicated sport keys. This is the
 // top-goalscorer market's key; verify it against the live catalogue at execution
@@ -90,4 +106,37 @@ export async function fetchGoalscorerOutrights(signal?: AbortSignal): Promise<Go
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error("Odds API: unexpected goalscorer response shape");
   return parseGoalscorerOutrights(json as ApiEvent[]);
+}
+
+// Free `/events` listing (0 credits): every upcoming fixture with its opaque event
+// id, so the per-event poller can resolve the id for a fixture before spending a
+// credit on its props markets.
+export async function fetchEventList(signal?: AbortSignal): Promise<EventListItem[]> {
+  const url =
+    `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/events` +
+    `?apiKey=${env.ODDS_API_KEY}`;
+  const res = await fetch(url, { cache: "no-store", signal });
+  if (!res.ok) throw new Error(`Odds API (events) responded ${res.status}`);
+  const json = await res.json();
+  if (!Array.isArray(json)) throw new Error("Odds API: unexpected events response shape");
+  return (json as Array<{ id: string; home_team: string; away_team: string; commence_time: string }>).map(
+    (e) => ({ id: e.id, homeName: e.home_team, awayName: e.away_team, commenceTime: e.commence_time }),
+  );
+}
+
+// Per-event additional markets for one fixture: BTTS + anytime goalscorer in a
+// single call. Cost = markets × regions = 2 credits per event. Returns both parsed
+// markets; either may be empty/null when a book doesn't offer it for this event.
+export async function fetchEventMarkets(
+  eventId: string,
+  signal?: AbortSignal,
+): Promise<{ btts: EventBtts | null; scorers: EventScorer[] }> {
+  const url =
+    `${env.ODDS_API_BASE}/sports/soccer_fifa_world_cup/events/${eventId}/odds` +
+    `?apiKey=${env.ODDS_API_KEY}&regions=${env.ODDS_API_REGION}` +
+    `&markets=btts,player_goal_scorer_anytime&oddsFormat=decimal`;
+  const res = await fetch(url, { cache: "no-store", signal });
+  if (!res.ok) throw new Error(`Odds API (event markets) responded ${res.status}`);
+  const json = (await res.json()) as ApiEvent;
+  return { btts: parseEventBtts(json), scorers: parseEventScorers(json) };
 }

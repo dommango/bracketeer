@@ -3,7 +3,6 @@ import {
   resolveBracket,
   validateKnockoutWinner,
   buildKnockoutPairMatchNos,
-  mergeThirdAdvance,
   findKnockoutSeatingConflict,
   orientScoresToSlot,
 } from "./bracket";
@@ -159,22 +158,6 @@ describe("buildKnockoutPairMatchNos", () => {
   });
 });
 
-describe("mergeThirdAdvance", () => {
-  it("keeps the stored order when the same eight teams are re-submitted", () => {
-    const current = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "GHA"];
-    const resubmitted = ["COD", "SWE", "ECU", "GHA", "BIH", "ALG", "PAR", "SEN"];
-    // Same set, different order — the order drives R32 seating, so it must not move.
-    expect(mergeThirdAdvance(current, resubmitted)).toBe(current);
-  });
-
-  it("accepts the submitted list when the set actually changes", () => {
-    const current = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "GHA"];
-    const changed = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "EGY"];
-    expect(mergeThirdAdvance(current, changed)).toBe(changed);
-    expect(mergeThirdAdvance([], changed)).toBe(changed);
-  });
-});
-
 describe("findKnockoutSeatingConflict", () => {
   it("is null when every recorded winner sits in its resolved matchup", () => {
     const results = chalkStandings();
@@ -183,17 +166,27 @@ describe("findKnockoutSeatingConflict", () => {
     expect(findKnockoutSeatingConflict({ ...results, knockout })).toBeNull();
   });
 
-  it("flags a thirdAdvance reorder that unseats a recorded winner", () => {
+  it("flags a group-placement edit that unseats a recorded winner", () => {
     const results = chalkStandings();
-    // Record each third-place side's occupant as its match's winner…
-    const bracket = resolveBracket(results);
-    const thirdSlots = R32.filter((m) => "third" in m.b);
-    const knockout = Object.fromEntries(thirdSlots.map((m) => [m.id, bracket[m.id].away!]));
+    // Find the R32 match hosting some group's 1st-place slot, and record that
+    // occupant as its winner.
+    const g = groups[groups.length - 1]; // a group whose 3rd is NOT in thirdAdvance
+    const match = R32.find(
+      (m) =>
+        ("group" in m.a && m.a.group === g && m.a.pos === 1) ||
+        ("group" in m.b && m.b.group === g && m.b.pos === 1),
+    )!;
+    const winner = results.groupFirst[g];
+    const knockout = { [match.id]: winner };
     expect(findKnockoutSeatingConflict({ ...results, knockout })).toBeNull();
-    // …then rotate the thirdAdvance order: the backtracker re-seats the slots, so
-    // at least one recorded winner no longer sits in its resolved matchup.
-    const rotated = [...results.thirdAdvance.slice(1), results.thirdAdvance[0]];
-    const conflict = findKnockoutSeatingConflict({ ...results, thirdAdvance: rotated, knockout });
+    // Re-seat that slot by "correcting" the group's 1st place to a different
+    // team: the recorded winner is orphaned from its matchup — flagged.
+    const edited = {
+      ...results,
+      groupFirst: { ...results.groupFirst, [g]: GROUPS[g][3] },
+      knockout,
+    };
+    const conflict = findKnockoutSeatingConflict(edited);
     expect(conflict).toMatch(/not in its resolved matchup/);
   });
 

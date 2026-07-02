@@ -3,7 +3,7 @@
 // selection is unit-testable.
 
 import type { PoolFormat } from "@/lib/pool/manage";
-import { resolveGamePhase, featuredGame, md3DateRange } from "@/lib/pool/games";
+import { resolveGamePhase, featuredGame, koPickemDateRange } from "@/lib/pool/games";
 
 // Constant brand line shown on every slide, so the Bracketeer identity stays
 // anchored while the game-specific headline + line rotate beneath it.
@@ -34,7 +34,9 @@ export function availableHeroSlides(now: Date = new Date()): HeroSlide[] {
       stateLine:
         md3Phase === "LOCKED_LIVE"
           ? "Live now · follow the leaderboard"
-          : `Predict every Match Day 3 scoreline · ${md3DateRange()}`,
+          : `Predict every knockout scoreline · free to play${
+              koPickemDateRange() ? ` · ${koPickemDateRange()}` : ""
+            }`,
     });
   }
 

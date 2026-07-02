@@ -77,33 +77,20 @@ export function buildKnockoutPairMatchNos(results: Results): Map<string, number>
 
 const KNOCKOUT_RANGE = (n: number) => n >= 73 && n <= 104;
 
-// The ORDER of results.thirdAdvance is load-bearing: resolveR32Slots seats
-// third-place teams by backtracking in list order, so two different orderings of
-// the same eight teams can seat different R32 matchups. When an admin re-saves
-// standings with the same eight advancers, keep the stored order — otherwise a
-// form whose fields happen to iterate differently silently re-seats the live
-// bracket (which is exactly how prod's R32 seating got scrambled mid-round).
-export function mergeThirdAdvance(
-  current: TeamCode[],
-  submitted: TeamCode[],
-): TeamCode[] {
-  const sameSet =
-    current.length === submitted.length &&
-    [...current].sort().join(",") === [...submitted].sort().join(",");
-  return sameSet ? current : submitted;
-}
-
 // Reject an answer key whose resolved seating contradicts a winner it already
 // records: if match N's winner is no longer one of match N's two seated teams,
-// the seating (not the winner) is wrong — surfaced before the write so a
-// thirdAdvance reorder can't orphan recorded results and break fixture mapping.
+// the seating edit (not the winner) is wrong. A standings correction that
+// changes a group's 1st/2nd or the advancing-thirds set after that team's R32
+// match was recorded would re-seat the bracket, orphan the recorded result, and
+// break team-pair fixture mapping — surface it before the write instead. (To
+// genuinely amend such a result, clear it first via clearKnockoutResult.)
 export function findKnockoutSeatingConflict(results: Results): string | null {
   const bracket = resolveBracket(results);
   for (const [no, winner] of Object.entries(results.knockout || {})) {
     if (!winner) continue;
     const m = bracket[Number(no)];
     if (m?.home && m?.away && winner !== m.home && winner !== m.away) {
-      return `Match ${no}'s recorded winner ${winner} is not in its resolved matchup (${m.home} vs ${m.away}) — third-place order is inconsistent with recorded results`;
+      return `Match ${no}'s recorded winner ${winner} is not in its resolved matchup (${m.home} vs ${m.away}) — this standings edit contradicts a recorded result; clear that result first`;
     }
   }
   return null;

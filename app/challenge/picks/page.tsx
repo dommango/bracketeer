@@ -1,9 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getSessionUser } from "@/lib/pool/access";
-import { getMd3ChallengeHome } from "@/lib/challenge/md3-dashboard";
-import { isMd3GameOpen } from "@/lib/pool/match-day-3";
-import { hasAcceptedTerms } from "@/lib/account/consent";
+import { getDailyKnockoutHome } from "@/lib/challenge/daily-knockout-dashboard";
+import { isDailyKnockoutGameOpen } from "@/lib/games/daily-pickem/schedule";
 import {
   getKnockoutState,
   getKnockoutBuilderProjections,
@@ -17,7 +16,7 @@ import { emptyPicks } from "@/lib/scoring/types";
 import { gameStateLine } from "@/lib/pool/games";
 import { md3CountLine } from "@/lib/pool/md3-summary";
 import { defaultOpenSection } from "@/lib/challenge/picks-summary";
-import { Md3ChallengeForm } from "@/app/challenge/md3/Md3ChallengeForm";
+import { DailyKnockoutForm } from "@/app/challenge/md3/DailyKnockoutForm";
 import { KnockoutPickForm } from "@/app/pool/[code]/KnockoutPickForm";
 import { Countdown } from "@/app/pool/[code]/Countdown";
 import { saveSoloBracketAction, saveKnockoutBracketAction } from "@/app/bracket/actions";
@@ -49,26 +48,24 @@ export default async function UnifiedPicksPage() {
   }
 
   const tournamentId = await getTournamentIdBySlug();
-  const [{ view }, koState, brackets, accepted] = await Promise.all([
-    getMd3ChallengeHome(user.id),
+  const [{ view }, koState, brackets] = await Promise.all([
+    getDailyKnockoutHome(user.id),
     getKnockoutState(tournamentId),
     getUserBrackets(user.id, tournamentId),
-    hasAcceptedTerms(user.id),
   ]);
-  const needsConsent = !accepted;
-  const gameOpen = isMd3GameOpen(now);
+  const gameOpen = isDailyKnockoutGameOpen(now);
 
-  // --- Match Day Pickem section: always render the form (read-only once locked)
-  // with a banner when the game has closed, mirroring /challenge/md3/play. Only
-  // MD3 carries consent — the knockout build form does not. ---
+  // --- Match Day Pickem section: the knockout scoreline pick'em. Free to play, so
+  // no consent gate (unlike the retired group leg). Renders read-only with a banner
+  // once the Final has kicked off, mirroring /challenge/md3/play. ---
   const md3Body: ReactNode = (
     <div className="space-y-3">
       {!gameOpen ? (
         <p className="rounded-2xl border border-dashed border-line bg-surface-sunk p-3 text-center text-sm text-ink-3">
-          Match Day Pickem is locked — every fixture has kicked off.
+          The knockout pick&apos;em is locked — the Final has kicked off.
         </p>
       ) : null}
-      <Md3ChallengeForm fixtures={view.fixtures} canEdit={gameOpen} needsConsent={needsConsent} />
+      <DailyKnockoutForm fixtures={view.fixtures} canEdit={gameOpen} />
     </div>
   );
 
@@ -245,7 +242,7 @@ export default async function UnifiedPicksPage() {
 function Header() {
   return (
     <div className="px-1">
-      <h1 className="font-display text-lg text-ink">Your picks</h1>
+      <h1 className="font-display text-xl text-ink">Your picks</h1>
       <p className="mt-0.5 text-[13px] text-ink-3">Both public challenges in one place.</p>
     </div>
   );

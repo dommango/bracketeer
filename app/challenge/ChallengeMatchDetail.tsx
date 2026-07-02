@@ -104,6 +104,46 @@ function SpreadLine({
   );
 }
 
+// Both-teams-to-score market, shown beside the other betting lines once the
+// per-event props poll has data. Hidden entirely otherwise.
+function BttsLine({ btts }: { btts: MatchDetail["btts"] }) {
+  if (!btts) return null;
+  const yes = Math.round(btts.yesProb * 100);
+  const no = Math.round(btts.noProb * 100);
+  return (
+    <p className="mt-1 text-xs text-ink-3">
+      <span className="font-semibold text-ink-2">Both teams to score</span>
+      {` — Yes ${yes}% · No ${no}%`}
+    </p>
+  );
+}
+
+// Anytime-goalscorer board for the match: the players most likely to score, with a
+// flag when the name resolves to a squad. Capped to the top few. Hidden until the
+// per-event props poll has data.
+function MatchScorers({ scorers }: { scorers: MatchDetail["scorers"] }) {
+  if (scorers.length === 0) return null;
+  const top = scorers.slice(0, 6);
+  return (
+    <div className="mt-3 rounded-xl border border-line bg-surface-sunk/40 px-3 py-2">
+      <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+        Anytime goalscorer
+      </p>
+      <ul className="space-y-1">
+        {top.map((s) => (
+          <li key={s.playerName} className="flex items-center gap-2 text-sm">
+            {s.teamCode ? <Flag code={s.teamCode} size={16} /> : <span className="w-4" />}
+            <span className="flex-1 truncate text-ink-2">{s.playerName}</span>
+            <span className="font-mono text-xs tabular-nums text-ink-3">
+              {Math.round(s.scoreProb * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // The viewer's Match Day Pickem scoreline for this fixture, shown beside the live
 // or final score. `points` is null until the match is final, then green when the
 // prediction scored, muted when it missed.
@@ -217,6 +257,8 @@ export function ChallengeMatchDetail({
         <WinProbBar odds={detail.odds} homeCode={detail.home.code} awayCode={detail.away.code} fetchedAt={detail.oddsFetchedAt} />
         <TotalsLine totals={detail.totals} />
         <SpreadLine spread={detail.spread} home={detail.home} away={detail.away} />
+        <BttsLine btts={detail.btts} />
+        <MatchScorers scorers={detail.scorers} />
         {yourScore ? <YourPrediction pick={yourScore} /> : null}
       </div>
 

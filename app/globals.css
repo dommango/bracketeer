@@ -16,6 +16,9 @@
   --pitch-tint: #e6f1ea;
   --gold: #f4c542;
   --gold-dark: #c8a032;
+  /* Gold dark enough to read as text on white/light (WCAG AA ~6:1); --gold-dark
+     is a decorative accent and fails as small text, so gold copy uses this. */
+  --gold-ink: #7a5e12;
   --gold-tint: #fcf2cf;
   --ink: #0a0f0d;
   --ink-2: #2b332e;
@@ -113,6 +116,7 @@
   --color-pitch-tint: var(--pitch-tint);
   --color-gold: var(--gold);
   --color-gold-dark: var(--gold-dark);
+  --color-gold-ink: var(--gold-ink);
   --color-gold-tint: var(--gold-tint);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
@@ -130,7 +134,9 @@
   --color-positive: var(--positive);
   --color-positive-tint: var(--positive-tint);
   --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
   --color-negative: var(--negative);
+  --color-negative-tint: var(--negative-tint);
 
   --color-city-atlanta: var(--city-atlanta);
   --color-city-boston: var(--city-boston);

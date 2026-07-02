@@ -6,7 +6,9 @@ import {
   getPoolBracket,
   getChampionshipOdds,
   getTopScorers,
+  getStatLeaders,
   getGoalscorerOutrights,
+  getTodayScorers,
   getUpsetRadar,
   getStadiumProjections,
   isGroupStageComplete,
@@ -21,6 +23,7 @@ import { GroupStandings, Bracket } from "../Bracket";
 import { ChampionshipOdds } from "../ChampionshipOdds";
 import { OddsBoard } from "../OddsBoard";
 import { Scorers } from "../Scorers";
+import { StatLeaders } from "../StatLeaders";
 import { UpsetRadar } from "../UpsetRadar";
 import { StadiumProjections } from "../StadiumProjections";
 
@@ -125,14 +128,16 @@ export default async function MatchesPage({
   if (!pool) notFound();
 
   const sessionUser = await getSessionUser();
-  const [sections, bracket, groupsDone, titleOdds, scorers, favorites, upsets, stadiums] =
+  const [sections, bracket, groupsDone, titleOdds, scorers, statLeaders, favorites, todayScorers, upsets, stadiums] =
     await Promise.all([
       getGroupMatchCenter(pool.id, sessionUser?.id ?? null),
       getPoolBracket(pool.id),
       isGroupStageComplete(pool.tournamentId),
       getChampionshipOdds(pool.tournamentId),
       getTopScorers(pool.tournamentId),
+      getStatLeaders(pool.tournamentId),
       getGoalscorerOutrights(pool.tournamentId),
+      getTodayScorers(pool.tournamentId),
       getUpsetRadar(pool.id, sessionUser?.id ?? null),
       getStadiumProjections(pool.id),
     ]);
@@ -202,11 +207,32 @@ export default async function MatchesPage({
           </div>
         </section>
       ) : active === "scorers" ? (
-        <Scorers scorers={scorers} code={code} />
-      ) : upsets.length > 0 || titleOdds.length > 0 || favorites.length > 0 || stadiumsOpen ? (
+        <div className="space-y-6">
+          <Scorers scorers={scorers} code={code} />
+          <StatLeaders leaders={statLeaders} code={code} />
+        </div>
+      ) : upsets.length > 0 ||
+        titleOdds.length > 0 ||
+        favorites.length > 0 ||
+        todayScorers.length > 0 ||
+        stadiumsOpen ? (
         <div className="space-y-5">
           <UpsetRadar rows={upsets} />
           <StadiumProjections projections={stadiums} code={code} />
+          {todayScorers.length > 0 ? (
+            <OddsBoard
+              title="Most likely to score today"
+              subtitle="Market-implied chance to score anytime in today's fixtures."
+              fetchedAt={todayScorers[0]?.fetchedAt}
+              rows={todayScorers.map((s) => ({
+                key: `${s.matchNo}-${s.playerName}`,
+                code: s.teamCode,
+                primary: s.playerName,
+                winProb: s.scoreProb,
+                href: `/pool/${code}/players/${encodeURIComponent(s.playerName)}`,
+              }))}
+            />
+          ) : null}
           {titleOdds.length > 0 ? <ChampionshipOdds odds={titleOdds} code={code} /> : null}
           {favorites.length > 0 ? (
             <OddsBoard

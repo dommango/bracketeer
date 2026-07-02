@@ -3,10 +3,11 @@
 import { useActionState, useState } from "react";
 import { createPoolAction, type CreatePoolState } from "./actions";
 import type { PoolFormat } from "@/lib/pool/manage";
+import { PRIMARY_BUTTON } from "@/lib/ui/buttons";
+import { LABEL } from "@/lib/ui/labels";
 
 const INPUT =
   "h-11 w-full rounded-md border border-line bg-surface px-[18px] text-[15px] text-ink outline-none focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]";
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 
 // A single game card, fully resolved on the server (copy + current state + whether
 // it's creatable right now) so the client just renders — no time math, no risk of
@@ -122,7 +123,7 @@ export function CreatePoolForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+        className={`${PRIMARY_BUTTON} disabled:opacity-60`}
       >
         {pending ? "Creating…" : "Create pool"}
       </button>

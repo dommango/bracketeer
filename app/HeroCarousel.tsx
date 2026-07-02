@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Hero } from "./Hero";
+import { HeroShell } from "./HeroShell";
 import { availableHeroSlides } from "@/lib/pool/hero-slides";
 
 const ADVANCE_MS = 5000;
@@ -15,31 +16,32 @@ export function HeroCarousel({ now }: { now: Date }) {
   const slides = availableHeroSlides(now);
   const count = slides.length;
   const [index, setIndex] = useState(0);
+  // Auto-advance pauses on hover/focus (so a reader isn't rushed) and via the
+  // explicit control below. Users who prefer reduced motion never get auto-rotation.
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    if (count <= 1) return;
+    if (count <= 1 || paused) return;
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
     const id = setInterval(() => setIndex((i) => (i + 1) % count), ADVANCE_MS);
     return () => clearInterval(id);
-  }, [count]);
+  }, [count, paused]);
 
   if (count === 0) return <Hero />;
 
   const slide = slides[Math.min(index, count - 1)];
 
   return (
-    <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "url(/brand-26-pattern.avif)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-2/5"
-        style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%)" }}
-      />
+    <HeroShell
+      overlay="bottom"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
       <div className="relative">
         <div
           className="inline-block max-w-full rounded-2xl px-4 py-3"
@@ -61,22 +63,37 @@ export function HeroCarousel({ now }: { now: Date }) {
           <p className="mt-2 text-[13px] font-semibold text-white/95">{slide.stateLine}</p>
         </div>
         {count > 1 ? (
-          <div className="relative z-10 mt-4 flex gap-1.5">
+          <div className="relative z-10 mt-4 flex items-center gap-1.5">
             {slides.map((s, i) => (
+              // Padded hit area (~44px tall) around a thin visual dot for touch.
               <button
                 key={s.format}
                 type="button"
                 aria-label={`Show ${s.headline}`}
                 aria-current={i === index ? "true" : undefined}
                 onClick={() => setIndex(i)}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === index ? "w-6 bg-white" : "w-1.5 bg-white/40 hover:bg-white/70"
-                }`}
-              />
+                className="group flex h-11 items-center py-2"
+              >
+                <span
+                  className={`block h-1.5 rounded-full transition-all ${
+                    i === index ? "w-6 bg-white" : "w-1.5 bg-white/40 group-hover:bg-white/70"
+                  }`}
+                />
+              </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setPaused((p) => !p)}
+              aria-label={paused ? "Play slideshow" : "Pause slideshow"}
+              className="ml-1 flex h-11 w-11 items-center justify-center text-white/70 transition-colors hover:text-white"
+            >
+              <span aria-hidden="true" className="text-xs">
+                {paused ? "▶" : "❚❚"}
+              </span>
+            </button>
           </div>
         ) : null}
       </div>
-    </div>
+    </HeroShell>
   );
 }

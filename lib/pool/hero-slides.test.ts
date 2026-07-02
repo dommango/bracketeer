@@ -12,23 +12,34 @@ describe("availableHeroSlides", () => {
     expect(slides.map((s) => s.format)).toEqual(["MATCH_DAY_3_PICKEM", "KNOCKOUT"]);
   });
 
-  it("leads with knockout (recruiting) while MD3 plays out live", () => {
-    // Just after knockout picks open — MD3's last kickoff (June 27) is past, so MD3
-    // is live and knockout is recruiting: both slides show, knockout (featured) first.
+  it("leads with the knockout bracket while its picks are open", () => {
+    // Just after knockout-bracket picks open (before the R32 kickoff): the bracket
+    // is recruiting (featured) and the knockout pick'em is still open — both slides
+    // show, bracket first.
     const now = new Date(new Date(KNOCKOUT_PICKS_OPEN_UTC).getTime() + 1000);
     const slides = availableHeroSlides(now);
     expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT", "MATCH_DAY_3_PICKEM"]);
   });
 
-  it("drops MD3 once complete: only the knockout slide survives the R32 kickoff", () => {
-    // After the Round of 32 kickoff (knockout lock) MD3 finished the night
-    // before — advertising it as "Live now" was the bug. Only the genuinely
-    // live game keeps a slide.
+  it("leads with the Match Day Pickem once the bracket locks at the R32 kickoff", () => {
+    // After the Round of 32 kickoff: the bracket is locked/live, but the knockout
+    // pick'em plays on through the rounds — so it takes the lead slide, and the
+    // locked bracket still shows its live state.
     const r32 = kickoffFor(73);
     expect(r32).not.toBeNull();
     const now = new Date(r32!.getTime() + 1000);
     const slides = availableHeroSlides(now);
-    expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT"]);
-    expect(slides[0].stateLine.toLowerCase()).toContain("live");
+    expect(slides.map((s) => s.format)).toEqual(["MATCH_DAY_3_PICKEM", "KNOCKOUT"]);
+    const ko = slides.find((s) => s.format === "KNOCKOUT")!;
+    expect(ko.stateLine.toLowerCase()).toContain("live");
+  });
+
+  it("goes empty once the tournament completes (no game advertised as live forever)", () => {
+    // Final kickoff + the settle window: every phase is COMPLETE, the carousel
+    // yields to the static hero instead of a permanent "Live now" slide.
+    const final = kickoffFor(104);
+    expect(final).not.toBeNull();
+    const now = new Date(final!.getTime() + 7 * 3_600_000);
+    expect(availableHeroSlides(now)).toEqual([]);
   });
 });

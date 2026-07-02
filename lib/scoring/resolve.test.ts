@@ -23,19 +23,19 @@ function thirdSlotAssignments(picks: Picks): Record<number, string | null> {
 }
 
 describe("resolveR32Slots third-place assignment", () => {
-  it("seats all 8 thirds when an assignment exists that greedy first-fit misses", () => {
-    // Groups A–H in order: greedy consumes A/E/H before reaching match 82
-    // (eligible groups A,E,H,I,J) and strands a team; backtracking seats all 8.
+  it("seats a complete set of 8 thirds via FIFA's official placement table", () => {
+    // Groups A–H: the official Annex C row for this combination seats each third
+    // per FIFA's table (not the incidental order a generic solver would produce).
     const picks = picksWithThirds(["A", "B", "C", "D", "E", "F", "G", "H"]);
     const byMatch = thirdSlotAssignments(picks);
 
     expect(byMatch).toEqual({
-      74: GROUPS.A[2],
-      77: GROUPS.C[2],
-      79: GROUPS.F[2],
+      74: GROUPS.C[2],
+      77: GROUPS.F[2],
+      79: GROUPS.H[2],
       80: GROUPS.E[2],
       81: GROUPS.B[2],
-      82: GROUPS.H[2],
+      82: GROUPS.A[2],
       85: GROUPS.G[2],
       87: GROUPS.D[2],
     });

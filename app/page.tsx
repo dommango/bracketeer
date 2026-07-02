@@ -7,10 +7,12 @@ import { resolveGamePhase, GAME_CATALOG } from "@/lib/pool/games";
 import { getTournamentIdBySlug } from "@/lib/pool/queries";
 import { getUserBrackets, type BracketSummary } from "@/lib/bracket/gallery";
 import { PublicGames } from "./PublicGames";
+import { HeroCarousel } from "./HeroCarousel";
 import { SignInPanel } from "./signin/SignInPanel";
 import { StartAPoolPromo } from "./StartAPoolPromo";
 import { Footer } from "./Footer";
 import { YourGames, type YourGame } from "./YourGames";
+import { SECONDARY_BUTTON } from "@/lib/ui/buttons";
 
 // Session-aware landing. Signed-out visitors get the sign-in / register panel
 // directly; signed-in visitors land on the hub — their games, available games,
@@ -62,7 +64,7 @@ function buildYourGames(brackets: BracketSummary[]): YourGame[] {
         entered > 0
           ? `${entered} bracket${entered > 1 ? "s" : ""} in the Challenge`
           : `${ko.length} bracket${ko.length > 1 ? "s" : ""} — not entered yet`,
-      href: "/challenge/picks",
+      href: "/challenge/knockout",
     });
   }
 
@@ -71,15 +73,12 @@ function buildYourGames(brackets: BracketSummary[]): YourGame[] {
     games.push({
       name: GAME_CATALOG.MATCH_DAY_3_PICKEM.challengeName ?? "Match Day Pickem",
       detail: "Your predictions",
-      href: "/challenge/md3/play",
+      href: "/challenge/md3",
     });
   }
 
   return games;
 }
-
-const SECONDARY_BTN =
-  "inline-flex h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-[18px] font-semibold text-pitch-dark transition-colors hover:bg-surface-sunk active:scale-[0.97]";
 
 function PoolStateBadge({ format, now }: { format: PoolFormat; now: Date }) {
   const label = resolveGamePhase(format, now).label;
@@ -109,11 +108,15 @@ function SignedInHub({
         <form action={signOutAction}>
           <button
             type="submit"
-            className="shrink-0 rounded-full bg-surface-sunk px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-line-soft"
+            className="inline-flex min-h-[44px] shrink-0 items-center rounded-full bg-surface-sunk px-4 text-xs font-semibold text-ink-2 hover:bg-line-soft"
           >
             Sign out
           </button>
         </form>
+      </div>
+
+      <div className="mt-4">
+        <HeroCarousel now={now} />
       </div>
 
       <YourGames games={games} />
@@ -146,10 +149,10 @@ function SignedInHub({
           </ul>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Link href="/join" className={SECONDARY_BTN}>
+            <Link href="/join" className={SECONDARY_BUTTON}>
               Join a pool
             </Link>
-            <Link href="/pool/create" className={SECONDARY_BTN}>
+            <Link href="/pool/create" className={SECONDARY_BUTTON}>
               Create a pool
             </Link>
           </div>

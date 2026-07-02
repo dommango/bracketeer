@@ -5,6 +5,7 @@ import { getPlayerDetail, type PlayerDetail } from "@/lib/pool/player-detail";
 import { roundLabel } from "@/lib/pool/rounds";
 import { Flag } from "../../Flag";
 import { TeamLink } from "../../TeamLink";
+import { PlayerProfileCard } from "../../PlayerProfileCard";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,8 @@ export default async function PlayerPage({
           </span>
         ) : null}
       </div>
+
+      <PlayerProfileCard profile={detail.profile} />
 
       {detail.odds ? (
         <section>

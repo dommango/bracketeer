@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { GAME_CATALOG, gameStateLine } from "@/lib/pool/games";
-
-const PRIMARY_BTN =
-  "inline-flex h-11 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.97]";
+import { PRIMARY_BUTTON } from "@/lib/ui/buttons";
 
 // Shown when the viewer isn't in any pool yet (on the hub and the sign-in panel):
 // a full promo for running your own private Knockout Stage Pool with friends —
@@ -20,7 +18,7 @@ export function StartAPoolPromo({ now }: { now: Date }) {
       <p className="mt-2 text-[13px] font-semibold text-pitch-dark">
         {gameStateLine("KNOCKOUT", now)}
       </p>
-      <Link href="/pool/create?game=knockout" className={`mt-3 ${PRIMARY_BTN}`}>
+      <Link href="/pool/create?game=knockout" className={`mt-3 ${PRIMARY_BUTTON}`}>
         Create a pool →
       </Link>
       <p className="mt-3 text-center text-[12px] text-ink-3">

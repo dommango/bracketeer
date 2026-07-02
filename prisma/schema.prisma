@@ -129,6 +129,10 @@ model Tournament {
   entries    Entry[]
   outrights        TeamOutright[]
   topScorers       TopScorer[]
+  statLeaders      StatLeader[]
+  teamStats        TeamStat[]
+  playerProfiles   PlayerProfile[]
+  squads           TeamSquad[]
   goalscorerOdds   GoalscorerOutright[]
   chatMessages     ChatMessage[]
 }
@@ -184,6 +188,8 @@ model Match {
   lineup     MatchLineup?
   playerStats MatchPlayerStats?
   injuries   MatchInjury?
+  props       MatchProps?
+  scorerOdds  MatchScorerOdds[]
 
   @@unique([tournamentId, matchNo])
   @@index([tournamentId])
@@ -263,6 +269,39 @@ model MatchOdds {
   raw         Json     // raw decimal prices, for audit / re-derivation
   source      String   // "the-odds-api"
   fetchedAt   DateTime
+}
+
+// Per-match additional ("props") markets from The Odds API's per-event endpoint:
+// both-teams-to-score. Separate row from MatchOdds because it's filled by a distinct
+// per-event poller on its own snapshot cadence — its fetchedAt gates that poller
+// independently of the h2h fetchedAt. Optional integration; absent = no data.
+model MatchProps {
+  id          String   @id @default(cuid())
+  matchId     String   @unique
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  bttsYesProb Float? // implied P(both teams score) after stripping the two-way overround
+  bttsNoProb  Float? // implied P(not both score)
+  source      String   // "the-odds-api"
+  fetchedAt   DateTime
+}
+
+// Per-match anytime-goalscorer prices: one row per player quoted to score in a
+// given match. Replaced wholesale per match each poll (like the Golden Boot board,
+// but match-scoped). scoreProb is the raw inverse price (NOT normalized across
+// players — multiple can score). Player names are the bookmaker's verbatim spelling;
+// a flag is resolved at read time via the never-guess matcher. Optional; absent = none.
+model MatchScorerOdds {
+  id         String   @id @default(cuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerName String
+  scoreProb  Float // implied P(scores) = clamp(1/decimal), not normalized
+  decimal    Float // raw decimal price, for audit / re-derivation
+  source     String // "the-odds-api"
+  fetchedAt  DateTime
+
+  @@unique([matchId, playerName])
+  @@index([matchId])
 }
 
 // Tournament-winner futures (outrights): one row per team with the market's
@@ -392,6 +431,103 @@ model TopScorer {
   fetchedAt    DateTime
 
   @@unique([tournamentId, rank])
+}
+
+// Secondary stat leaderboards beyond the Golden Boot: assist leaders and the
+// disciplinary boards. One row per player per category, ranked; replaced wholesale
+// per category by the poller (mirrors TopScorer). `value` is the ranked stat for
+// the category (assists, yellow cards, or red cards). Kept in one table (vs three)
+// so the board UI and queries stay uniform.
+enum StatCategory {
+  ASSISTS
+  YELLOW_CARDS
+  RED_CARDS
+}
+
+model StatLeader {
+  id           String       @id @default(cuid())
+  tournamentId String
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  category     StatCategory
+  rank         Int // 1-based position within the category
+  playerName   String
+  teamCode     String // internal 3-letter code
+  value        Int // the category's ranked stat: assists / yellow cards / red cards
+  appearances  Int?
+  raw          Json
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, category, rank])
+}
+
+// Per-team tournament form / record, from API-Football /teams/statistics. One row
+// per team; upserted by the poller (daily — these move slowly). Powers the team
+// page's form card. `form` is the recent-results string (e.g. "WWDLW").
+model TeamStat {
+  id            String     @id @default(cuid())
+  tournamentId  String
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamCode      String // internal 3-letter code
+  played        Int
+  wins          Int
+  draws         Int
+  losses        Int
+  goalsFor      Int
+  goalsAgainst  Int
+  cleanSheets   Int
+  failedToScore Int
+  form          String? // recent results, most recent last (e.g. "WWDLW")
+  raw           Json
+  fetchedAt     DateTime
+
+  @@unique([tournamentId, teamCode])
+}
+
+// Per-player tournament profile (bio + season stat line), from API-Football
+// /players. Upserted by the poller's paginated sweep, keyed by the provider player
+// id. Powers the profile card on the player drill-down page; joined by name.
+model PlayerProfile {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  externalId   Int // provider player id
+  playerName   String
+  teamCode     String? // internal 3-letter code when resolvable
+  firstName    String?
+  lastName     String?
+  age          Int?
+  nationality  String?
+  height       String? // e.g. "185 cm"
+  position     String?
+  photoUrl     String?
+  appearances  Int?
+  minutes      Int?
+  goals        Int?
+  assists      Int?
+  shots        Int?
+  rating       Float? // average match rating
+  yellowCards  Int?
+  redCards     Int?
+  raw          Json
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, externalId])
+  @@index([tournamentId, playerName])
+}
+
+// A national-team squad (roster), from API-Football /players/squads. One row per
+// team; `players` is the roster as JSON ([{name, number, position, age}]). Upserted
+// by the poller (daily — rosters are static once named). Powers the team roster card.
+model TeamSquad {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamCode     String // internal 3-letter code
+  players      Json // SquadPlayer[]: { name, number, position, age }
+  raw          Json
+  fetchedAt    DateTime
+
+  @@unique([tournamentId, teamCode])
 }
 
 // ---------------------------------------------------------------------------

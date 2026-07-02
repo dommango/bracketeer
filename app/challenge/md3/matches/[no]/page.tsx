@@ -6,7 +6,9 @@ import {
 } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
 import { getMd3ChallengeView } from "@/lib/pool/md3-view";
+import { getDailyKnockoutView } from "@/lib/pool/daily-knockout-view";
 import { isMd3MatchNo } from "@/lib/pool/match-day-3";
+import { isDailyKnockoutMatchNo } from "@/lib/games/daily-pickem/scope";
 import { ChallengeMatchDetail } from "@/app/challenge/ChallengeMatchDetail";
 import { ChallengeChat } from "@/app/challenge/ChallengeChat";
 
@@ -28,17 +30,19 @@ export default async function Md3ChallengeMatchPage({
   const detail = await getChallengeMatchDetail(tournamentId, matchNo);
   if (!detail) notFound();
 
-  // Surface the viewer's own scoreline prediction on the 24 MD3 fixtures (this
-  // page also resolves non-MD3 matches via team/venue drill-downs, which have no
-  // MD3 pick).
+  // Surface the viewer's own scoreline prediction — group fixtures from the MD3
+  // view, knockout fixtures from the daily-knockout view. This page also resolves
+  // matches with no pick (team/venue drill-downs), which simply show no prediction.
   let yourScore: { home: number; away: number; points: number | null } | null = null;
-  if (isMd3MatchNo(matchNo)) {
-    const user = await getSessionUser();
-    if (user) {
-      const view = await getMd3ChallengeView(tournamentId, user.id);
-      const f = view.fixtures.find((x) => x.matchNo === matchNo);
-      if (f?.pred) yourScore = { home: f.pred.home, away: f.pred.away, points: f.points };
-    }
+  const user = await getSessionUser();
+  if (user && isMd3MatchNo(matchNo)) {
+    const view = await getMd3ChallengeView(tournamentId, user.id);
+    const f = view.fixtures.find((x) => x.matchNo === matchNo);
+    if (f?.pred) yourScore = { home: f.pred.home, away: f.pred.away, points: f.points };
+  } else if (user && isDailyKnockoutMatchNo(matchNo)) {
+    const view = await getDailyKnockoutView(tournamentId, user.id);
+    const f = view.fixtures.find((x) => x.matchNo === matchNo);
+    if (f?.pred) yourScore = { home: f.pred.home, away: f.pred.away, points: f.points };
   }
 
   return (

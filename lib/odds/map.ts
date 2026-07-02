@@ -106,6 +106,29 @@ export function toGoalscorerProbs(
   }));
 }
 
+export interface ScorerProb {
+  playerName: string;
+  decimal: number;
+  scoreProb: number;
+}
+
+// Implied anytime-goalscorer probability per player for a single match: the raw
+// inverse price clamped to [0,1]. Unlike the tournament-wide Golden Boot market,
+// these are NOT normalized across players — multiple players can score in one
+// match, so the events aren't mutually exclusive and the probs needn't sum to 1.
+// Bad/zero prices are dropped, and ties keep the input order.
+export function toScorerProbs(
+  entries: Array<{ playerName: string; decimal: number }>,
+): ScorerProb[] {
+  return entries
+    .filter((e) => e.playerName && e.decimal > 0)
+    .map((e) => ({
+      playerName: e.playerName,
+      decimal: e.decimal,
+      scoreProb: Math.min(1, 1 / e.decimal),
+    }));
+}
+
 // Provider name -> our 3-letter code. Built from TEAMS (code->name) plus aliases
 // for names The Odds API spells differently. Unknown names return null (skipped,
 // never guessed); scripts/verify-odds.ts surfaces any unmatched name vs live data.

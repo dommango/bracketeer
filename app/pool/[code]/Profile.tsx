@@ -3,8 +3,7 @@ import type { EntrySelections, TeamPick } from "@/lib/pool/pick-analytics";
 import { ROUND_ORDER, roundLabel } from "@/lib/pool/rounds";
 import { teamColor } from "@/lib/teams/colors";
 import { Flag } from "./Flag";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+import { LABEL } from "@/lib/ui/labels";
 
 const HIT_STYLE: Record<KnockoutHit["result"], { bg: string; border: string; text: string }> = {
   hit: { bg: "var(--positive)", border: "var(--positive)", text: "#fff" },

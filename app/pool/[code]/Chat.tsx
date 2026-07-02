@@ -78,7 +78,18 @@ export function Chat({
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [gifOpen, setGifOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // Whether the view was near the bottom before the last messages update, so we
+  // don't yank a user who has scrolled up to read history.
+  const nearBottomRef = useRef(true);
+  const initialMountRef = useRef(true);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -100,12 +111,17 @@ export function Chat({
   );
 
   useEffect(() => {
-    // Newest messages render at the bottom (normal chat), so keep the view pinned
-    // there as they arrive. Scroll the message list's own scroll box, NOT
-    // scrollIntoView — that scrolls every ancestor including the window, which
-    // yanked the whole match-detail page down to its embedded chat on mount.
-    const list = bottomRef.current?.parentElement;
-    if (list) list.scrollTop = list.scrollHeight;
+    // Newest messages render at the bottom (normal chat). Jump straight to the
+    // bottom on first mount (no animation), then only follow new messages when the
+    // user is already near the bottom — otherwise leave them where they scrolled.
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      return;
+    }
+    if (nearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Single POST path shared by the text composer and the GIF picker. Returns
@@ -130,6 +146,8 @@ export function Chat({
           return false;
         }
         setReplyTo(null);
+        // Always follow my own message down to the bottom, even if I'd scrolled up.
+        nearBottomRef.current = true;
         await refresh();
         return true;
       } catch {
@@ -172,7 +190,11 @@ export function Chat({
 
   return (
     <div className="rounded-2xl border border-line bg-surface">
-      <div className="max-h-96 space-y-3 overflow-y-auto p-4">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="max-h-96 space-y-3 overflow-y-auto p-4"
+      >
         {messages.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-3">No messages yet. Say hello 👋</p>
         ) : (
@@ -244,7 +266,7 @@ export function Chat({
               onChange={(e) => setBody(e.target.value)}
               maxLength={2000}
               placeholder={replyTo ? "Write a reply…" : placeholder}
-              className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none transition-[border-color,box-shadow] focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]"
+              className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-base text-ink outline-none transition-[border-color,box-shadow] focus:border-pitch focus:shadow-[0_0_0_3px_rgba(11,107,58,0.15)]"
             />
             <button
               type="submit"
@@ -278,28 +300,41 @@ function SystemRow({ m }: { m: ChatMessage }) {
 
 function ReactionBar({
   reactions,
+  interactive,
   onToggle,
 }: {
   reactions: ReactionGroup[];
+  // Read-only viewers get non-interactive spans, not buttons that look tappable.
+  interactive: boolean;
   onToggle: (emoji: string) => void;
 }) {
   if (reactions.length === 0) return null;
   return (
-    <div className="mt-1 flex flex-wrap gap-1">
-      {reactions.map((r) => (
-        <button
-          key={r.emoji}
-          onClick={() => onToggle(r.emoji)}
-          className={`inline-flex items-center gap-0.5 rounded-full border px-1.5 py-px text-[11px] tabular-nums transition-colors ${
-            r.mine
-              ? "border-pitch bg-pitch-tint text-pitch-dark"
-              : "border-line bg-surface text-ink-2 hover:bg-surface-sunk"
-          }`}
-        >
-          <span>{r.emoji}</span>
-          <span>{r.count}</span>
-        </button>
-      ))}
+    // Negative margin keeps the row visually compact while each pill still offers a
+    // ~44px tall touch target.
+    <div className="mt-1 flex flex-wrap gap-1 -my-1.5">
+      {reactions.map((r) => {
+        const cls = `inline-flex min-h-[44px] items-center gap-0.5 rounded-full border px-2.5 py-1 text-[12px] tabular-nums transition-colors ${
+          r.mine
+            ? "border-pitch bg-pitch-tint text-pitch-dark"
+            : "border-line bg-surface text-ink-2"
+        }`;
+        return interactive ? (
+          <button
+            key={r.emoji}
+            onClick={() => onToggle(r.emoji)}
+            className={`${cls} hover:bg-surface-sunk`}
+          >
+            <span>{r.emoji}</span>
+            <span>{r.count}</span>
+          </button>
+        ) : (
+          <span key={r.emoji} className={cls}>
+            <span>{r.emoji}</span>
+            <span>{r.count}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -376,12 +411,12 @@ function MessageRow({
       </div>
 
       {interactive && pickerOpen ? (
-        <div className="mt-1 flex gap-1 rounded-full border border-line bg-surface px-2 py-1 shadow-[var(--shadow-sm)]">
+        <div className="mt-1 flex gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 shadow-[var(--shadow-sm)]">
           {REACTIONS.map((emoji) => (
             <button
               key={emoji}
               onClick={() => onReact(emoji)}
-              className="rounded-full px-1 text-base leading-none transition-transform hover:scale-125"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-lg leading-none transition-transform hover:scale-125 hover:bg-surface-sunk"
             >
               {emoji}
             </button>
@@ -389,7 +424,7 @@ function MessageRow({
         </div>
       ) : null}
 
-      <ReactionBar reactions={m.reactions} onToggle={interactive ? onReact : () => {}} />
+      <ReactionBar reactions={m.reactions} interactive={interactive} onToggle={onReact} />
     </div>
   );
 }
@@ -441,7 +476,7 @@ function GifPicker({
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search GIFs…"
         aria-label="Search GIFs"
-        className="mb-2 h-9 w-full rounded-full border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-pitch"
+        className="mb-2 h-10 w-full rounded-full border border-line bg-surface px-3 text-base text-ink outline-none focus:border-pitch"
       />
       <div className="grid max-h-52 grid-cols-3 gap-1.5 overflow-y-auto sm:grid-cols-4">
         {loading && results.length === 0 ? (
@@ -482,19 +517,21 @@ function MessageActions({
   onReply: () => void;
   onOpenPicker: () => void;
 }) {
+  // 44px touch targets, but negative vertical margins pull the stacked pair back so
+  // the row stays as compact as before.
   return (
-    <div className="flex shrink-0 flex-col gap-0.5 opacity-40 transition-opacity group-hover:opacity-100">
+    <div className="-my-3 flex shrink-0 flex-col justify-center opacity-40 transition-opacity group-hover:opacity-100">
       <button
         onClick={onOpenPicker}
         aria-label="React"
-        className="rounded-full px-1 text-[13px] leading-none text-ink-3 hover:text-ink"
+        className="-my-1 flex h-11 w-11 items-center justify-center rounded-full text-[15px] leading-none text-ink-3 hover:bg-surface-sunk hover:text-ink"
       >
         🙂
       </button>
       <button
         onClick={onReply}
         aria-label="Reply"
-        className="rounded-full px-1 text-[13px] leading-none text-ink-3 hover:text-ink"
+        className="-my-1 flex h-11 w-11 items-center justify-center rounded-full text-[15px] leading-none text-ink-3 hover:bg-surface-sunk hover:text-ink"
       >
         ↩
       </button>

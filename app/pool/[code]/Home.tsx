@@ -13,8 +13,7 @@ import type { ChatView } from "@/lib/pool/chat";
 import type { PoolFormat } from "@/lib/pool/manage";
 import { prizeTeaser, GAME_CATALOG } from "@/lib/pool/games";
 import { DISPLAY_TZ } from "@/lib/tz";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+import { LABEL } from "@/lib/ui/labels";
 
 // Short time-of-day in the pool's display zone (Eastern), matching Chat.tsx's
 // timeLabel so timestamps read identically across the app — not the viewer's zone.
@@ -216,7 +215,7 @@ function StatsStrip({ stats }: { stats: HomeStats }) {
   return (
     <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
       <div className="flex items-center gap-2 px-4 py-3">
-        <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Accuracy</span>
+        <span className={LABEL}>Accuracy</span>
         <span className="ml-1 font-semibold text-ink">
           <span className="font-mono tabular-nums">
             {accuracy.hits}/{accuracy.decided}
@@ -229,7 +228,7 @@ function StatsStrip({ stats }: { stats: HomeStats }) {
       </div>
       {boldest ? (
         <div className="flex items-center gap-2 px-4 py-3">
-          <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Boldest</span>
+          <span className={LABEL}>Boldest</span>
           <span className="ml-1 truncate font-semibold text-ink">{boldest.pickName}</span>
           <span className="shrink-0 text-xs text-ink-3">{boldest.roundLabel}</span>
           <span className="ml-auto shrink-0 text-xs text-ink-3">
@@ -247,7 +246,7 @@ function ContextStrip({ mover }: { mover: HomeView["topMover"] }) {
   return (
     <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
       <div className="flex items-center gap-2 px-4 py-3">
-        <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Top mover</span>
+        <span className={LABEL}>Top mover</span>
         <span className="ml-1 truncate font-semibold text-ink">{mover.label}</span>
         {mover.rankDelta !== 0 ? (
           <span
@@ -310,12 +309,6 @@ function KnockoutNotice({
               <span className="text-sm text-pitch-dark">at the Round of 32 kickoff</span>
             )}
           </div>
-          <Link
-            href="/bracket"
-            className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-pitch transition-colors hover:text-pitch-dark hover:underline"
-          >
-            Enter the Challenge →
-          </Link>
         </>
       ) : (
         <>
@@ -424,7 +417,7 @@ export function Home({
 
       <section>
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+          <h2 className={LABEL}>
             Leaderboard
             <span className="ml-1.5 font-medium normal-case tracking-normal text-ink-4">
               {entryCount} {entryCount === 1 ? "entry" : "entries"}
@@ -448,7 +441,7 @@ export function Home({
       bracket.groups.some((g) => g.first || g.second || g.table.some((r) => r.played > 0)) ? (
         <section>
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
+            <h2 className={LABEL}>
               Group standings
             </h2>
             <Link

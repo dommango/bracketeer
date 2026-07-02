@@ -13,7 +13,6 @@ import type { ApnsPayload } from "@/lib/push/apns";
 import {
   resolveBracket,
   validateKnockoutWinner,
-  mergeThirdAdvance,
   findKnockoutSeatingConflict,
   orientScoresToSlot,
 } from "@/lib/pool/bracket";
@@ -360,13 +359,9 @@ export async function setGroupStandings(
 
     let thirdAdvance = current.thirdAdvance;
     if (input.thirdAdvance) {
-      const cleaned = input.thirdAdvance
+      thirdAdvance = input.thirdAdvance
         .map((c) => (c || "").toUpperCase())
         .filter((c) => c && TEAMS[c]);
-      // Same eight advancers → keep the stored order: the order drives R32
-      // seating (resolveR32Slots backtracks in list order), so a re-save of the
-      // same set must never re-seat the live bracket.
-      thirdAdvance = mergeThirdAdvance(current.thirdAdvance ?? [], cleaned);
     }
 
     const next: Results = {
@@ -383,7 +378,8 @@ export async function setGroupStandings(
 
     // Reject a standings edit whose re-seated bracket would orphan a recorded
     // knockout winner — fixture mapping, daily scoring and every seed-derived
-    // surface read the seating, so an inconsistent reorder must not be written.
+    // surface read the seating. Clear the affected result first if the standing
+    // really was wrong (see findKnockoutSeatingConflict).
     const seating = findKnockoutSeatingConflict(next);
     if (seating) throw new Error(seating);
 

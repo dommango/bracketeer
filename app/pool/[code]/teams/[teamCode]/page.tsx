@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPoolByCode } from "@/lib/pool/queries";
+import { getPoolByCode, getTeamStats, getSquad } from "@/lib/pool/queries";
 import { getTeamDetail, type TeamDetail } from "@/lib/pool/team-detail";
+import { TeamForm } from "../../TeamForm";
+import { TeamSquad } from "../../TeamSquad";
 import { roundLabel } from "@/lib/pool/rounds";
 import { formatKickoff } from "@/lib/pool/format";
-import { teamColor } from "@/lib/teams/colors";
 import { Flag } from "../../Flag";
 
 export const dynamic = "force-dynamic";
@@ -139,6 +140,11 @@ export default async function TeamPage({
   const detail = await getTeamDetail(pool.id, pool.tournamentId, teamCode.toUpperCase());
   if (!detail) notFound();
 
+  const [teamStats, squad] = await Promise.all([
+    getTeamStats(pool.tournamentId, teamCode.toUpperCase()),
+    getSquad(pool.tournamentId, teamCode.toUpperCase()),
+  ]);
+
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between">
@@ -161,22 +167,21 @@ export default async function TeamPage({
         </div>
         {detail.odds ? (
           <span className="shrink-0 text-right">
-            <span
-              className="block font-display text-2xl tabular-nums"
-              style={{ color: teamColor(detail.code) }}
-            >
+            <span className="block font-display text-2xl tabular-nums text-ink">
               {Math.round(detail.odds.winProb * 100)}%
             </span>
-            <span className="block text-[10px] font-bold uppercase tracking-[0.06em] text-ink-4">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
               to win
             </span>
           </span>
         ) : null}
       </div>
 
+      <TeamForm stats={teamStats} />
       <GroupTable detail={detail} />
       <Fixtures detail={detail} code={code} />
       <Backers detail={detail} code={code} />
+      <TeamSquad squad={squad} />
     </section>
   );
 }

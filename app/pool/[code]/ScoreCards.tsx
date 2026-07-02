@@ -7,6 +7,8 @@ import { formatKickoff, formatMatchDate } from "@/lib/pool/format";
 import { VenueLine } from "./VenueLine";
 import { WinProbBar } from "./WinProbBar";
 import { roundLabel } from "@/lib/pool/rounds";
+import { ROUND_ACCENT } from "@/lib/pool/round-accent";
+import { LiveBadge } from "./LiveBadge";
 
 // code → group letter, for labelling a group match by its actual group (A–L).
 const TEAM_GROUP: Record<string, string> = Object.fromEntries(
@@ -22,30 +24,11 @@ function roundLabelFor(roundCode: string, homeCode: string | null, awayCode: str
   return roundLabel(roundCode);
 }
 
-const ROUND_ACCENT: Record<string, string> = {
-  GROUP: "var(--pitch)",
-  R32: "var(--round-r32)",
-  R16: "var(--round-r16)",
-  QF: "var(--round-qf)",
-  SF: "var(--round-sf)",
-  BRONZE: "var(--gold-dark)",
-  FINAL: "var(--round-final)",
-};
-
 const teamName = (code: string | null): string =>
   (code && TEAMS[code as keyof typeof TEAMS]) || "TBD";
 
 const CARD_CLASS =
   "flex h-full flex-col rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch";
-
-function LiveBadge({ minute }: { minute?: number | null }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
-      <span className="h-1.5 w-1.5 rounded-full bg-current [animation:live-pulse_1.4s_ease-out_infinite]" />
-      {minute != null ? `${minute}'` : "Live"}
-    </span>
-  );
-}
 
 function TeamRow({
   code,

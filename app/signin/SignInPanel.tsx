@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signIn } from "@/auth";
 import { googleEnabled, facebookEnabled, emailEnabled } from "@/lib/env";
 import { PublicGames } from "@/app/PublicGames";
-import { StartAPoolPromo } from "@/app/StartAPoolPromo";
+import { HeroShell } from "@/app/HeroShell";
 
 // Only same-origin relative paths are honored as a post-sign-in destination, so
 // a crafted ?callbackUrl can't turn sign-in into an open redirect. Reject
@@ -43,21 +43,7 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
   const now = new Date();
   return (
     <main className="mx-auto max-w-2xl px-5 pb-8 pt-12">
-      <div className="relative overflow-hidden rounded-[32px] bg-pitch p-8 text-white shadow-[var(--shadow-lg)]">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: "url(/brand-26-pattern.avif)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)",
-          }}
-        />
+      <HeroShell overlay="full">
         <div className="relative">
           <div
             className="inline-block max-w-full rounded-2xl p-4"
@@ -77,7 +63,7 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
             </p>
           </div>
         </div>
-      </div>
+      </HeroShell>
 
       {error ? (
         <p className="mt-4 rounded-xl border border-[var(--negative)]/25 bg-[var(--negative-tint)] px-4 py-3 text-sm text-[var(--negative)]">
@@ -149,8 +135,6 @@ export function SignInPanel({ error, dest }: { error?: string; dest: string }) {
       </p>
 
       <PublicGames now={now} />
-
-      <StartAPoolPromo now={now} />
     </main>
   );
 }

@@ -9,6 +9,7 @@ import {
   orientToHome,
   toSpreadProbs,
   orientSpreadToHome,
+  toScorerProbs,
 } from "./map";
 
 describe("toSpreadProbs", () => {
@@ -80,6 +81,30 @@ describe("toOutrightProbs", () => {
   });
   it("returns empty when nothing resolves", () => {
     expect(toOutrightProbs([{ teamName: "Atlantis", decimal: 3 }])).toEqual([]);
+  });
+});
+
+describe("toScorerProbs", () => {
+  it("keeps raw inverse prices without normalizing across players", () => {
+    const out = toScorerProbs([
+      { playerName: "Mbappé", decimal: 2.0 },
+      { playerName: "Kane", decimal: 2.5 },
+    ]);
+    expect(out).toEqual([
+      { playerName: "Mbappé", decimal: 2.0, scoreProb: 0.5 },
+      { playerName: "Kane", decimal: 2.5, scoreProb: 0.4 },
+    ]);
+    // Independent events → sum may exceed 1 (not normalized).
+    expect(out[0].scoreProb + out[1].scoreProb).toBeGreaterThan(0.8);
+  });
+  it("clamps sub-evens prices to 1 and drops bad/blank entries", () => {
+    expect(
+      toScorerProbs([
+        { playerName: "Lock", decimal: 0.8 }, // 1/0.8 = 1.25 → clamp 1
+        { playerName: "", decimal: 3 }, // blank → dropped
+        { playerName: "Bad", decimal: 0 }, // non-positive → dropped
+      ]),
+    ).toEqual([{ playerName: "Lock", decimal: 0.8, scoreProb: 1 }]);
   });
 });
 

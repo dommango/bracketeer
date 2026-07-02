@@ -43,7 +43,7 @@ export interface GoalscorerEntry {
   decimal: number;
 }
 
-interface ApiOutcome { name: string; price: number; point?: number }
+interface ApiOutcome { name: string; price: number; point?: number; description?: string }
 interface ApiMarket { key: string; outcomes: ApiOutcome[] }
 interface ApiBookmaker { markets: ApiMarket[] }
 export interface ApiEvent {

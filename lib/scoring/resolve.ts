@@ -11,6 +11,7 @@
 // in-app builder only.
 
 import { GROUPS, R32 } from "./data";
+import { THIRD_PLACE_TABLE, THIRD_PLACE_MATCH_ORDER } from "./third-place-table";
 import type { GroupLetter, Picks, TeamCode } from "./types";
 
 export type ResolvedR32 = Record<number, { a: TeamCode | null; b: TeamCode | null }>;
@@ -46,13 +47,47 @@ function eligibleThirdTeams(
   return thirdTeams.filter((t) => groupList.includes(teamGroup[t]));
 }
 
-// Assign each picked 3rd-place team to exactly one R32 slot. Greedy first-fit
-// fails for many valid pick sets; backtracking finds a full assignment when
-// one exists.
+// The official FIFA seating for a COMPLETE set of eight third-place teams, via
+// the Annex C placement table (third-place-table.ts). Returns null unless the
+// eight teams come from eight distinct groups that form a real qualifying
+// combination — i.e. a partial/degenerate draft, which falls back to
+// backtracking below. Keyed by slot (`${matchId}b`, matching resolveR32Slots).
+function officialThirdAssignment(
+  thirdTeams: TeamCode[],
+  teamGroup: Record<TeamCode, GroupLetter>,
+): Record<string, TeamCode> | null {
+  if (thirdTeams.length !== 8) return null;
+  const groupToTeam: Record<string, TeamCode> = {};
+  for (const t of thirdTeams) groupToTeam[teamGroup[t]] = t;
+  const key = Object.keys(groupToTeam).sort().join("");
+  if (key.length !== 8) return null; // two thirds shared a group — not a real combo
+  const value = THIRD_PLACE_TABLE[key];
+  if (!value) return null;
+  // Derive each match's third-slot side from the R32 data (not assuming "b"), so
+  // the slot key matches resolveR32Slots even if a third ever sits on the a side.
+  const sideOf: Record<number, "a" | "b"> = {};
+  for (const m of R32) {
+    if ("third" in m.a) sideOf[m.id] = "a";
+    else if ("third" in m.b) sideOf[m.id] = "b";
+  }
+  const assignment: Record<string, TeamCode> = {};
+  THIRD_PLACE_MATCH_ORDER.forEach((mid, i) => {
+    assignment[`${mid}${sideOf[mid]}`] = groupToTeam[value[i]];
+  });
+  return assignment;
+}
+
+// Assign each picked 3rd-place team to exactly one R32 slot. A complete set of 8
+// uses FIFA's official placement table (the real bracket + full user brackets);
+// partial drafts fall back to backtracking (greedy first-fit strands many valid
+// sets, so we search for a full assignment when one exists).
 function assignThirdPlaceTeams(
   thirdTeams: TeamCode[],
   teamGroup: Record<TeamCode, GroupLetter>,
 ): Record<string, TeamCode> {
+  const official = officialThirdAssignment(thirdTeams, teamGroup);
+  if (official) return official;
+
   const slots = collectThirdPlaceSlots();
   const assignment: Record<string, TeamCode> = {};
   const used = new Set<TeamCode>();

@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/pool/access";
 import { getTournamentIdBySlug, DEFAULT_TOURNAMENT_SLUG } from "@/lib/pool/queries";
-import { getMd3EntryView } from "@/lib/pool/md3-view";
-import { getMd3ChallengeLeaderboard } from "@/lib/challenge/leaderboard";
-import { Md3PickBreakdown } from "../../Md3PickBreakdown";
+import { getDailyKnockoutEntryView } from "@/lib/pool/daily-knockout-view";
+import { getDailyKnockoutLeaderboard } from "@/lib/challenge/leaderboard";
+import { DailyKnockoutBreakdown } from "../../DailyKnockoutBreakdown";
 
 export const dynamic = "force-dynamic";
 
-export default async function Md3ChallengeEntryPage({
+export default async function DailyKnockoutEntryPage({
   params,
 }: {
   params: Promise<{ entryId: string }>;
@@ -20,12 +20,12 @@ export default async function Md3ChallengeEntryPage({
   const [entry, board] = await Promise.all([
     // Another player's scorelines stay hidden per fixture until kickoff; the
     // owner sees their own. Points/standing remain public on the board.
-    getMd3EntryView(tournamentId, entryId, user?.id ?? null),
-    getMd3ChallengeLeaderboard(),
+    getDailyKnockoutEntryView(tournamentId, entryId, user?.id ?? null),
+    getDailyKnockoutLeaderboard(),
   ]);
   if (!entry) notFound();
 
   const rank = board.find((r) => r.entryId === entryId)?.rank ?? null;
 
-  return <Md3PickBreakdown label={entry.label} view={entry.view} rank={rank} />;
+  return <DailyKnockoutBreakdown label={entry.label} view={entry.view} rank={rank} />;
 }

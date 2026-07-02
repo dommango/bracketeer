@@ -1,19 +1,15 @@
 import Link from "next/link";
-import { GAME_CATALOG, resolveGamePhase, gameStateLine, prizeTeaser, md3DateRange } from "@/lib/pool/games";
+import { GAME_CATALOG, resolveGamePhase, gameStateLine, prizeTeaser, koPickemDateRange } from "@/lib/pool/games";
 import { isEarlyBuilderOpen } from "@/lib/pool/knockout";
 import { kickoffFor } from "@/lib/scoring/schedule";
 import { R32Countdown } from "./pool/[code]/R32Countdown";
-
-const PRIMARY_BTN =
-  "inline-flex h-11 w-full items-center justify-center rounded-full bg-pitch px-[18px] font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.97]";
-const SECONDARY_BTN =
-  "inline-flex h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-[18px] font-semibold text-pitch-dark transition-colors hover:bg-surface-sunk active:scale-[0.97]";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/lib/ui/buttons";
 
 // Highlight pill flagging a game that's new this run, styled off the gold accent
 // so it stands apart from the neutral phase badges.
 function NewTag() {
   return (
-    <span className="shrink-0 rounded-full bg-gold-dark px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
+    <span className="shrink-0 rounded-full bg-gold px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink">
       New
     </span>
   );
@@ -41,10 +37,10 @@ export function PublicGames({ now }: { now: Date }) {
   );
 }
 
-// Match Day Pickem — the live group-stage scoreline game. Public challenge, so it's
-// play / leaderboard rather than create / join.
+// Match Day Pickem — the live knockout scoreline game. Public challenge, so it's
+// play / leaderboard rather than create / join. Free to play (no prize teaser).
 function Md3PromoCard({ now }: { now: Date }) {
-  const teaser = prizeTeaser("MATCH_DAY_3_PICKEM");
+  const range = koPickemDateRange();
   return (
     <div className="relative rounded-3xl border border-pitch/30 bg-pitch/5 p-[22px]">
       <div className="flex items-center justify-between gap-2">
@@ -60,23 +56,21 @@ function Md3PromoCard({ now }: { now: Date }) {
           href="/challenge/md3"
           className="after:absolute after:inset-0 after:rounded-3xl hover:underline"
         >
-          Predict every Match Day 3 scoreline
+          Predict every knockout scoreline
         </Link>
       </h2>
       <p className="mt-1 text-[13px] text-ink-3">
-        Final group-stage games · {md3DateRange()}
+        Round of 32 to the Final{range ? ` · ${range}` : ""}
       </p>
       <p className="mt-1.5 text-[13px] font-semibold text-pitch-dark">
         {gameStateLine("MATCH_DAY_3_PICKEM", now)}
       </p>
-      {teaser ? (
-        <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
-      ) : null}
+      <p className="mt-1 text-[13px] font-semibold text-pitch-dark">Free to play</p>
       <div className="relative z-10 mt-3 grid grid-cols-2 gap-2">
-        <Link href="/challenge/md3/play" className={PRIMARY_BTN}>
+        <Link href="/challenge/md3/play" className={PRIMARY_BUTTON}>
           Play
         </Link>
-        <Link href="/challenge/md3/leaderboard" className={SECONDARY_BTN}>
+        <Link href="/challenge/md3/leaderboard" className={SECONDARY_BUTTON}>
           Leaderboard
         </Link>
       </div>
@@ -96,7 +90,7 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
   return (
     <div className="relative rounded-3xl border border-gold/40 bg-gold-tint p-[22px]">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold-dark">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-gold-ink">
           Knockout Stage Bracket Games
         </p>
         <NewTag />
@@ -121,14 +115,14 @@ function KnockoutChallengeCard({ now }: { now: Date }) {
             : "Opens June 28 — picks open once the last 32 are set."}
       </p>
       {teaser ? (
-        <p className="mt-1 text-[13px] font-semibold text-gold-dark">🏆 {teaser}</p>
+        <p className="mt-1 text-[13px] font-semibold text-gold-ink">🏆 {teaser}</p>
       ) : null}
       {r32 ? (
         <div className="mt-3">
           <R32Countdown target={r32.toISOString()} label="Round of 32 kicks off in" />
         </div>
       ) : null}
-      <Link href="/bracket" className={`relative z-10 mt-3 ${PRIMARY_BTN}`}>
+      <Link href="/bracket" className={`relative z-10 mt-3 ${PRIMARY_BUTTON}`}>
         Build your bracket →
       </Link>
       <p className="relative z-10 mt-2 text-center text-[12px] text-ink-3">

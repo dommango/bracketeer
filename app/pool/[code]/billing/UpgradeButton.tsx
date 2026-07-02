@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { upgradePoolAction, type BillingState } from "./actions";
+import { PRIMARY_BUTTON } from "@/lib/ui/buttons";
 
 // Client wrapper so the upgrade CTA can surface inline errors (not-owner,
 // billing-off, Stripe failure) without a full-page error. On success the action
@@ -18,7 +19,7 @@ export function UpgradeButton({ code, disabled }: { code: string; disabled?: boo
       <button
         type="submit"
         disabled={pending || disabled}
-        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-pitch px-5 font-semibold text-white transition-colors hover:bg-pitch-dark active:scale-[0.99] disabled:opacity-60"
+        className={`${PRIMARY_BUTTON} disabled:opacity-60`}
       >
         {pending ? "Redirecting…" : "Upgrade to Premium"}
       </button>

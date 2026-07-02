@@ -1,10 +1,14 @@
-import { Skeleton } from "../Skeleton";
+import { Skeleton, SkeletonTabNav } from "../Skeleton";
 
 export default function LeaderboardLoading() {
   return (
-    <section aria-busy>
-      <Skeleton className="ml-1 h-3 w-28" />
-      <ol className="mt-2.5 space-y-2">
+    <section className="space-y-4" aria-busy>
+      <SkeletonTabNav />
+      <div className="flex items-center justify-between px-1">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <ol className="space-y-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <li key={i} className="rounded-2xl border border-line bg-surface p-4">
             <div className="flex items-center gap-3">

@@ -7,6 +7,9 @@ import type { ApiLineupEntry } from "@/lib/sports/lineups-parse";
 import type { ApiTopScorer } from "@/lib/sports/topscorers-parse";
 import type { ApiInjury } from "@/lib/sports/injuries-parse";
 import type { ApiFixturePlayerEntry } from "@/lib/sports/fixture-players-parse";
+import type { ApiTeamStatistics } from "@/lib/sports/team-stats-parse";
+import type { ApiPlayer } from "@/lib/sports/players-parse";
+import type { ApiSquad } from "@/lib/sports/squad-parse";
 
 export interface FinishedFixture {
   fixtureId: number; // numeric API id, used for events/stats sub-requests
@@ -210,6 +213,44 @@ export async function fetchTopScorers(signal?: AbortSignal): Promise<ApiTopScore
   return json.response ?? [];
 }
 
+// Secondary stat leaderboards — same provider shape as topscorers, one call each
+// returns the whole ranked board. Assist leaders and the two disciplinary boards.
+export async function fetchTopAssists(signal?: AbortSignal): Promise<ApiTopScorer[]> {
+  const url = `${env.SPORTS_API_BASE}/players/topassists?league=1&season=2026`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /topassists responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTopScorer[] };
+  return json.response ?? [];
+}
+
+export async function fetchTopYellowCards(signal?: AbortSignal): Promise<ApiTopScorer[]> {
+  const url = `${env.SPORTS_API_BASE}/players/topyellowcards?league=1&season=2026`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /topyellowcards responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTopScorer[] };
+  return json.response ?? [];
+}
+
+export async function fetchTopRedCards(signal?: AbortSignal): Promise<ApiTopScorer[]> {
+  const url = `${env.SPORTS_API_BASE}/players/topredcards?league=1&season=2026`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /topredcards responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTopScorer[] };
+  return json.response ?? [];
+}
+
 // Per-player match stats (ratings, minutes, goals, shots, passes) for a fixture.
 // Empty until the provider publishes them (live, finalized at full time). Parsing /
 // home-away assignment lives in fixture-players-parse.ts (env-free, unit-tested).
@@ -225,6 +266,56 @@ export async function fetchFixturePlayers(
   });
   if (!res.ok) throw new Error(`Sports API /fixtures/players responded ${res.status}`);
   const json = (await res.json()) as { response?: ApiFixturePlayerEntry[] };
+  return json.response ?? [];
+}
+
+// Per-team tournament statistics (form, W/D/L, goals, clean sheets). Returns the
+// single stats object, or null when the provider has none yet. Parsing lives in
+// team-stats-parse.ts (env-free, unit-tested). teamId is the provider's numeric id.
+export async function fetchTeamStatistics(
+  teamId: number,
+  signal?: AbortSignal,
+): Promise<ApiTeamStatistics | null> {
+  const url = `${env.SPORTS_API_BASE}/teams/statistics?league=1&season=2026&team=${teamId}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /teams/statistics responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiTeamStatistics | null };
+  return json.response ?? null;
+}
+
+// One page of the tournament player list (bio + season stats). API-Football paginates
+// at 20/page; the poller sweeps `total` pages. Returns the rows plus the page count.
+// Parsing lives in players-parse.ts (env-free, unit-tested).
+export async function fetchPlayersPage(
+  page: number,
+  signal?: AbortSignal,
+): Promise<{ players: ApiPlayer[]; totalPages: number }> {
+  const url = `${env.SPORTS_API_BASE}/players?league=1&season=2026&page=${page}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /players responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiPlayer[]; paging?: { total?: number | null } };
+  return { players: json.response ?? [], totalPages: json.paging?.total ?? 1 };
+}
+
+// A team's named squad (roster). Returns the raw response array (one team entry);
+// parsing lives in squad-parse.ts (env-free, unit-tested). teamId is the provider id.
+export async function fetchSquad(teamId: number, signal?: AbortSignal): Promise<ApiSquad[]> {
+  const url = `${env.SPORTS_API_BASE}/players/squads?team=${teamId}`;
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": env.SPORTS_API_KEY },
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Sports API /players/squads responded ${res.status}`);
+  const json = (await res.json()) as { response?: ApiSquad[] };
   return json.response ?? [];
 }
 

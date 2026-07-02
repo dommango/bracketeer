@@ -1,15 +1,26 @@
-import { Skeleton } from "./Skeleton";
+import { Skeleton, SkeletonMatchCard } from "./Skeleton";
 
-// Landing fallback: standing card + leaderboard list.
+// Landing fallback: score cards + standing card + leaderboard list, matching the
+// leading elements of Home.tsx (ScoreCards → StandingCard → Leaderboard).
 export default function HomeLoading() {
   return (
     <div className="space-y-4" aria-busy>
-      <div className="rounded-2xl border border-line bg-surface p-5">
-        <Skeleton className="h-3 w-28" />
-        <Skeleton className="mt-3 h-10 w-40" />
-        <Skeleton className="mt-3 h-4 w-2/3" />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <SkeletonMatchCard />
+        <SkeletonMatchCard />
       </div>
-      <ol className="mt-2.5 space-y-2">
+      <div className="rounded-2xl border border-line bg-surface p-4">
+        <Skeleton className="h-3 w-28" />
+        <div className="mt-1.5 flex items-end justify-between">
+          <Skeleton className="h-7 w-24" />
+          <Skeleton className="h-7 w-16" />
+        </div>
+        <Skeleton className="mt-2 h-4 w-2/3" />
+        <div className="mt-3 border-t border-line-soft pt-2.5">
+          <Skeleton className="h-4 w-40" />
+        </div>
+      </div>
+      <ol className="space-y-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <li key={i} className="rounded-2xl border border-line bg-surface p-4">
             <div className="flex items-center gap-3">

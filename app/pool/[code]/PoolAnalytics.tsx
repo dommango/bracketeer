@@ -3,8 +3,7 @@ import { TeamLink } from "./TeamLink";
 import { teamColor } from "@/lib/teams/colors";
 import type { PickAnalytics, PickTally } from "@/lib/pool/pick-analytics";
 import type { PoolStandouts, StandoutRow } from "@/lib/pool/standouts";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
+import { LABEL } from "@/lib/ui/labels";
 
 // One decimal, trailing ".0" dropped — EV points are fractional.
 function fmtEv(n: number): string {
@@ -165,7 +164,10 @@ export function PoolAnalytics({
           </div>
         ) : null}
 
-        {/* Most popular group winners */}
+        {/* Most popular group winners — only when the field actually picked them
+            (full-bracket pools). Knockout brackets have no group-winner picks, so
+            this is empty there and the section is hidden rather than showing dashes. */}
+        {groupWinners.some((g) => g.top) ? (
         <div>
           <p className={LABEL}>Group winner favorites</p>
           <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -194,6 +196,7 @@ export function PoolAnalytics({
             ))}
           </div>
         </div>
+        ) : null}
 
         {/* Contrarian champion calls */}
         {contrarian.length > 0 ? (
