@@ -20,14 +20,15 @@ describe("availableHeroSlides", () => {
     expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT", "MATCH_DAY_3_PICKEM"]);
   });
 
-  it("shows both live games (knockout first) once both are locked", () => {
-    // After the Round of 32 kickoff (knockout lock) — both games are live. The
-    // carousel keeps surfacing them, current stage (knockout) first, both "live".
+  it("drops MD3 once complete: only the knockout slide survives the R32 kickoff", () => {
+    // After the Round of 32 kickoff (knockout lock) MD3 finished the night
+    // before — advertising it as "Live now" was the bug. Only the genuinely
+    // live game keeps a slide.
     const r32 = kickoffFor(73);
     expect(r32).not.toBeNull();
     const now = new Date(r32!.getTime() + 1000);
     const slides = availableHeroSlides(now);
-    expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT", "MATCH_DAY_3_PICKEM"]);
-    expect(slides.every((s) => s.stateLine.toLowerCase().includes("live"))).toBe(true);
+    expect(slides.map((s) => s.format)).toEqual(["KNOCKOUT"]);
+    expect(slides[0].stateLine.toLowerCase()).toContain("live");
   });
 });

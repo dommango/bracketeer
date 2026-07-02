@@ -11,6 +11,7 @@ import type { PoolFormat } from "@/lib/pool/manage";
 import { KNOCKOUT_PICKS_OPEN_UTC } from "@/lib/pool/knockout";
 import { firstMd3Kickoff, lastMd3Kickoff } from "@/lib/pool/match-day-3";
 import { kickoffFor } from "@/lib/scoring/schedule";
+import { DISPLAY_TZ } from "@/lib/tz";
 import { PRIZES, isChallengeFormat } from "@/lib/challenge/prizes-config";
 import { formatPrize } from "@/lib/challenge/format-prize";
 
@@ -95,6 +96,24 @@ const KNOCKOUT_OPEN = new Date(KNOCKOUT_PICKS_OPEN_UTC);
 const KNOCKOUT_LOCK = kickoffFor(73) ?? new Date(KNOCKOUT_PICKS_OPEN_UTC);
 const FULL_START = kickoffFor(1) ?? new Date("2026-06-11T19:00:00Z");
 
+// A game is COMPLETE a settle-window after its last kickoff (match over, results
+// propagated) — without this every "live" phase lasted forever, so surfaces kept
+// advertising a finished game as "Live now". 6h ≈ match length + ET/pens + feed lag.
+const SETTLE_MS = 6 * 3_600_000;
+const MD3_COMPLETE = new Date(MD3_LAST_LOCK.getTime() + SETTLE_MS);
+const FINAL_KICKOFF = kickoffFor(104);
+const TOURNAMENT_COMPLETE = FINAL_KICKOFF
+  ? new Date(FINAL_KICKOFF.getTime() + SETTLE_MS)
+  : null;
+
+const COMPLETE_STATE: GameState = {
+  phase: "COMPLETE",
+  label: "Complete",
+  deadline: null,
+  creatable: false,
+  joinable: false,
+};
+
 // Pure, time-derived phase for a game. No DB — every boundary is a fixed instant.
 export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): GameState {
   const t = now.getTime();
@@ -118,13 +137,16 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
         joinable: true,
       };
     }
-    return {
-      phase: "LOCKED_LIVE",
-      label: "Locked · live",
-      deadline: null,
-      creatable: false,
-      joinable: false,
-    };
+    if (t < MD3_COMPLETE.getTime()) {
+      return {
+        phase: "LOCKED_LIVE",
+        label: "Locked · live",
+        deadline: null,
+        creatable: false,
+        joinable: false,
+      };
+    }
+    return COMPLETE_STATE;
   }
 
   if (format === "KNOCKOUT") {
@@ -148,6 +170,9 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
         joinable: true,
       };
     }
+    if (TOURNAMENT_COMPLETE && t >= TOURNAMENT_COMPLETE.getTime()) {
+      return COMPLETE_STATE;
+    }
     return {
       phase: "LOCKED_LIVE",
       label: "Locked · live",
@@ -168,6 +193,9 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
       creatable: true,
       joinable: true,
     };
+  }
+  if (TOURNAMENT_COMPLETE && t >= TOURNAMENT_COMPLETE.getTime()) {
+    return COMPLETE_STATE;
   }
   return {
     phase: "LOCKED_LIVE",
@@ -205,27 +233,38 @@ export function prizeTeaser(format: PoolFormat): string | null {
 const MONTH_DAY = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",
-  timeZone: "UTC",
+  timeZone: DISPLAY_TZ,
 });
 
 function dayLabel(d: Date): string {
   return MONTH_DAY.format(d); // e.g. "June 24"
 }
 
+// A kickoff's calendar month/day in the app's display timezone (Eastern). The
+// late fixtures kick off past midnight UTC, so a UTC framing put the last MD3
+// match on "June 28" when everyone experiences it as the June 27 night game.
+function monthDayInDisplayTz(d: Date): { month: string; day: number } {
+  const parts = MONTH_DAY.formatToParts(d);
+  return {
+    month: parts.find((p) => p.type === "month")?.value ?? "",
+    day: Number(parts.find((p) => p.type === "day")?.value ?? 0),
+  };
+}
+
 // The calendar span of the Match Day Pickem fixtures (first → last kickoff), for
-// copy that tells players which games they're predicting and when. UTC-framed to
-// match the rest of this module's date labels (gameStateLine). Same-month spans
-// collapse the second month, e.g. "June 24–27"; cross-month stays "June 24 – July 2".
+// copy that tells players which games they're predicting and when. Framed in the
+// display timezone like every other match label. Same-month spans collapse the
+// second month, e.g. "June 24–27"; cross-month stays "June 24 – July 2".
 export function md3DateRange(): string {
-  const first = firstMd3Kickoff();
-  const last = lastMd3Kickoff();
-  if (first.getUTCMonth() === last.getUTCMonth() && first.getUTCDate() === last.getUTCDate()) {
-    return dayLabel(first);
+  const first = monthDayInDisplayTz(firstMd3Kickoff());
+  const last = monthDayInDisplayTz(lastMd3Kickoff());
+  if (first.month === last.month && first.day === last.day) {
+    return `${first.month} ${first.day}`;
   }
-  if (first.getUTCMonth() === last.getUTCMonth()) {
-    return `${dayLabel(first)}–${last.getUTCDate()}`;
+  if (first.month === last.month) {
+    return `${first.month} ${first.day}–${last.day}`;
   }
-  return `${dayLabel(first)} – ${dayLabel(last)}`;
+  return `${first.month} ${first.day} – ${last.month} ${last.day}`;
 }
 
 // A short, friendly state line for a game card / badge, derived from the phase.

@@ -3,6 +3,7 @@ import {
   knockoutR32Seed,
   isKnockoutFieldSet,
   isKnockoutLocked,
+  isEarlyBuilderOpen,
   knockoutOnlyPicks,
   hasConcreteR32Slots,
   knockoutOpenState,
@@ -124,5 +125,17 @@ describe("isKnockoutLocked", () => {
   it("never time-locks when no kickoff time is known", () => {
     expect(isKnockoutLocked(null, false, new Date("2030-01-01T00:00:00Z"))).toBe(false);
     expect(isKnockoutLocked(null, true)).toBe(true);
+  });
+});
+
+describe("isEarlyBuilderOpen", () => {
+  it("opens at the early-build instant and closes at the R32 kickoff", () => {
+    expect(isEarlyBuilderOpen(new Date("2026-06-17T23:59:59Z"))).toBe(false);
+    expect(isEarlyBuilderOpen(new Date("2026-06-18T00:00:00Z"))).toBe(true);
+    expect(isEarlyBuilderOpen(new Date("2026-06-27T12:00:00Z"))).toBe(true);
+    // At/after the R32 kickoff the bracket is locked — "build early" must never
+    // be advertised again (it used to stay true for the rest of the tournament).
+    expect(isEarlyBuilderOpen(new Date("2026-06-28T19:00:00Z"))).toBe(false);
+    expect(isEarlyBuilderOpen(new Date("2026-07-02T12:00:00Z"))).toBe(false);
   });
 });

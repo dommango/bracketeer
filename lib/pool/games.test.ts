@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GAME_CATALOG, resolveGamePhase, featuredGame, prizeTeaser } from "./games";
+import { GAME_CATALOG, resolveGamePhase, featuredGame, prizeTeaser, md3DateRange } from "./games";
 import type { PoolFormat } from "@/lib/pool/manage";
 
 // Fixed schedule anchors mirrored from lib/scoring/schedule + lib/pool/knockout.
@@ -60,6 +60,20 @@ describe("resolveGamePhase — MD3", () => {
     expect(s.joinable).toBe(false);
     expect(s.creatable).toBe(false);
   });
+  it("is COMPLETE once the last fixture has settled (never 'live' forever)", () => {
+    // Last kickoff 02:00 Jun 28 + the 6h settle window → complete from 08:00.
+    expect(resolveGamePhase("MATCH_DAY_3_PICKEM", at("2026-06-28T07:59:00Z")).phase).toBe(
+      "LOCKED_LIVE",
+    );
+    expect(resolveGamePhase("MATCH_DAY_3_PICKEM", at("2026-06-28T08:00:00Z")).phase).toBe(
+      "COMPLETE",
+    );
+    // Mid-knockout (Jul 2, R32 in progress) MD3 is long over — this exact instant
+    // used to report LOCKED_LIVE and kept a "Live now" slide on the home carousel.
+    expect(resolveGamePhase("MATCH_DAY_3_PICKEM", at("2026-07-02T12:00:00Z")).phase).toBe(
+      "COMPLETE",
+    );
+  });
 });
 
 describe("resolveGamePhase — KNOCKOUT", () => {
@@ -74,6 +88,10 @@ describe("resolveGamePhase — KNOCKOUT", () => {
   it("is LOCKED_LIVE at and after the R32 kickoff", () => {
     expect(resolveGamePhase("KNOCKOUT", at(KO_LOCK)).phase).toBe("LOCKED_LIVE");
   });
+  it("stays LOCKED_LIVE through the knockout rounds, COMPLETE after the final settles", () => {
+    expect(resolveGamePhase("KNOCKOUT", at("2026-07-02T12:00:00Z")).phase).toBe("LOCKED_LIVE");
+    expect(resolveGamePhase("KNOCKOUT", at("2026-07-21T00:00:00Z")).phase).toBe("COMPLETE");
+  });
 });
 
 describe("resolveGamePhase — FULL_BRACKET", () => {
@@ -81,6 +99,18 @@ describe("resolveGamePhase — FULL_BRACKET", () => {
     expect(resolveGamePhase("FULL_BRACKET", at("2026-06-10T00:00:00Z")).creatable).toBe(true);
     expect(resolveGamePhase("FULL_BRACKET", at(FULL_START)).phase).toBe("LOCKED_LIVE");
     expect(resolveGamePhase("FULL_BRACKET", at("2026-06-22T00:00:00Z")).creatable).toBe(false);
+  });
+  it("is COMPLETE after the final settles", () => {
+    expect(resolveGamePhase("FULL_BRACKET", at("2026-07-21T00:00:00Z")).phase).toBe("COMPLETE");
+  });
+});
+
+describe("md3DateRange", () => {
+  it("frames the span in the display timezone (Eastern), not UTC", () => {
+    // Last kickoff is 02:00Z Jun 28 = 10:00 PM ET Jun 27 — the UTC framing this
+    // replaced printed "June 24–28", contradicting the catalog's "(June 24–27)".
+    expect(md3DateRange()).toBe("June 24–27");
+    expect(GAME_CATALOG.MATCH_DAY_3_PICKEM.tagline).toContain(md3DateRange());
   });
 });
 

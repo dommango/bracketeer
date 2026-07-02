@@ -8,6 +8,7 @@
 import { GROUPS, R32 } from "@/lib/scoring/data";
 import { resolveR32Slots, type ResolvedR32 } from "@/lib/scoring/resolve";
 import { emptyPicks, type Picks, type Results } from "@/lib/scoring/types";
+import { kickoffFor } from "@/lib/scoring/schedule";
 
 const THIRDS_NEEDED = 8;
 
@@ -25,10 +26,15 @@ export const KNOCKOUT_PICKS_OPEN_UTC = "2026-06-28T02:00:00Z";
 // (the official open) and from scoring, which still key off the real answer key.
 export const EARLY_BUILDER_OPEN_UTC = "2026-06-18T00:00:00Z";
 
-// True once early projected-fill should be available (independent of the official
-// open). Time-gated so a pre-tournament visitor doesn't see a bracket of pure TBDs.
+// True while early projected-fill should be available (independent of the official
+// open). Time-gated on both ends: opens once standings give a meaningful projection
+// (not a bracket of pure TBDs), and closes at the R32 kickoff — after the lock the
+// builder is read-only, so "early build" must never be advertised again.
 export function isEarlyBuilderOpen(now: Date = new Date()): boolean {
-  return now.getTime() >= new Date(EARLY_BUILDER_OPEN_UTC).getTime();
+  const t = now.getTime();
+  if (t < new Date(EARLY_BUILDER_OPEN_UTC).getTime()) return false;
+  const lock = kickoffFor(73);
+  return !lock || t < lock.getTime();
 }
 
 // The official Round-of-32 matchups (the 32 qualifiers) from the answer key.
