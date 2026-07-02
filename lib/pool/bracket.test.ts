@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { resolveBracket, validateKnockoutWinner, buildKnockoutPairMatchNos } from "./bracket";
+import {
+  resolveBracket,
+  validateKnockoutWinner,
+  buildKnockoutPairMatchNos,
+  mergeThirdAdvance,
+  findKnockoutSeatingConflict,
+  orientScoresToSlot,
+} from "./bracket";
 import { resolveR32Slots } from "@/lib/scoring/resolve";
 import { GROUPS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
@@ -149,5 +156,83 @@ describe("buildKnockoutPairMatchNos", () => {
     // Unresolved later rounds aren't keyed.
     expect([...pairs.values()]).not.toContain(FINAL.id);
     expect([...pairs.values()]).not.toContain(QF[0].id);
+  });
+});
+
+describe("mergeThirdAdvance", () => {
+  it("keeps the stored order when the same eight teams are re-submitted", () => {
+    const current = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "GHA"];
+    const resubmitted = ["COD", "SWE", "ECU", "GHA", "BIH", "ALG", "PAR", "SEN"];
+    // Same set, different order — the order drives R32 seating, so it must not move.
+    expect(mergeThirdAdvance(current, resubmitted)).toBe(current);
+  });
+
+  it("accepts the submitted list when the set actually changes", () => {
+    const current = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "GHA"];
+    const changed = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "EGY"];
+    expect(mergeThirdAdvance(current, changed)).toBe(changed);
+    expect(mergeThirdAdvance([], changed)).toBe(changed);
+  });
+});
+
+describe("findKnockoutSeatingConflict", () => {
+  it("is null when every recorded winner sits in its resolved matchup", () => {
+    const results = chalkStandings();
+    const bracket = resolveBracket(results);
+    const knockout = { 73: bracket[73].home!, 74: bracket[74].away! };
+    expect(findKnockoutSeatingConflict({ ...results, knockout })).toBeNull();
+  });
+
+  it("flags a thirdAdvance reorder that unseats a recorded winner", () => {
+    const results = chalkStandings();
+    // Record each third-place side's occupant as its match's winner…
+    const bracket = resolveBracket(results);
+    const thirdSlots = R32.filter((m) => "third" in m.b);
+    const knockout = Object.fromEntries(thirdSlots.map((m) => [m.id, bracket[m.id].away!]));
+    expect(findKnockoutSeatingConflict({ ...results, knockout })).toBeNull();
+    // …then rotate the thirdAdvance order: the backtracker re-seats the slots, so
+    // at least one recorded winner no longer sits in its resolved matchup.
+    const rotated = [...results.thirdAdvance.slice(1), results.thirdAdvance[0]];
+    const conflict = findKnockoutSeatingConflict({ ...results, thirdAdvance: rotated, knockout });
+    expect(conflict).toMatch(/not in its resolved matchup/);
+  });
+
+  it("ignores matches whose slots are not resolvable yet", () => {
+    // A recorded R16 winner with no R32 winners recorded — feeders unresolved, no conflict.
+    const results = { ...chalkStandings(), knockout: { [R16[0].id]: GROUPS.A[0] } };
+    expect(findKnockoutSeatingConflict(results)).toBeNull();
+  });
+});
+
+describe("orientScoresToSlot", () => {
+  const slot = { home: "MEX", away: "USA" };
+  const scores = { homeScore: 1, awayScore: 2, homePens: 5, awayPens: 4 };
+
+  it("passes through when the API home is the bracket home", () => {
+    expect(orientScoresToSlot(slot, { ...scores, apiHomeCode: "MEX", apiAwayCode: "USA" })).toEqual(
+      scores,
+    );
+  });
+
+  it("swaps scores AND pens when the API home is the bracket away", () => {
+    expect(orientScoresToSlot(slot, { ...scores, apiHomeCode: "USA", apiAwayCode: "MEX" })).toEqual(
+      { homeScore: 2, awayScore: 1, homePens: 4, awayPens: 5 },
+    );
+  });
+
+  it("passes through untouched with no API codes (manual entry) or an unseated slot", () => {
+    expect(orientScoresToSlot(slot, scores)).toEqual(scores);
+    expect(orientScoresToSlot(undefined, { ...scores, apiHomeCode: "USA" })).toEqual(scores);
+    expect(orientScoresToSlot({ home: null, away: null }, { ...scores, apiHomeCode: "USA" })).toEqual(
+      scores,
+    );
+    // API home matches neither seated team — don't guess.
+    expect(orientScoresToSlot(slot, { ...scores, apiHomeCode: "BRA" })).toEqual(scores);
+  });
+
+  it("normalizes missing fields to null", () => {
+    expect(orientScoresToSlot(slot, { apiHomeCode: "USA", apiAwayCode: "MEX", homeScore: 3 })).toEqual(
+      { homeScore: null, awayScore: 3, homePens: null, awayPens: null },
+    );
   });
 });

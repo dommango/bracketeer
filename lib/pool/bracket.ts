@@ -77,6 +77,71 @@ export function buildKnockoutPairMatchNos(results: Results): Map<string, number>
 
 const KNOCKOUT_RANGE = (n: number) => n >= 73 && n <= 104;
 
+// The ORDER of results.thirdAdvance is load-bearing: resolveR32Slots seats
+// third-place teams by backtracking in list order, so two different orderings of
+// the same eight teams can seat different R32 matchups. When an admin re-saves
+// standings with the same eight advancers, keep the stored order — otherwise a
+// form whose fields happen to iterate differently silently re-seats the live
+// bracket (which is exactly how prod's R32 seating got scrambled mid-round).
+export function mergeThirdAdvance(
+  current: TeamCode[],
+  submitted: TeamCode[],
+): TeamCode[] {
+  const sameSet =
+    current.length === submitted.length &&
+    [...current].sort().join(",") === [...submitted].sort().join(",");
+  return sameSet ? current : submitted;
+}
+
+// Reject an answer key whose resolved seating contradicts a winner it already
+// records: if match N's winner is no longer one of match N's two seated teams,
+// the seating (not the winner) is wrong — surfaced before the write so a
+// thirdAdvance reorder can't orphan recorded results and break fixture mapping.
+export function findKnockoutSeatingConflict(results: Results): string | null {
+  const bracket = resolveBracket(results);
+  for (const [no, winner] of Object.entries(results.knockout || {})) {
+    if (!winner) continue;
+    const m = bracket[Number(no)];
+    if (m?.home && m?.away && winner !== m.home && winner !== m.away) {
+      return `Match ${no}'s recorded winner ${winner} is not in its resolved matchup (${m.home} vs ${m.away}) — third-place order is inconsistent with recorded results`;
+    }
+  }
+  return null;
+}
+
+// Orient an API-reported scoreline (home/away as the provider frames the fixture)
+// to the bracket slot's home/away, so the FINAL Result row reads the same way as
+// the live row (which already orients) and never contradicts winnerCode. When the
+// API home code matches neither seated team (or no codes are provided) the input
+// is returned unchanged — the manual-entry path passes no API codes.
+export function orientScoresToSlot(
+  slot: { home: TeamCode | null; away: TeamCode | null } | undefined,
+  input: {
+    homeScore?: number | null;
+    awayScore?: number | null;
+    homePens?: number | null;
+    awayPens?: number | null;
+    apiHomeCode?: string | null;
+    apiAwayCode?: string | null;
+  },
+): { homeScore: number | null; awayScore: number | null; homePens: number | null; awayPens: number | null } {
+  const asIs = {
+    homeScore: input.homeScore ?? null,
+    awayScore: input.awayScore ?? null,
+    homePens: input.homePens ?? null,
+    awayPens: input.awayPens ?? null,
+  };
+  if (!input.apiHomeCode || !slot?.home || !slot?.away) return asIs;
+  if (input.apiHomeCode === slot.home) return asIs;
+  if (input.apiHomeCode !== slot.away) return asIs; // unrecognized orientation — don't guess
+  return {
+    homeScore: asIs.awayScore,
+    awayScore: asIs.homeScore,
+    homePens: asIs.awayPens,
+    awayPens: asIs.homePens,
+  };
+}
+
 export interface ValidationResult {
   ok: boolean;
   reason?: string;
