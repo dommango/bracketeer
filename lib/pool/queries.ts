@@ -424,7 +424,7 @@ async function withProjectedPoints(
   format: PoolFormat,
   rows: LeaderboardRow[],
 ): Promise<LeaderboardRow[]> {
-  const [liveRows, groupPoints] = await Promise.all([
+  const [liveRows, groupPoints, tournament] = await Promise.all([
     prisma.result.findMany({
       where: { status: "LIVE", match: { tournamentId } },
       select: {
@@ -437,10 +437,20 @@ async function withProjectedPoints(
       },
     }),
     provisionalGroupPoints(poolId, tournamentId, scoringConfig),
+    prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { officialResults: true },
+    }),
   ]);
 
+  // Matches the answer key already decided are in the official totals; exclude
+  // them from projection so a Result row lagging at LIVE can't pay them twice.
+  const decided = new Set(
+    Object.keys(asResults(tournament?.officialResults).knockout || {}).map(Number),
+  );
   const leaders = liveLeaders(
     liveRows.map((r) => ({ ...r, matchNo: r.match.matchNo })),
+    decided,
   );
   if (leaders.length === 0 && groupPoints.size === 0) return rows;
 
@@ -956,10 +966,17 @@ export async function getLiveMatches(
   });
   if (matches.length === 0) return [];
 
-  const resolved = resolveBracket(asResults(pool.tournament.officialResults));
+  const answerKey = asResults(pool.tournament.officialResults);
+  // A match whose winner is already in the answer key is over regardless of what
+  // the feed row says — a poll that never flipped LIVE→FINAL must not pin a
+  // decided match on the "live now" card forever.
+  const live = matches.filter((m) => !answerKey.knockout?.[m.matchNo]);
+  if (live.length === 0) return [];
+
+  const resolved = resolveBracket(answerKey);
   const yourPicks = await getEntryKnockoutPicks(poolId, userId);
 
-  const inputs = matches.map((m) => toMatchInput(m, resolved));
+  const inputs = live.map((m) => toMatchInput(m, resolved));
 
   // buildMatchCenter groups + orders by round; flatten back to a single list.
   return buildMatchCenter(inputs, yourPicks).flatMap((s) => s.matches);

@@ -41,13 +41,25 @@ describe("buildMatchCenter", () => {
     expect(g.matches[0].away.code).toBeNull();
   });
 
-  it("derives status: Result status wins, else winner => FINAL, else SCHEDULED", () => {
+  it("derives status: a known winner => FINAL (even over a stale LIVE row), else Result status", () => {
     const [sec] = buildMatchCenter([
+      // A recorded winner with a Result stuck at LIVE (missed poll / answer key
+      // entered first) is a decided match — it must not render live forever.
       m({ matchNo: 1, roundCode: "GROUP", resultStatus: "LIVE", winnerCode: "MEX" }),
       m({ matchNo: 2, roundCode: "GROUP", winnerCode: "CAN" }),
       m({ matchNo: 3, roundCode: "GROUP" }),
+      // Genuinely live: LIVE row, no winner anywhere yet.
+      m({ matchNo: 4, roundCode: "GROUP", resultStatus: "LIVE" }),
+      // Drawn group match: no winner, but the Result row says FINAL.
+      m({ matchNo: 5, roundCode: "GROUP", resultStatus: "FINAL" }),
     ]);
-    expect(sec.matches.map((r) => r.status)).toEqual(["LIVE", "FINAL", "SCHEDULED"]);
+    expect(sec.matches.map((r) => r.status)).toEqual([
+      "FINAL",
+      "FINAL",
+      "SCHEDULED",
+      "LIVE",
+      "FINAL",
+    ]);
   });
 
   it("serializes scheduledAt to ISO", () => {

@@ -24,10 +24,17 @@ const isKnockout = (n: number) => n >= 73 && n <= 104;
 
 // The currently-leading side of each live knockout match. Ties and unknown
 // teams project nothing — a draw resolves on penalties, which we can't guess.
-export function liveLeaders(rows: LiveResultRow[]): LiveLeader[] {
+// `decided` is the set of match numbers already recorded in the answer key: a
+// decided match is in every entry's OFFICIAL total, so projecting it again from
+// a Result row the feed hasn't flipped to FINAL yet would pay the same match
+// twice on the live board during the whistle→feed-reconcile window.
+export function liveLeaders(
+  rows: LiveResultRow[],
+  decided: ReadonlySet<number> = new Set(),
+): LiveLeader[] {
   const out: LiveLeader[] = [];
   for (const r of rows) {
-    if (r.status !== "LIVE" || !isKnockout(r.matchNo)) continue;
+    if (r.status !== "LIVE" || !isKnockout(r.matchNo) || decided.has(r.matchNo)) continue;
     if (r.homeScore == null || r.awayScore == null || r.homeScore === r.awayScore) continue;
     const leadingCode = r.homeScore > r.awayScore ? r.homeTeamCode : r.awayTeamCode;
     if (!leadingCode) continue;
