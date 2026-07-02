@@ -101,8 +101,11 @@ export function Chat({
 
   useEffect(() => {
     // Newest messages render at the bottom (normal chat), so keep the view pinned
-    // there as they arrive.
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // there as they arrive. Scroll the message list's own scroll box, NOT
+    // scrollIntoView — that scrolls every ancestor including the window, which
+    // yanked the whole match-detail page down to its embedded chat on mount.
+    const list = bottomRef.current?.parentElement;
+    if (list) list.scrollTop = list.scrollHeight;
   }, [messages]);
 
   // Single POST path shared by the text composer and the GIF picker. Returns

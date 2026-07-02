@@ -10,7 +10,11 @@ const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-ink-3";
 // R32 is under way — and keeps the server component pure (no render-time clock).
 export function R32Countdown({ target, label }: { target: string; label: string }) {
   const targetMs = new Date(target).getTime();
-  const [passed, setPassed] = useState(false);
+  // Seed from the clock, not `false`: once the kickoff is in the past both the
+  // server render and the client's first paint agree it's gone, instead of
+  // flashing a stale "kicks off in · · ·" banner that the mount effect removes.
+  // (Server and client clocks only disagree across the kickoff instant itself.)
+  const [passed, setPassed] = useState(() => Date.now() >= targetMs);
 
   useEffect(() => {
     const tick = () => setPassed(Date.now() >= targetMs);

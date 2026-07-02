@@ -1,6 +1,7 @@
 import type { Md3View, Md3FixtureVM } from "@/lib/pool/md3-view";
 import { Flag } from "@/app/pool/[code]/Flag";
 import { WinProbBar } from "@/app/pool/[code]/WinProbBar";
+import { DISPLAY_TZ } from "@/lib/tz";
 
 // The MD3 analogue of the knockout Profile: a read-only, per-fixture breakdown of
 // one entry's predictions vs. the live/final results, with the points each pick
@@ -9,12 +10,24 @@ import { WinProbBar } from "@/app/pool/[code]/WinProbBar";
 // Group-stage accent, matching the ScoreCards / form fixture cards.
 const GROUP_ACCENT = "var(--pitch)";
 
+// Pinned to DISPLAY_TZ like every other match surface — this renders on the
+// server (UTC on Railway), where an unpinned format shows UTC times and splits
+// the late Eastern-evening fixtures across the wrong day headers.
 function kickoffLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: DISPLAY_TZ,
+  });
 }
 
 function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: DISPLAY_TZ,
+  });
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {

@@ -159,9 +159,13 @@ export async function getKnockoutChallengeProfile(entryId: string): Promise<Prof
     getChallengeKnockoutProjection(tournamentId),
   ]);
 
-  // Same eligibility filter as the public leaderboard — only complete & valid
-  // brackets are materialized, so the profile can't leak an incomplete one.
+  // Board membership is the eligibility source of truth: the leaderboard applies
+  // the verified-email (anti-Sybil) gate on top of completeness, and a profile —
+  // like the pick-share denominators — must only ever expose entries the public
+  // board shows. Filtering here on completeness alone leaked gated brackets.
+  const boardIds = new Set(board.map((r) => r.entryId));
   const eligible = entries.filter((e) => {
+    if (!boardIds.has(e.id)) return false;
     try {
       return isKnockoutEntryComplete(pickRowsToSubmission(e.picks).picks);
     } catch {
@@ -172,7 +176,8 @@ export async function getKnockoutChallengeProfile(entryId: string): Promise<Prof
   if (!entry) return null;
 
   const row = board.find((r) => r.entryId === entryId);
-  const projected = row?.projected ?? 0;
+  if (!row) return null;
+  const projected = row.projected ?? 0;
 
   const projectionRow = projection.hasData
     ? projection.rows.find((r) => r.entryId === entryId)
@@ -188,9 +193,9 @@ export async function getKnockoutChallengeProfile(entryId: string): Promise<Prof
   return buildProfile({
     entryId: entry.id,
     label: entry.label,
-    total: (row?.total ?? 0) + projected,
+    total: row.total + projected,
     projected: projected > 0 ? projected : undefined,
-    rank: row?.rank ?? Math.max(1, board.length),
+    rank: row.rank,
     entryCount: board.length,
     picks: pickRowsToSubmission(entry.picks).picks,
     results: asResults(tournament.officialResults),
