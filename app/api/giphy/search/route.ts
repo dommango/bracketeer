@@ -6,6 +6,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/pool/access";
+import { rateLimit } from "@/lib/rate-limit";
 import { env, giphyEnabled } from "@/lib/env";
 import { mapGiphyResults } from "@/lib/chat/giphy";
 import { apiOk, apiError } from "@/lib/api";
@@ -26,6 +27,11 @@ export async function GET(req: NextRequest) {
 
   // Defensive: the UI hides the button when Giphy is disabled.
   if (!giphyEnabled) return apiOk({ results: [] });
+
+  // Every call spends the shared GIPHY_API_KEY quota, so throttle per user like
+  // the chat routes (generous for a human paging the picker, a wall for a loop).
+  const rl = await rateLimit(`giphy:${user.id}`, 30, 60_000);
+  if (!rl.ok) return apiError("Slow down a moment and try again.", 429);
 
   let parsed: z.infer<typeof querySchema>;
   try {

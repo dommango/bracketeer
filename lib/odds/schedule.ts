@@ -59,3 +59,17 @@ export function snapshotKickoffRange(now: number): { gt: Date; lt: Date } {
     lt: new Date(now - EARLY_WINDOW_START_MS),
   };
 }
+
+// Minimum spacing between extras polls (totals/spreads/outrights — 4+ credits per
+// run). The cron's own 24 h bucket is in-memory and resets on every restart, and
+// the cron service restarts with each deploy — so the DB timestamp of the last
+// run, checked through this policy, is the ceiling that actually holds. 20 h (not
+// 24) so one poll per calendar day still fires even as the cron's daily bucket
+// boundary drifts around restarts.
+export const EXTRAS_MIN_INTERVAL_MS = 20 * 60 * 60_000;
+
+// Whether an extras poll may spend credits now, given when the last one ran
+// (null = never). Pure for testing; pollOddsExtras supplies the DB timestamp.
+export function extrasPollDue(lastFetchedAtMs: number | null, now: number): boolean {
+  return lastFetchedAtMs == null || now - lastFetchedAtMs >= EXTRAS_MIN_INTERVAL_MS;
+}

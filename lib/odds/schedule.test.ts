@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   snapshotDue,
   snapshotKickoffRange,
+  extrasPollDue,
+  EXTRAS_MIN_INTERVAL_MS,
   EARLY_WINDOW_START_MS,
   PRE_WINDOW_START_MS,
   HALF_WINDOW_START_MS,
@@ -78,5 +80,16 @@ describe("snapshotKickoffRange", () => {
     // …and one that kicked off up to 75 min ago (halftime window open) too.
     expect(gt.getTime()).toBe(now - HALF_WINDOW_END_MS);
     expect(gt.getTime()).toBeLessThan(lt.getTime());
+  });
+});
+
+describe("extrasPollDue", () => {
+  it("fires when never fetched and after the interval, not inside it", () => {
+    const now = Date.parse("2026-07-02T12:00:00Z");
+    expect(extrasPollDue(null, now)).toBe(true);
+    // A cron restart minutes after a successful run must NOT re-spend credits.
+    expect(extrasPollDue(now - 5 * 60_000, now)).toBe(false);
+    expect(extrasPollDue(now - EXTRAS_MIN_INTERVAL_MS + 1, now)).toBe(false);
+    expect(extrasPollDue(now - EXTRAS_MIN_INTERVAL_MS, now)).toBe(true);
   });
 });

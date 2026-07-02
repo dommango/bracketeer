@@ -21,7 +21,10 @@ const schema = z.object({
   // links are logged to the server console for local development.
   EMAIL_SERVER: z.string().default(""),
   EMAIL_FROM: z.string().default("Bracketeer <no-reply@bracketeer.app>"),
-  CRON_SECRET: z.string().min(1),
+  // Guards the internet-reachable, result-mutating /api/cron/* routes — a
+  // trivially-guessable value here would let anyone write scores, so require
+  // real entropy (prod uses 48 chars; AUTH_SECRET already requires 16+).
+  CRON_SECRET: z.string().min(16, "CRON_SECRET must be at least 16 characters"),
   // Sports data API (optional — manual result entry works without it).
   SPORTS_API_KEY: z.string().default(""),
   SPORTS_API_BASE: z.string().default("https://v3.football.api-sports.io"),

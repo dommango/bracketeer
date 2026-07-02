@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { decideRateLimit } from "./rate-limit-core";
+import { decideRateLimit, clientIpFromForwardedFor } from "./rate-limit-core";
 
 // The window math is the pure, unit-tested core; the async rateLimit wrapper just
 // persists `next` and returns `result` under an advisory lock.
@@ -36,5 +36,20 @@ describe("decideRateLimit", () => {
     const { next } = decideRateLimit(null, 1, 1000, t);
     const blocked = decideRateLimit(next, 1, 1000, t + 500);
     expect(blocked.next).toEqual(next); // unchanged while blocked
+  });
+});
+
+describe("clientIpFromForwardedFor", () => {
+  it("takes the RIGHTMOST hop (edge-appended), so a spoofed leftmost value is ignored", () => {
+    expect(clientIpFromForwardedFor("6.6.6.6, 203.0.113.9")).toBe("203.0.113.9");
+    expect(clientIpFromForwardedFor("a, b, 198.51.100.4")).toBe("198.51.100.4");
+  });
+
+  it("handles single hops, whitespace, and missing headers", () => {
+    expect(clientIpFromForwardedFor("203.0.113.9")).toBe("203.0.113.9");
+    expect(clientIpFromForwardedFor("  203.0.113.9 , ")).toBe("203.0.113.9");
+    expect(clientIpFromForwardedFor("")).toBe("anon");
+    expect(clientIpFromForwardedFor(null)).toBe("anon");
+    expect(clientIpFromForwardedFor(",,")).toBe("anon");
   });
 });

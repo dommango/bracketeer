@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/pool/access";
 import { rateLimit } from "@/lib/rate-limit";
+import { clientIpFromForwardedFor } from "@/lib/rate-limit-core";
 import { apiOk, apiError } from "@/lib/api";
 import { createFeedback } from "@/lib/feedback/submit";
 
@@ -46,7 +47,9 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
+  // Rightmost XFF hop (edge-appended) — the leftmost is client-spoofable, which
+  // would let an anonymous submitter mint a fresh rate-limit bucket per request.
+  const ip = clientIpFromForwardedFor(req.headers.get("x-forwarded-for"));
   const key = user ? `feedback:${user.id}` : `feedback:ip:${ip}`;
   const rl = await rateLimit(key, 10, 5 * 60_000);
   if (!rl.ok) return apiError("rate limited", 429);
