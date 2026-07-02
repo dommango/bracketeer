@@ -10,7 +10,12 @@ import { asResults, recomputePool, recomputeStandalone } from "@/lib/pool/scorin
 import { notifyPool } from "@/lib/realtime/notify";
 import { sendPushToPool } from "@/lib/push/send";
 import type { ApnsPayload } from "@/lib/push/apns";
-import { resolveBracket, validateKnockoutWinner } from "@/lib/pool/bracket";
+import {
+  resolveBracket,
+  validateKnockoutWinner,
+  findKnockoutSeatingConflict,
+  orientScoresToSlot,
+} from "@/lib/pool/bracket";
 import { findStandingsConflict } from "@/lib/pool/standings";
 import { promoteCompletedGroups } from "@/lib/pool/group-promote";
 import type { GroupResultRow } from "@/lib/pool/group-table";
@@ -55,6 +60,13 @@ export interface KnockoutInput {
   awayScore?: number | null;
   homePens?: number | null; // shootout score when the tie went to penalties
   awayPens?: number | null;
+  // How the API frames the fixture's home/away. When set, the scores/pens above
+  // are in THIS orientation and get re-oriented to the bracket slot before the
+  // Result mirror (the live display path already orients; without this the FINAL
+  // row flips whenever the provider's home differs from the bracket's home).
+  // Manual entry omits these — admin scores are already bracket-oriented.
+  apiHomeCode?: string | null;
+  apiAwayCode?: string | null;
   final?: boolean; // default true; false marks the match LIVE rather than FINAL
   source?: "API" | "MANUAL"; // default MANUAL
 }
@@ -90,13 +102,14 @@ async function setKnockoutResultLocked(
   await writeAnswerKey(tournamentId, next, tx);
 
   const slot = resolveBracket(next)[matchNo];
+  const oriented = orientScoresToSlot(slot, input);
   await mirrorResultRow(tx, tournamentId, matchNo, {
     homeTeamCode: slot?.home ?? null,
     awayTeamCode: slot?.away ?? null,
-    homeScore: input.homeScore ?? null,
-    awayScore: input.awayScore ?? null,
-    homePens: input.homePens ?? null,
-    awayPens: input.awayPens ?? null,
+    homeScore: oriented.homeScore,
+    awayScore: oriented.awayScore,
+    homePens: oriented.homePens,
+    awayPens: oriented.awayPens,
     winnerCode: winner,
     final: input.final ?? true,
     source: input.source ?? "MANUAL",
@@ -362,6 +375,13 @@ export async function setGroupStandings(
     // can silently corrupt scoring for the whole pool.
     const conflict = findStandingsConflict(next);
     if (conflict) throw new Error(conflict);
+
+    // Reject a standings edit whose re-seated bracket would orphan a recorded
+    // knockout winner — fixture mapping, daily scoring and every seed-derived
+    // surface read the seating. Clear the affected result first if the standing
+    // really was wrong (see findKnockoutSeatingConflict).
+    const seating = findKnockoutSeatingConflict(next);
+    if (seating) throw new Error(seating);
 
     await writeAnswerKey(tournamentId, next, tx);
     return next;

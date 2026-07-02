@@ -292,6 +292,10 @@ export async function pollScores(): Promise<PollSummary> {
         awayScore: f.awayGoals,
         homePens: f.homePens,
         awayPens: f.awayPens,
+        // API orientation of the scores above — the mirror re-orients them to the
+        // bracket slot so the FINAL row can't flip against the live row.
+        apiHomeCode: homeCode ?? null,
+        apiAwayCode: awayCode ?? null,
         final: true,
       });
       if (didApply) {

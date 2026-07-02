@@ -7,18 +7,28 @@ import type { Md3FixtureVM } from "@/lib/pool/md3-view";
 import { Flag } from "@/app/pool/[code]/Flag";
 import { WinProbBar } from "@/app/pool/[code]/WinProbBar";
 import { LiveBadge } from "@/app/pool/[code]/LiveBadge";
+import { DISPLAY_TZ } from "@/lib/tz";
 
-// Group fixtures by kickoff day for light visual chunking.
+// Group fixtures by kickoff day for light visual chunking. Pinned to DISPLAY_TZ
+// like every other match surface: this is a client component, so an unpinned
+// locale format renders in the server's zone (UTC on Railway) then re-renders in
+// the viewer's — a hydration mismatch, with late kickoffs grouped under the
+// wrong day on first paint.
 function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: DISPLAY_TZ,
   });
 }
 
 function kickoffLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: DISPLAY_TZ,
+  });
 }
 
 const SCORE_BOX =

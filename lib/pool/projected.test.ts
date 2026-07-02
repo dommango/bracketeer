@@ -66,3 +66,17 @@ describe("projectedLivePoints", () => {
     expect(out.get("e1")).toBe(10);
   });
 });
+
+describe("liveLeaders — decided matches", () => {
+  it("skips a LIVE row whose match the answer key already decided", () => {
+    // The scored totals already contain a decided match; projecting it again from
+    // a Result row the feed hasn't flipped to FINAL would pay it twice.
+    expect(liveLeaders([row({})], new Set([73]))).toEqual([]);
+  });
+
+  it("still projects live matches the answer key has not decided", () => {
+    expect(liveLeaders([row({})], new Set([74]))).toEqual([
+      { matchNo: 73, leadingCode: "BRA" },
+    ]);
+  });
+});

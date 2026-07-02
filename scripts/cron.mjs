@@ -18,6 +18,11 @@ if (!base || !secret) {
 }
 
 const TICK_MS = 60_000; // live-score cadence
+// Jobs run sequentially, so one hung request (typically the web service draining
+// during a redeploy) would otherwise stall every later job — including the
+// live-score poll — for undici's ~5 min default. Bound each call instead; the
+// next tick retries.
+const HIT_TIMEOUT_MS = 30_000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function hit(path) {
@@ -25,6 +30,7 @@ async function hit(path) {
     const res = await fetch(`${base}${path}`, {
       method: "POST",
       headers: { "x-cron-secret": secret },
+      signal: AbortSignal.timeout(HIT_TIMEOUT_MS),
     });
     const body = await res.text();
     console.log(`${path} ${res.status}: ${body}`);

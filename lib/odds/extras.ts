@@ -22,8 +22,13 @@ import {
   toGoalscorerProbs,
 } from "@/lib/odds/map";
 import { loadCodedMatches } from "@/lib/odds/coded";
+import { extrasPollDue } from "@/lib/odds/schedule";
 
 export interface OddsExtrasSummary {
+  // True when the run spent no credits because the last extras poll is recent
+  // (see extrasPollDue) — the cron's in-memory daily bucket resets on restart,
+  // so this DB-backed guard is what actually bounds the metered spend.
+  skipped?: boolean;
   totalsFetched: number;
   totalsUpdated: number;
   spreadsFetched: number;
@@ -54,6 +59,18 @@ export async function pollOddsExtras(): Promise<OddsExtrasSummary> {
     select: { id: true, officialResults: true },
   });
   if (!tournament) return summary;
+
+  // Restart-proof daily throttle: the outright rows carry the last run's
+  // fetchedAt, so a cron redeploy/crash-loop (which resets the in-memory daily
+  // bucket) can't re-spend the 4+ metered credits until the interval elapses.
+  const lastRun = await prisma.teamOutright.findFirst({
+    where: { tournamentId: tournament.id },
+    orderBy: { fetchedAt: "desc" },
+    select: { fetchedAt: true },
+  });
+  if (!extrasPollDue(lastRun?.fetchedAt?.getTime() ?? null, Date.now())) {
+    return { ...summary, skipped: true };
+  }
 
   // --- Totals: update existing MatchOdds rows only. The h2h poll owns row
   // creation; updateMany simply no-ops (0 rows) until that row exists. ---

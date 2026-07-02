@@ -116,11 +116,14 @@ export interface MatchCenterSection {
   defaultOpen?: boolean; // when collapsible, whether it starts expanded
 }
 
-// A match is FINAL when the Result says so, or (no Result yet) when the answer
-// key already records a winner. LIVE only ever comes from a live Result feed.
+// A match is FINAL when a winner is known (Result row or answer key) — a known
+// winner overrides a Result stuck at LIVE, so a missed poll can't pin a decided
+// match as "live" forever. Otherwise the Result feed's status is authoritative.
+// (A drawn group match has no winnerCode but its Result says FINAL — covered by
+// the resultStatus fallback.)
 function statusOf(m: MatchInput): MatchStatus {
-  if (m.resultStatus) return m.resultStatus;
-  return m.winnerCode ? "FINAL" : "SCHEDULED";
+  if (m.winnerCode) return "FINAL";
+  return m.resultStatus ?? "SCHEDULED";
 }
 
 function buildRow(

@@ -33,4 +33,13 @@ describe("availableHeroSlides", () => {
     const ko = slides.find((s) => s.format === "KNOCKOUT")!;
     expect(ko.stateLine.toLowerCase()).toContain("live");
   });
+
+  it("goes empty once the tournament completes (no game advertised as live forever)", () => {
+    // Final kickoff + the settle window: every phase is COMPLETE, the carousel
+    // yields to the static hero instead of a permanent "Live now" slide.
+    const final = kickoffFor(104);
+    expect(final).not.toBeNull();
+    const now = new Date(final!.getTime() + 7 * 3_600_000);
+    expect(availableHeroSlides(now)).toEqual([]);
+  });
 });

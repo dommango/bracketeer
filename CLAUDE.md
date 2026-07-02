@@ -16,7 +16,7 @@ Postgres `bracketeer` DB (e.g. a Docker `postgres` container on `localhost:5432`
 
 ```bash
 # Inline env prefix used throughout (DB + the two required secrets):
-ENV='DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bracketeer AUTH_SECRET=dev-only-secret-at-least-32-characters-long CRON_SECRET=dev-cron-secret APP_BASE_URL=http://localhost:3000'
+ENV='DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bracketeer AUTH_SECRET=dev-only-secret-at-least-32-characters-long CRON_SECRET=dev-cron-secret-16-chars APP_BASE_URL=http://localhost:3000'
 
 env $ENV npm run dev            # dev server (http://localhost:3000)
 env $ENV npm run build          # production build (compiles/validates every route)

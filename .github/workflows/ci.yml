@@ -12,7 +12,7 @@ jobs:
       # Build-time only — env.ts validates presence; no real services are reached.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       AUTH_SECRET: ci-only-secret-at-least-32-characters-long
-      CRON_SECRET: ci-cron-secret
+      CRON_SECRET: ci-cron-secret-at-least-16-chars
       APP_BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4

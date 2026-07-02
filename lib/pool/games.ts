@@ -12,6 +12,7 @@ import { KNOCKOUT_PICKS_OPEN_UTC } from "@/lib/pool/knockout";
 import { firstMd3Kickoff, lastMd3Kickoff } from "@/lib/pool/match-day-3";
 import { firstKnockoutKickoff, lastKnockoutKickoff } from "@/lib/games/daily-pickem/schedule";
 import { kickoffFor } from "@/lib/scoring/schedule";
+import { DISPLAY_TZ } from "@/lib/tz";
 import { PRIZES, isChallengeFormat } from "@/lib/challenge/prizes-config";
 import { formatPrize } from "@/lib/challenge/format-prize";
 
@@ -99,6 +100,22 @@ const KNOCKOUT_OPEN = new Date(KNOCKOUT_PICKS_OPEN_UTC);
 const KNOCKOUT_LOCK = kickoffFor(73) ?? new Date(KNOCKOUT_PICKS_OPEN_UTC);
 const FULL_START = kickoffFor(1) ?? new Date("2026-06-11T19:00:00Z");
 
+// Every game is COMPLETE a settle-window after the Final's kickoff (match over,
+// results propagated) — without this each "live" phase lasted forever, so
+// surfaces kept advertising finished games as live. 6h ≈ match length + ET/pens
+// + feed lag. (All three formats end with the Final: the pick'em locks at its
+// kickoff, the brackets score it.)
+const SETTLE_MS = 6 * 3_600_000;
+const TOURNAMENT_COMPLETE = new Date(KO_PICKEM_LAST.getTime() + SETTLE_MS);
+
+const COMPLETE_STATE: GameState = {
+  phase: "COMPLETE",
+  label: "Complete",
+  deadline: null,
+  creatable: false,
+  joinable: false,
+};
+
 // Pure, time-derived phase for a game. No DB — every boundary is a fixed instant.
 export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): GameState {
   const t = now.getTime();
@@ -124,6 +141,7 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
         joinable: true,
       };
     }
+    if (t >= TOURNAMENT_COMPLETE.getTime()) return COMPLETE_STATE;
     return {
       phase: "LOCKED_LIVE",
       label: "Locked · live",
@@ -154,6 +172,7 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
         joinable: true,
       };
     }
+    if (t >= TOURNAMENT_COMPLETE.getTime()) return COMPLETE_STATE;
     return {
       phase: "LOCKED_LIVE",
       label: "Locked · live",
@@ -175,6 +194,7 @@ export function resolveGamePhase(format: PoolFormat, now: Date = new Date()): Ga
       joinable: true,
     };
   }
+  if (t >= TOURNAMENT_COMPLETE.getTime()) return COMPLETE_STATE;
   return {
     phase: "LOCKED_LIVE",
     label: "Locked · live",
@@ -214,11 +234,23 @@ export function prizeTeaser(format: PoolFormat): string | null {
 const MONTH_DAY = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",
-  timeZone: "UTC",
+  timeZone: DISPLAY_TZ,
 });
 
 function dayLabel(d: Date): string {
   return MONTH_DAY.format(d); // e.g. "June 24"
+}
+
+// A kickoff's calendar month/day in the app's display timezone (Eastern). The
+// late fixtures kick off past midnight UTC, so a UTC framing put the last MD3
+// group fixture on "June 28" when everyone experiences it as the June 27 night
+// game — every other match surface labels dates in DISPLAY_TZ.
+function monthDayInDisplayTz(d: Date): { month: string; day: number } {
+  const parts = MONTH_DAY.formatToParts(d);
+  return {
+    month: parts.find((p) => p.type === "month")?.value ?? "",
+    day: Number(parts.find((p) => p.type === "day")?.value ?? 0),
+  };
 }
 
 // The calendar span of the Match Day Pickem fixtures (first → last kickoff), for
@@ -238,16 +270,18 @@ export function koPickemDateRange(): string {
   return spanLabel(first, last);
 }
 
-// Collapse a first→last span into a compact label. Same-day → one date; same-month
-// → "June 24–27"; cross-month → "July 3 – July 19".
+// Collapse a first→last span into a compact label, framed in DISPLAY_TZ. Same-day
+// → one date; same-month → "June 24–27"; cross-month → "June 28 – July 19".
 function spanLabel(first: Date, last: Date): string {
-  if (first.getUTCMonth() === last.getUTCMonth() && first.getUTCDate() === last.getUTCDate()) {
-    return dayLabel(first);
+  const a = monthDayInDisplayTz(first);
+  const b = monthDayInDisplayTz(last);
+  if (a.month === b.month && a.day === b.day) {
+    return `${a.month} ${a.day}`;
   }
-  if (first.getUTCMonth() === last.getUTCMonth()) {
-    return `${dayLabel(first)}–${last.getUTCDate()}`;
+  if (a.month === b.month) {
+    return `${a.month} ${a.day}–${b.day}`;
   }
-  return `${dayLabel(first)} – ${dayLabel(last)}`;
+  return `${a.month} ${a.day} – ${b.month} ${b.day}`;
 }
 
 // A short, friendly state line for a game card / badge, derived from the phase.

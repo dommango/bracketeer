@@ -52,8 +52,11 @@ export async function claimEntriesForUser(
       // claim path (CSV import + sign-in, the primary way contestants enroll)
       // would silently push a FREE pool past its member cap, bypassing the gate
       // that joinPool/acceptInvite enforce. At cap, the entry is still bound to
-      // the account above; the owner upgrades to Premium to seat them. The
-      // count→create isn't atomic (same documented MVP tradeoff as joinPool).
+      // the account above; the owner upgrades to Premium to seat them. The same
+      // per-pool advisory lock joinPool/acceptInvite take serializes this
+      // count→create against theirs — without it a concurrent join and claim
+      // both count the pre-insert total and overshoot the cap by one.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${entry.poolId}))`;
       const pool = await tx.pool.findUnique({
         where: { id: entry.poolId },
         select: { tier: true },

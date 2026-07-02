@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { resolveBracket, validateKnockoutWinner, buildKnockoutPairMatchNos } from "./bracket";
+import {
+  resolveBracket,
+  validateKnockoutWinner,
+  buildKnockoutPairMatchNos,
+  findKnockoutSeatingConflict,
+  orientScoresToSlot,
+} from "./bracket";
 import { resolveR32Slots } from "@/lib/scoring/resolve";
 import { GROUPS, R32, R16, QF, SF, BRONZE, FINAL } from "@/lib/scoring/data";
 import { emptyPicks, type Results } from "@/lib/scoring/types";
@@ -149,5 +155,77 @@ describe("buildKnockoutPairMatchNos", () => {
     // Unresolved later rounds aren't keyed.
     expect([...pairs.values()]).not.toContain(FINAL.id);
     expect([...pairs.values()]).not.toContain(QF[0].id);
+  });
+});
+
+describe("findKnockoutSeatingConflict", () => {
+  it("is null when every recorded winner sits in its resolved matchup", () => {
+    const results = chalkStandings();
+    const bracket = resolveBracket(results);
+    const knockout = { 73: bracket[73].home!, 74: bracket[74].away! };
+    expect(findKnockoutSeatingConflict({ ...results, knockout })).toBeNull();
+  });
+
+  it("flags a group-placement edit that unseats a recorded winner", () => {
+    const results = chalkStandings();
+    // Find the R32 match hosting some group's 1st-place slot, and record that
+    // occupant as its winner.
+    const g = groups[groups.length - 1]; // a group whose 3rd is NOT in thirdAdvance
+    const match = R32.find(
+      (m) =>
+        ("group" in m.a && m.a.group === g && m.a.pos === 1) ||
+        ("group" in m.b && m.b.group === g && m.b.pos === 1),
+    )!;
+    const winner = results.groupFirst[g];
+    const knockout = { [match.id]: winner };
+    expect(findKnockoutSeatingConflict({ ...results, knockout })).toBeNull();
+    // Re-seat that slot by "correcting" the group's 1st place to a different
+    // team: the recorded winner is orphaned from its matchup — flagged.
+    const edited = {
+      ...results,
+      groupFirst: { ...results.groupFirst, [g]: GROUPS[g][3] },
+      knockout,
+    };
+    const conflict = findKnockoutSeatingConflict(edited);
+    expect(conflict).toMatch(/not in its resolved matchup/);
+  });
+
+  it("ignores matches whose slots are not resolvable yet", () => {
+    // A recorded R16 winner with no R32 winners recorded — feeders unresolved, no conflict.
+    const results = { ...chalkStandings(), knockout: { [R16[0].id]: GROUPS.A[0] } };
+    expect(findKnockoutSeatingConflict(results)).toBeNull();
+  });
+});
+
+describe("orientScoresToSlot", () => {
+  const slot = { home: "MEX", away: "USA" };
+  const scores = { homeScore: 1, awayScore: 2, homePens: 5, awayPens: 4 };
+
+  it("passes through when the API home is the bracket home", () => {
+    expect(orientScoresToSlot(slot, { ...scores, apiHomeCode: "MEX", apiAwayCode: "USA" })).toEqual(
+      scores,
+    );
+  });
+
+  it("swaps scores AND pens when the API home is the bracket away", () => {
+    expect(orientScoresToSlot(slot, { ...scores, apiHomeCode: "USA", apiAwayCode: "MEX" })).toEqual(
+      { homeScore: 2, awayScore: 1, homePens: 4, awayPens: 5 },
+    );
+  });
+
+  it("passes through untouched with no API codes (manual entry) or an unseated slot", () => {
+    expect(orientScoresToSlot(slot, scores)).toEqual(scores);
+    expect(orientScoresToSlot(undefined, { ...scores, apiHomeCode: "USA" })).toEqual(scores);
+    expect(orientScoresToSlot({ home: null, away: null }, { ...scores, apiHomeCode: "USA" })).toEqual(
+      scores,
+    );
+    // API home matches neither seated team — don't guess.
+    expect(orientScoresToSlot(slot, { ...scores, apiHomeCode: "BRA" })).toEqual(scores);
+  });
+
+  it("normalizes missing fields to null", () => {
+    expect(orientScoresToSlot(slot, { apiHomeCode: "USA", apiAwayCode: "MEX", homeScore: 3 })).toEqual(
+      { homeScore: null, awayScore: 3, homePens: null, awayPens: null },
+    );
   });
 });

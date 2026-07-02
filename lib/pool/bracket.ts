@@ -77,6 +77,58 @@ export function buildKnockoutPairMatchNos(results: Results): Map<string, number>
 
 const KNOCKOUT_RANGE = (n: number) => n >= 73 && n <= 104;
 
+// Reject an answer key whose resolved seating contradicts a winner it already
+// records: if match N's winner is no longer one of match N's two seated teams,
+// the seating edit (not the winner) is wrong. A standings correction that
+// changes a group's 1st/2nd or the advancing-thirds set after that team's R32
+// match was recorded would re-seat the bracket, orphan the recorded result, and
+// break team-pair fixture mapping — surface it before the write instead. (To
+// genuinely amend such a result, clear it first via clearKnockoutResult.)
+export function findKnockoutSeatingConflict(results: Results): string | null {
+  const bracket = resolveBracket(results);
+  for (const [no, winner] of Object.entries(results.knockout || {})) {
+    if (!winner) continue;
+    const m = bracket[Number(no)];
+    if (m?.home && m?.away && winner !== m.home && winner !== m.away) {
+      return `Match ${no}'s recorded winner ${winner} is not in its resolved matchup (${m.home} vs ${m.away}) — this standings edit contradicts a recorded result; clear that result first`;
+    }
+  }
+  return null;
+}
+
+// Orient an API-reported scoreline (home/away as the provider frames the fixture)
+// to the bracket slot's home/away, so the FINAL Result row reads the same way as
+// the live row (which already orients) and never contradicts winnerCode. When the
+// API home code matches neither seated team (or no codes are provided) the input
+// is returned unchanged — the manual-entry path passes no API codes.
+export function orientScoresToSlot(
+  slot: { home: TeamCode | null; away: TeamCode | null } | undefined,
+  input: {
+    homeScore?: number | null;
+    awayScore?: number | null;
+    homePens?: number | null;
+    awayPens?: number | null;
+    apiHomeCode?: string | null;
+    apiAwayCode?: string | null;
+  },
+): { homeScore: number | null; awayScore: number | null; homePens: number | null; awayPens: number | null } {
+  const asIs = {
+    homeScore: input.homeScore ?? null,
+    awayScore: input.awayScore ?? null,
+    homePens: input.homePens ?? null,
+    awayPens: input.awayPens ?? null,
+  };
+  if (!input.apiHomeCode || !slot?.home || !slot?.away) return asIs;
+  if (input.apiHomeCode === slot.home) return asIs;
+  if (input.apiHomeCode !== slot.away) return asIs; // unrecognized orientation — don't guess
+  return {
+    homeScore: asIs.awayScore,
+    awayScore: asIs.homeScore,
+    homePens: asIs.awayPens,
+    awayPens: asIs.homePens,
+  };
+}
+
 export interface ValidationResult {
   ok: boolean;
   reason?: string;
