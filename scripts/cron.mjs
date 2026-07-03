@@ -84,6 +84,12 @@ async function tick() {
   // Idempotent and cheap when idle (a couple of indexed completion checks), so a
   // half-hour cadence comfortably catches the Final / last MD3 fixture finishing.
   if (due("resolve-prizes", 30)) await hit("/api/cron/resolve-prizes");
+
+  // Feedback → Notion outbox reconciler: repairs any submission whose central-DB
+  // sync was missed (crash between the DB write and the after() sync). Idempotent
+  // (queries by App Row ID before creating) and cheap when idle — one indexed
+  // partial-index scan that returns nothing once everything is synced.
+  if (due("reconcile-feedback", 30)) await hit("/api/cron/reconcile-feedback");
 }
 
 // Always-on loop. Each tick is isolated so one failure never stops the poller, and

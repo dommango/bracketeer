@@ -827,6 +827,14 @@ model Feedback {
   screenshots Json?
   // Back-link to the synced Notion card, when the integration is configured.
   notionUrl   String?
+  // Outbox columns for the central-DB sync. notionSyncedAt is NULL until a page
+  // exists in Notion (the outbox flag the reconciler scans); notionPageId is the
+  // created page id (idempotency back-link); attempts/lastError bound retries so
+  // a persistently-failing row surfaces in logs rather than being silently lost.
+  notionPageId       String?
+  notionSyncedAt     DateTime?
+  notionSyncAttempts Int       @default(0)
+  notionLastError    String?
   createdAt   DateTime     @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
