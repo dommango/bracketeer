@@ -30,6 +30,7 @@ yarn-error.log*
 
 # exported pool seed bundles — contain real contestant emails (PII)
 /prisma/seed-data/
+/ko-list.csv
 
 # vercel
 .vercel
