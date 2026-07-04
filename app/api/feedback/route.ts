@@ -49,9 +49,16 @@ export async function POST(req: NextRequest) {
 
   // Rightmost XFF hop (edge-appended) — the leftmost is client-spoofable, which
   // would let an anonymous submitter mint a fresh rate-limit bucket per request.
+  // IP-less clients (no XFF → "anon") all collapse onto one key, so give that
+  // shared bucket a larger budget (30/5min) rather than starving every anonymous
+  // submitter through a single 10/5min bucket. A resolvable IP keeps its own 10.
   const ip = clientIpFromForwardedFor(req.headers.get("x-forwarded-for"));
-  const key = user ? `feedback:${user.id}` : `feedback:ip:${ip}`;
-  const rl = await rateLimit(key, 10, 5 * 60_000);
+  const { key, limit } = user
+    ? { key: `feedback:${user.id}`, limit: 10 }
+    : ip === "anon"
+      ? { key: "feedback:anon-global", limit: 30 }
+      : { key: `feedback:ip:${ip}`, limit: 10 };
+  const rl = await rateLimit(key, limit, 5 * 60_000);
   if (!rl.ok) return apiError("rate limited", 429);
 
   let parsed;
