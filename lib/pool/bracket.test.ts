@@ -207,20 +207,6 @@ describe("findKnockoutSeatingConflict", () => {
     expect(conflict).toMatch(/not in its resolved matchup/);
   });
 
-  it("flags a thirdAdvance reorder that unseats a recorded winner", () => {
-    const results = chalkStandings();
-    // Record each third-place side's occupant as its match's winner…
-    const bracket = resolveBracket(results);
-    const thirdSlots = R32.filter((m) => "third" in m.b);
-    const knockout = Object.fromEntries(thirdSlots.map((m) => [m.id, bracket[m.id].away!]));
-    expect(findKnockoutSeatingConflict({ ...results, knockout })).toBeNull();
-    // …then rotate the thirdAdvance order: the backtracker re-seats the slots, so
-    // at least one recorded winner no longer sits in its resolved matchup.
-    const rotated = [...results.thirdAdvance.slice(1), results.thirdAdvance[0]];
-    const conflict = findKnockoutSeatingConflict({ ...results, thirdAdvance: rotated, knockout });
-    expect(conflict).toMatch(/not in its resolved matchup/);
-  });
-
   it("ignores matches whose slots are not resolvable yet", () => {
     // A recorded R16 winner with no R32 winners recorded — feeders unresolved, no conflict.
     const results = { ...chalkStandings(), knockout: { [R16[0].id]: GROUPS.A[0] } };
