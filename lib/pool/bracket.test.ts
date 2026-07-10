@@ -3,6 +3,7 @@ import {
   resolveBracket,
   validateKnockoutWinner,
   buildKnockoutPairMatchNos,
+  mergeThirdAdvance,
   findKnockoutSeatingConflict,
   orientScoresToSlot,
 } from "./bracket";
@@ -155,6 +156,22 @@ describe("buildKnockoutPairMatchNos", () => {
     // Unresolved later rounds aren't keyed.
     expect([...pairs.values()]).not.toContain(FINAL.id);
     expect([...pairs.values()]).not.toContain(QF[0].id);
+  });
+});
+
+describe("mergeThirdAdvance", () => {
+  it("keeps the stored order when the same eight teams are re-submitted", () => {
+    const current = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "GHA"];
+    const resubmitted = ["COD", "SWE", "ECU", "GHA", "BIH", "ALG", "PAR", "SEN"];
+    // Same set, different order — the order drives R32 seating, so it must not move.
+    expect(mergeThirdAdvance(current, resubmitted)).toBe(current);
+  });
+
+  it("accepts the submitted list when the set actually changes", () => {
+    const current = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "GHA"];
+    const changed = ["PAR", "SWE", "ECU", "COD", "BIH", "SEN", "ALG", "EGY"];
+    expect(mergeThirdAdvance(current, changed)).toBe(changed);
+    expect(mergeThirdAdvance([], changed)).toBe(changed);
   });
 });
 

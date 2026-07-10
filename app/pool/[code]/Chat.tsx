@@ -112,15 +112,19 @@ export function Chat({
 
   useEffect(() => {
     // Newest messages render at the bottom (normal chat). Jump straight to the
-    // bottom on first mount (no animation), then only follow new messages when the
-    // user is already near the bottom — otherwise leave them where they scrolled.
+    // bottom on first mount, then only follow new messages when the user is
+    // already near the bottom — otherwise leave them where they scrolled. Scroll
+    // the message list's own scroll box, NOT scrollIntoView — that scrolls every
+    // ancestor including the window, which yanked the whole match-detail page down
+    // to its embedded chat on mount.
+    const list = bottomRef.current?.parentElement;
     if (initialMountRef.current) {
       initialMountRef.current = false;
-      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      if (list) list.scrollTop = list.scrollHeight;
       return;
     }
-    if (nearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (nearBottomRef.current && list) {
+      list.scrollTop = list.scrollHeight;
     }
   }, [messages]);
 

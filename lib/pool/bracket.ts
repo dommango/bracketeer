@@ -77,6 +77,22 @@ export function buildKnockoutPairMatchNos(results: Results): Map<string, number>
 
 const KNOCKOUT_RANGE = (n: number) => n >= 73 && n <= 104;
 
+// The ORDER of results.thirdAdvance is load-bearing: resolveR32Slots seats
+// third-place teams by backtracking in list order, so two different orderings of
+// the same eight teams can seat different R32 matchups. When an admin re-saves
+// standings with the same eight advancers, keep the stored order — otherwise a
+// form whose fields happen to iterate differently silently re-seats the live
+// bracket (which is exactly how prod's R32 seating got scrambled mid-round).
+export function mergeThirdAdvance(
+  current: TeamCode[],
+  submitted: TeamCode[],
+): TeamCode[] {
+  const sameSet =
+    current.length === submitted.length &&
+    [...current].sort().join(",") === [...submitted].sort().join(",");
+  return sameSet ? current : submitted;
+}
+
 // Reject an answer key whose resolved seating contradicts a winner it already
 // records: if match N's winner is no longer one of match N's two seated teams,
 // the seating edit (not the winner) is wrong. A standings correction that
