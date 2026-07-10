@@ -69,6 +69,27 @@ describe("snapshotDue", () => {
     expect(snapshotDue(at(HALF_WINDOW_END_MS + MIN), KO, at(-25 * MIN))).toBeNull();
     expect(snapshotDue(at(120 * MIN), KO, at(-25 * MIN))).toBeNull();
   });
+
+  describe("skipEarly (per-event props)", () => {
+    it("suppresses the early snapshot that would otherwise fire in the 18-h window", () => {
+      // Same input that returns "early" by default…
+      expect(snapshotDue(at(-90 * MIN), KO, null)).toBe("early");
+      // …returns null once the early window is skipped.
+      expect(snapshotDue(at(-90 * MIN), KO, null, { skipEarly: true })).toBeNull();
+      expect(snapshotDue(at(EARLY_WINDOW_START_MS), KO, null, { skipEarly: true })).toBeNull();
+    });
+
+    it("still fires pre and half when early is skipped", () => {
+      expect(snapshotDue(at(-10 * MIN), KO, null, { skipEarly: true })).toBe("pre");
+      const preRow = at(-25 * MIN);
+      expect(snapshotDue(at(55 * MIN), KO, preRow, { skipEarly: true })).toBe("half");
+    });
+
+    it("fires pre on a never-fetched match without an early row seeding it first", () => {
+      // No early snapshot ever taken (fetchedAt null through kickoff): pre still due.
+      expect(snapshotDue(at(PRE_WINDOW_START_MS), KO, null, { skipEarly: true })).toBe("pre");
+    });
+  });
 });
 
 describe("snapshotKickoffRange", () => {

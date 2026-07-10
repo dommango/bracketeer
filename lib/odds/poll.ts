@@ -7,6 +7,7 @@ import { fetchOddsEvents } from "@/lib/odds/client";
 import { normalizeTeam, resolveMatchNo, toImpliedProbs, orientToHome } from "@/lib/odds/map";
 import { loadCodedMatches } from "@/lib/odds/coded";
 import { snapshotDue, snapshotKickoffRange, type OddsSnapshot } from "@/lib/odds/schedule";
+import { quotaExhausted, quotaSnapshot } from "@/lib/odds/quota";
 
 export interface OddsPollSummary {
   fetched: number;
@@ -15,6 +16,7 @@ export interface OddsPollSummary {
   unmatched: string[];
   skipped?: boolean; // gate decided this poll shouldn't spend an Odds API credit
   snapshot?: OddsSnapshot; // why: which snapshot (pre/half) this fetch is taking
+  quotaBlocked?: boolean; // remaining Odds API credits below the floor → held off
 }
 
 // Decide whether this poll should spend a credit. Cron calls poll-odds every
@@ -61,6 +63,13 @@ export async function pollOdds(opts: { force?: boolean } = {}): Promise<OddsPoll
     : await oddsRefreshDue(tournament.id);
   if (!plan.due) {
     return { fetched: 0, mapped: 0, upserted: 0, unmatched: [], skipped: true };
+  }
+
+  // Hard stop: hold off once the last known remaining credits fall below the floor,
+  // so an exhausted quota can't be pushed further into overage.
+  if (quotaExhausted()) {
+    console.warn(`[odds] h2h poll held: quota below floor (${quotaSnapshot().remaining} left)`);
+    return { fetched: 0, mapped: 0, upserted: 0, unmatched: [], skipped: true, quotaBlocked: true };
   }
 
   const coded = await loadCodedMatches(tournament.id, tournament.officialResults);

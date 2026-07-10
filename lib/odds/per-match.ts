@@ -5,10 +5,12 @@
 // Credit shape (why this is gated, not interval-polled): the per-event endpoint is
 // billed per event — markets=btts,player_goal_scorer_anytime = 2 credits per match
 // per call — unlike the featured whole-slate markets (1 credit covers every match).
-// So we spend only at the same fixed snapshot moments as the h2h poll (just before
-// kickoff + around halftime, see lib/odds/schedule.ts), bounding props spend to
-// ~4 credits per distinct kickoff. When no match is at a snapshot moment the poll
-// makes ZERO API calls (one indexed query, then returns), like poll-odds.
+// So we spend only at fixed snapshot moments (just before kickoff + around halftime,
+// see lib/odds/schedule.ts), bounding props spend to ~4 credits per distinct kickoff.
+// Unlike the h2h poll we pass `skipEarly` to snapshotDue: the free whole-slate h2h
+// can afford the 18-h early snapshot, but here it would be a full per-match charge
+// 18 h out, so props capture only pre + half. When no match is at a snapshot moment
+// the poll makes ZERO API calls (one indexed query, then returns), like poll-odds.
 
 import { prisma } from "@/lib/db";
 import { oddsApiEnabled } from "@/lib/env";
@@ -16,6 +18,7 @@ import { fetchEventList, fetchEventMarkets } from "@/lib/odds/client";
 import { normalizeTeam, resolveMatchNo, toTwoWayProbs, toScorerProbs } from "@/lib/odds/map";
 import { loadCodedMatches } from "@/lib/odds/coded";
 import { snapshotDue, snapshotKickoffRange } from "@/lib/odds/schedule";
+import { quotaExhausted, quotaSnapshot } from "@/lib/odds/quota";
 
 export interface MatchPropsSummary {
   dueMatches: number;
@@ -24,6 +27,7 @@ export interface MatchPropsSummary {
   scorersUpserted: number;
   unmatched: string[]; // due matches we couldn't resolve to an Odds API event id
   skipped?: boolean; // no match at a snapshot moment → no API call made
+  quotaBlocked?: boolean; // remaining Odds API credits below the floor → held off
 }
 
 interface DueMatch {
@@ -42,7 +46,8 @@ async function duePropMatches(tournamentId: string): Promise<DueMatch[]> {
 
   const due: DueMatch[] = [];
   for (const m of candidates) {
-    if (snapshotDue(now, m.scheduledAt!.getTime(), m.props?.fetchedAt?.getTime() ?? null)) {
+    // skipEarly: props skip the 18-h early snapshot (it's a per-match charge here).
+    if (snapshotDue(now, m.scheduledAt!.getTime(), m.props?.fetchedAt?.getTime() ?? null, { skipEarly: true })) {
       due.push({ matchNo: m.matchNo, matchId: m.id });
     }
   }
@@ -67,6 +72,14 @@ export async function pollMatchProps(): Promise<MatchPropsSummary> {
 
   const due = await duePropMatches(tournament.id);
   if (due.length === 0) return { ...empty, skipped: true };
+
+  // Hard stop: the per-event endpoint is the priciest poll (2 credits/match). If the
+  // last known remaining credits are below the floor, hold off entirely rather than
+  // drain the last of the quota — the props board is the most expendable feature.
+  if (quotaExhausted()) {
+    console.warn(`[odds] props poll held: quota below floor (${quotaSnapshot().remaining} left)`);
+    return { ...empty, dueMatches: due.length, skipped: true, quotaBlocked: true };
+  }
 
   // Resolve each due match to The Odds API event id via the free /events listing
   // (0 credits), so a credit is spent only on events we actually want.

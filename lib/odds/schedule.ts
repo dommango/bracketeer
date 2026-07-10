@@ -30,13 +30,19 @@ export type OddsSnapshot = "early" | "pre" | "half";
 // that window's start (null = never fetched, so it fires). Returns null when no
 // snapshot is due — including the gaps between windows and after FT. Windows are
 // checked earliest-first so a match can never skip ahead to a later snapshot.
+//
+// `skipEarly` drops the 18-h early window. The early snapshot is free for the
+// whole-slate h2h poll (one call refreshes every match), but for the per-event
+// props poller it costs a full per-match charge 18 h out — where a BTTS / anytime-
+// scorer board is least useful. Props pass skipEarly so they capture only pre + half.
 export function snapshotDue(
   now: number,
   kickoffMs: number,
   oddsFetchedAtMs: number | null,
+  opts: { skipEarly?: boolean } = {},
 ): OddsSnapshot | null {
   const earlyStart = kickoffMs + EARLY_WINDOW_START_MS;
-  if (now >= earlyStart && now < kickoffMs + PRE_WINDOW_START_MS) {
+  if (!opts.skipEarly && now >= earlyStart && now < kickoffMs + PRE_WINDOW_START_MS) {
     if (oddsFetchedAtMs == null || oddsFetchedAtMs < earlyStart) return "early";
   }
   const preStart = kickoffMs + PRE_WINDOW_START_MS;
