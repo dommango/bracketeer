@@ -106,6 +106,29 @@ async function shouldPollNow(tournamentId: string): Promise<boolean> {
   });
   if (inWindow) return true;
 
+  // Backstop for the live-knockout gap: a match whose full-time result only lands
+  // after its 155-min live window closes (extra time + shootout, long stoppages, or
+  // a lagging FT status from the feed) would otherwise be stranded LIVE forever —
+  // the window check above stops polling before the FINAL status is ever fetched, so
+  // the finalizing poll never runs. Keep polling any scored match that has kicked off
+  // but isn't FINAL yet, for a generous grace period after kickoff (bronze 103 is
+  // never finalized via the API, so it's excluded to avoid polling forever). Self-
+  // terminating: once the match flips to FINAL it no longer matches.
+  const GRACE_MS = 6 * 60 * 60 * 1000;
+  const awaitingFinal = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      matchNo: { not: 103 },
+      scheduledAt: {
+        gt: new Date(now - GRACE_MS),
+        lt: new Date(now + 5 * 60 * 1000),
+      },
+      OR: [{ result: { is: null } }, { result: { status: { not: "FINAL" } } }],
+    },
+    select: { id: true },
+  });
+  if (awaitingFinal) return true;
+
   // Bootstrap: group matches are seeded with no kickoff time (scheduledAt null),
   // and the only thing that backfills them is a poll run — a deadlock that would
   // keep the live window permanently closed through the whole group stage. So
