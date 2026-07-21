@@ -8,6 +8,7 @@ import {
   getKnockoutState,
 } from "@/lib/pool/queries";
 import { getPoolAccess, getSessionUser } from "@/lib/pool/access";
+import { cutoverAppliesTo, isCutoverActive } from "@/lib/pool/cutover";
 import { listMessages } from "@/lib/pool/chat";
 import { Home } from "./Home";
 
@@ -71,6 +72,7 @@ export default async function PoolHomePage({
       knockoutOpen={knockout?.open}
       knockoutOpensAt={knockout?.opensAt.toISOString()}
       knockoutLocksAt={knockout?.locksAt ? knockout.locksAt.toISOString() : null}
+      showScoringChange={cutoverAppliesTo(pool.id) && isCutoverActive()}
     />
   );
 }
