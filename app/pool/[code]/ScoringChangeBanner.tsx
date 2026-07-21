@@ -18,10 +18,10 @@ export function ScoringChangeBanner({ code, now = new Date() }: { code: string; 
         📋
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-ink">Scoring updated</span>
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-sm font-semibold text-ink">Statement from the Commissioner</span>
           <span className="rounded-full bg-pitch px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
-            New
+            Important Update
           </span>
         </span>
         <span className="mt-0.5 block truncate text-[12px] text-ink-3">
