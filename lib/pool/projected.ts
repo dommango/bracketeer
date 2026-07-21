@@ -4,7 +4,15 @@
 // matches are excluded because group points come from admin-entered standings,
 // not per-match winners.
 
-import { roundPointsFor, DEFAULT_SCORING, type ScoringConfig } from "@/lib/scoring/score";
+import {
+  roundPointsFor,
+  stagePoints,
+  winnersByStage,
+  KNOCKOUT_BUCKET,
+  DEFAULT_SCORING,
+  type KnockoutStage,
+  type ScoringConfig,
+} from "@/lib/scoring/score";
 
 export interface LiveResultRow {
   matchNo: number;
@@ -45,17 +53,53 @@ export function liveLeaders(
 
 // Sum the round points of every live match whose leader matches the entry's
 // pick. Bronze (103) yields 0 via roundPointsFor, mirroring official scoring.
+//
+// Placement-agnostic (cfg.knockoutPlacementAgnostic): the projection must match
+// how the match will actually score, so a round's points go to every DISTINCT
+// team the entry picked to win any match in that round that is currently leading
+// a live match in that round — minus teams already credited for that round via a
+// decided (official) result, so a round the entry already banked is never paid
+// twice. `officialKnockout` supplies those decided winners.
 export function projectedLivePoints(
   leaders: LiveLeader[],
   knockoutPicksByEntry: Map<string, Record<number, string>>,
   cfgOverride: Record<string, number> = {},
+  officialKnockout: Record<number, string> = {},
 ): Map<string, number> {
   const cfg: ScoringConfig = { ...DEFAULT_SCORING, ...cfgOverride };
   const out = new Map<string, number>();
+
+  if (!cfg.knockoutPlacementAgnostic) {
+    for (const [entryId, picks] of knockoutPicksByEntry) {
+      let pts = 0;
+      for (const { matchNo, leadingCode } of leaders) {
+        if (picks[matchNo] === leadingCode) pts += roundPointsFor(matchNo, cfg);
+      }
+      out.set(entryId, pts);
+    }
+    return out;
+  }
+
+  // Teams currently leading a live match, by round — excluding any already
+  // credited for that round by a decided result (else the entry double-banks it).
+  const leadingByStage = winnersByStage(
+    Object.fromEntries(leaders.map((l) => [l.matchNo, l.leadingCode])),
+  );
+  const decidedByStage = winnersByStage(officialKnockout);
+  const stages = Object.keys(KNOCKOUT_BUCKET) as KnockoutStage[];
+  for (const stage of stages) {
+    for (const team of decidedByStage[stage]) leadingByStage[stage].delete(team);
+  }
+
   for (const [entryId, picks] of knockoutPicksByEntry) {
+    const pickedByStage = winnersByStage(picks);
     let pts = 0;
-    for (const { matchNo, leadingCode } of leaders) {
-      if (picks[matchNo] === leadingCode) pts += roundPointsFor(matchNo, cfg);
+    for (const stage of stages) {
+      const p = stagePoints(stage, cfg);
+      if (!p) continue;
+      for (const team of pickedByStage[stage]) {
+        if (leadingByStage[stage].has(team)) pts += p;
+      }
     }
     out.set(entryId, pts);
   }

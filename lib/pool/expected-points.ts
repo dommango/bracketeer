@@ -35,6 +35,15 @@ function scoredKnockoutMatchIds(): number[] {
 }
 
 // Expected remaining knockout points for one entry's picks against the model.
+//
+// Note on placement-agnostic scoring (cfg.knockoutPlacementAgnostic): the per-
+// round point VALUE is unchanged, so already-decided matches — the only ones
+// that matter once a tournament is complete — score identically. This forward EV
+// stays slot-based (P a pick advances out of its own match), which under the flag
+// is a lower bound: it doesn't model the extra upside of a team advancing from a
+// slot the entry didn't seed. Left as-is deliberately — modelling that needs a
+// per-round "wins ≥1 match" probability the win model doesn't expose, and it only
+// affects the live projection of still-undecided matches.
 export function expectedRemainingPoints(
   knockout: Record<number, string | null | undefined>,
   model: WinModel,

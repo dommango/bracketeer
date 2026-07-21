@@ -446,9 +446,8 @@ async function withProjectedPoints(
 
   // Matches the answer key already decided are in the official totals; exclude
   // them from projection so a Result row lagging at LIVE can't pay them twice.
-  const decided = new Set(
-    Object.keys(asResults(tournament?.officialResults).knockout || {}).map(Number),
-  );
+  const officialKnockout = asResults(tournament?.officialResults).knockout || {};
+  const decided = new Set(Object.keys(officialKnockout).map(Number));
   const leaders = liveLeaders(
     liveRows.map((r) => ({ ...r, matchNo: r.match.matchNo })),
     decided,
@@ -470,7 +469,12 @@ async function withProjectedPoints(
       entry[matchNo] = p.code;
       picksByEntry.set(p.entryId, entry);
     }
-    projected = projectedLivePoints(leaders, picksByEntry, asScoringConfig(scoringConfig));
+    projected = projectedLivePoints(
+      leaders,
+      picksByEntry,
+      asScoringConfig(scoringConfig),
+      officialKnockout,
+    );
   }
 
   const withLive = rows.map((r) => {
