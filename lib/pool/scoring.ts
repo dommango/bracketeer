@@ -74,7 +74,14 @@ export function asScoringConfig(scoringConfig: unknown): ScoringConfig {
 // duplicate snapshot rows and serve a leaderboard mixing two half-applied
 // recomputes. The lock serializes them; the transaction makes the breakdown
 // cache flip atomically instead of entry-by-entry.
-export async function recomputePool(poolId: string) {
+// `captureSnapshots` defaults on; pass false for an administrative recompute that
+// isn't a result landing (e.g. a scoring-rule cutover) so the change doesn't
+// surface as a "top mover" as though someone gained points from a match.
+export async function recomputePool(
+  poolId: string,
+  opts: { captureSnapshots?: boolean } = {},
+) {
+  const shouldSnapshot = opts.captureSnapshots ?? true;
   return prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${poolId}))`;
@@ -104,7 +111,7 @@ export async function recomputePool(poolId: string) {
       await upsertScored(tx, scored);
 
       const leaderboard = await getLeaderboard(poolId, tx, pool.format as PoolFormat);
-      await captureSnapshots(poolId, leaderboard, tx);
+      if (shouldSnapshot) await captureSnapshots(poolId, leaderboard, tx);
       return leaderboard;
     },
     { timeout: 30_000 },
