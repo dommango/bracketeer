@@ -82,6 +82,35 @@ export default async function PoolScoringPage({
             </p>
           </div>
 
+          <figure className="rounded-2xl border border-line bg-surface-sunk p-5 shadow-[var(--shadow-xs)]">
+            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-4">
+              Official statement
+            </h2>
+            <blockquote className="mt-3 space-y-2.5 border-l-2 border-pitch pl-4 text-[13px] leading-relaxed text-ink-2">
+              <p>
+                <span className="font-semibold text-ink">
+                  Following a comprehensive review of the knockout-stage scoring format, the HessFest
+                  Pool hereby adopts placement-agnostic credit for all knockout selections, effective
+                  immediately.
+                </span>
+              </p>
+              <p>
+                Under this provision, any nation correctly forecast to prevail in a given round shall
+                be duly credited, irrespective of the group-stage seeding from which that nation
+                emerged. No participant&apos;s foresight shall go unrewarded on account of placement
+                alone.
+              </p>
+              <p>
+                This measure has been ratified after full review of its effect upon the standings.
+                The integrity of the competition and the equitable recognition of every entrant
+                remain paramount.
+              </p>
+            </blockquote>
+            <figcaption className="mt-3 pl-4 text-[12px] font-semibold text-ink-3">
+              — Mike Hessemer, Commissioner
+            </figcaption>
+          </figure>
+
           <div className="rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-xs)]">
             <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
               What stays exactly the same
