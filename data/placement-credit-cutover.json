@@ -1,0 +1,440 @@
+{
+  "generatedAt": "2026-07-21T00:35:11.288Z",
+  "tournamentId": "cmq86qr3m00004jnkqiw8ewki",
+  "poolId": "cmqcil8qh0000bjuvuwg7qegx",
+  "poolName": "HessFest 2026",
+  "rule": "knockoutPlacementAgnostic",
+  "finalWinner": "ESP",
+  "entries": [
+    {
+      "entryId": "cmqcilcd300u9bjuvw6toorjw",
+      "label": "Joe Van Der Bogart",
+      "beforeTotal": 111,
+      "afterTotal": 115,
+      "beforeRank": 1,
+      "afterRank": 1,
+      "rankDelta": 0,
+      "pointsDelta": 4
+    },
+    {
+      "entryId": "cmqcil94g003tbjuvdprwto8i",
+      "label": "Brendan",
+      "beforeTotal": 111,
+      "afterTotal": 113,
+      "beforeRank": 1,
+      "afterRank": 2,
+      "rankDelta": -1,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqcil9t500d9bjuv7ehet1ll",
+      "label": "Conor Moloney",
+      "beforeTotal": 110,
+      "afterTotal": 111,
+      "beforeRank": 3,
+      "afterRank": 3,
+      "rankDelta": 0,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcila8d00ixbjuv38wp4w5y",
+      "label": "Dom Mangonon",
+      "beforeTotal": 107,
+      "afterTotal": 111,
+      "beforeRank": 5,
+      "afterRank": 3,
+      "rankDelta": 2,
+      "pointsDelta": 4
+    },
+    {
+      "entryId": "cmqcinu8o01gcjeuvq8hpendg",
+      "label": "Neal Melchionni",
+      "beforeTotal": 109,
+      "afterTotal": 110,
+      "beforeRank": 4,
+      "afterRank": 5,
+      "rankDelta": -1,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcil9f3007lbjuvw82owwbk",
+      "label": "Charles Gubman",
+      "beforeTotal": 107,
+      "afterTotal": 109,
+      "beforeRank": 5,
+      "afterRank": 6,
+      "rankDelta": -1,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqfhq75y01si15t4griaa0n8",
+      "label": "Ricardo Arocha Sr.",
+      "beforeTotal": 105,
+      "afterTotal": 107,
+      "beforeRank": 9,
+      "afterRank": 7,
+      "rankDelta": 2,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqcil9pi00bdbjuvbsocgepy",
+      "label": "Colin Fitzpatrick",
+      "beforeTotal": 104,
+      "afterTotal": 106,
+      "beforeRank": 10,
+      "afterRank": 8,
+      "rankDelta": 2,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqcintyh01ckjeuvo471jo3p",
+      "label": "Matthew",
+      "beforeTotal": 106,
+      "afterTotal": 106,
+      "beforeRank": 7,
+      "afterRank": 8,
+      "rankDelta": -1,
+      "pointsDelta": 0
+    },
+    {
+      "entryId": "cmqcinuhc01k4jeuv1209656b",
+      "label": "Nick Barattucci",
+      "beforeTotal": 106,
+      "afterTotal": 106,
+      "beforeRank": 7,
+      "afterRank": 8,
+      "rankDelta": -1,
+      "pointsDelta": 0
+    },
+    {
+      "entryId": "cmqcinvsf0230jeuv6u9e2cty",
+      "label": "Zack Ingerman (2)",
+      "beforeTotal": 102,
+      "afterTotal": 103,
+      "beforeRank": 11,
+      "afterRank": 11,
+      "rankDelta": 0,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcilc7700sdbjuvmlkc87iy",
+      "label": "JM Larin",
+      "beforeTotal": 98,
+      "afterTotal": 101,
+      "beforeRank": 13,
+      "afterRank": 12,
+      "rankDelta": 1,
+      "pointsDelta": 3
+    },
+    {
+      "entryId": "cmqcinv4t01tkjeuvx3sxhr3l",
+      "label": "Taylor Cole",
+      "beforeTotal": 99,
+      "afterTotal": 101,
+      "beforeRank": 12,
+      "afterRank": 12,
+      "rankDelta": 0,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqcinvna0214jeuv00on01y2",
+      "label": "Zack Ingerman",
+      "beforeTotal": 98,
+      "afterTotal": 101,
+      "beforeRank": 13,
+      "afterRank": 12,
+      "rankDelta": 1,
+      "pointsDelta": 3
+    },
+    {
+      "entryId": "cmqcilaw500qhbjuvymaacynf",
+      "label": "Geoff",
+      "beforeTotal": 96,
+      "afterTotal": 100,
+      "beforeRank": 17,
+      "afterRank": 15,
+      "rankDelta": 2,
+      "pointsDelta": 4
+    },
+    {
+      "entryId": "cmqcinv9a01vgjeuv50seqkhm",
+      "label": "Vincent",
+      "beforeTotal": 98,
+      "afterTotal": 99,
+      "beforeRank": 13,
+      "afterRank": 16,
+      "rankDelta": -3,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcil8tn0001bjuvrwlyvonz",
+      "label": "Alex Weisberger",
+      "beforeTotal": 96,
+      "afterTotal": 98,
+      "beforeRank": 17,
+      "afterRank": 17,
+      "rankDelta": 0,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqcil9ji009hbjuvhkuydo8e",
+      "label": "Christopher Varga",
+      "beforeTotal": 96,
+      "afterTotal": 98,
+      "beforeRank": 17,
+      "afterRank": 17,
+      "rankDelta": 0,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqcinuzy01rojeuv31yranyx",
+      "label": "Ryan Fitzpatrick",
+      "beforeTotal": 97,
+      "afterTotal": 98,
+      "beforeRank": 16,
+      "afterRank": 17,
+      "rankDelta": -1,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcilakc00mpbjuvg4zuqj2o",
+      "label": "Eric Spirko",
+      "beforeTotal": 96,
+      "afterTotal": 96,
+      "beforeRank": 17,
+      "afterRank": 20,
+      "rankDelta": -3,
+      "pointsDelta": 0
+    },
+    {
+      "entryId": "cmqcinte00150jeuvdjokvzaz",
+      "label": "Kevin Fitzpatrick",
+      "beforeTotal": 95,
+      "afterTotal": 96,
+      "beforeRank": 21,
+      "afterRank": 20,
+      "rankDelta": 1,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcilcnk00y1bjuvcsqrzewu",
+      "label": "Jordie Ciuffetelli",
+      "beforeTotal": 89,
+      "afterTotal": 95,
+      "beforeRank": 24,
+      "afterRank": 22,
+      "rankDelta": 2,
+      "pointsDelta": 6
+    },
+    {
+      "entryId": "cmqcinton018sjeuv1iyh1hqz",
+      "label": "Larry Silvi",
+      "beforeTotal": 90,
+      "afterTotal": 95,
+      "beforeRank": 22,
+      "afterRank": 22,
+      "rankDelta": 0,
+      "pointsDelta": 5
+    },
+    {
+      "entryId": "cmqcinuv501psjeuvyvdgluf7",
+      "label": "Rico Arocha",
+      "beforeTotal": 90,
+      "afterTotal": 94,
+      "beforeRank": 22,
+      "afterRank": 24,
+      "rankDelta": -2,
+      "pointsDelta": 4
+    },
+    {
+      "entryId": "cmqcil99p005pbjuvem78zh4t",
+      "label": "Brian Ascolese",
+      "beforeTotal": 87,
+      "afterTotal": 93,
+      "beforeRank": 26,
+      "afterRank": 25,
+      "rankDelta": 1,
+      "pointsDelta": 6
+    },
+    {
+      "entryId": "cmqi601ff0f6j15p8xhwrndti",
+      "label": "Cucci",
+      "beforeTotal": 89,
+      "afterTotal": 90,
+      "beforeRank": 24,
+      "afterRank": 26,
+      "rankDelta": -2,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcilcig00w5bjuvruq2ao4q",
+      "label": "Jonathan Haley",
+      "beforeTotal": 87,
+      "afterTotal": 90,
+      "beforeRank": 26,
+      "afterRank": 26,
+      "rankDelta": 0,
+      "pointsDelta": 3
+    },
+    {
+      "entryId": "cmqcilctf00zxbjuvrs2x1d8z",
+      "label": "Jose Larin",
+      "beforeTotal": 87,
+      "afterTotal": 90,
+      "beforeRank": 26,
+      "afterRank": 26,
+      "rankDelta": 0,
+      "pointsDelta": 3
+    },
+    {
+      "entryId": "cmqcintiz016wjeuvbjtoaj39",
+      "label": "Kyle Grzeszczak",
+      "beforeTotal": 86,
+      "afterTotal": 89,
+      "beforeRank": 29,
+      "afterRank": 29,
+      "rankDelta": 0,
+      "pointsDelta": 3
+    },
+    {
+      "entryId": "cmqcinvih01z8jeuvt14rh39b",
+      "label": "Zach Gould",
+      "beforeTotal": 82,
+      "afterTotal": 88,
+      "beforeRank": 31,
+      "afterRank": 30,
+      "rankDelta": 1,
+      "pointsDelta": 6
+    },
+    {
+      "entryId": "cmqcint8h0134jeuvfa08qivn",
+      "label": "Julian Gould",
+      "beforeTotal": 83,
+      "afterTotal": 84,
+      "beforeRank": 30,
+      "afterRank": 31,
+      "rankDelta": -1,
+      "pointsDelta": 1
+    },
+    {
+      "entryId": "cmqcil8yf001xbjuvr8jae7j4",
+      "label": "Andrew Vasta",
+      "beforeTotal": 79,
+      "afterTotal": 83,
+      "beforeRank": 35,
+      "afterRank": 32,
+      "rankDelta": 3,
+      "pointsDelta": 4
+    },
+    {
+      "entryId": "cmqfhq76d01ue15t4ot1yclfb",
+      "label": "Ricardo Arocha Sr",
+      "beforeTotal": 80,
+      "afterTotal": 83,
+      "beforeRank": 33,
+      "afterRank": 32,
+      "rankDelta": 1,
+      "pointsDelta": 3
+    },
+    {
+      "entryId": "cmqcilaei00ktbjuv1f4rgimg",
+      "label": "Dustin Monahan",
+      "beforeTotal": 80,
+      "afterTotal": 82,
+      "beforeRank": 33,
+      "afterRank": 34,
+      "rankDelta": -1,
+      "pointsDelta": 2
+    },
+    {
+      "entryId": "cmqcinvdr01xcjeuv2ccs82fw",
+      "label": "Whitey",
+      "beforeTotal": 82,
+      "afterTotal": 82,
+      "beforeRank": 31,
+      "afterRank": 34,
+      "rankDelta": -3,
+      "pointsDelta": 0
+    },
+    {
+      "entryId": "cmqcila3c00h1bjuvpdc5los9",
+      "label": "Danny Odenwelder",
+      "beforeTotal": 71,
+      "afterTotal": 81,
+      "beforeRank": 36,
+      "afterRank": 36,
+      "rankDelta": 0,
+      "pointsDelta": 10
+    },
+    {
+      "entryId": "cmqcinulz01m0jeuve2dza17d",
+      "label": "Nicole",
+      "beforeTotal": 69,
+      "afterTotal": 76,
+      "beforeRank": 38,
+      "afterRank": 37,
+      "rankDelta": 1,
+      "pointsDelta": 7
+    },
+    {
+      "entryId": "cmqcinu3c01egjeuvxodkde6w",
+      "label": "Mike Hessemer",
+      "beforeTotal": 70,
+      "afterTotal": 75,
+      "beforeRank": 37,
+      "afterRank": 38,
+      "rankDelta": -1,
+      "pointsDelta": 5
+    },
+    {
+      "entryId": "cmqcilaq500olbjuvukts67lx",
+      "label": "Evan Torrens",
+      "beforeTotal": 68,
+      "afterTotal": 72,
+      "beforeRank": 39,
+      "afterRank": 39,
+      "rankDelta": 0,
+      "pointsDelta": 4
+    },
+    {
+      "entryId": "cmqcinuq601nwjeuvquidpzpq",
+      "label": "Ricardo Arocha",
+      "beforeTotal": 68,
+      "afterTotal": 71,
+      "beforeRank": 39,
+      "afterRank": 40,
+      "rankDelta": -1,
+      "pointsDelta": 3
+    },
+    {
+      "entryId": "cmqcint3z0118jeuv4kr1q4lz",
+      "label": "Jose Larin (2)",
+      "beforeTotal": 59,
+      "afterTotal": 64,
+      "beforeRank": 41,
+      "afterRank": 41,
+      "rankDelta": 0,
+      "pointsDelta": 5
+    },
+    {
+      "entryId": "cmqcintt401aojeuv9ok2il42",
+      "label": "Lauren Devine",
+      "beforeTotal": 53,
+      "afterTotal": 63,
+      "beforeRank": 42,
+      "afterRank": 42,
+      "rankDelta": 0,
+      "pointsDelta": 10
+    },
+    {
+      "entryId": "cmqcinucm01i8jeuvlqehwjy0",
+      "label": "Nick 2",
+      "beforeTotal": 52,
+      "afterTotal": 58,
+      "beforeRank": 43,
+      "afterRank": 43,
+      "rankDelta": 0,
+      "pointsDelta": 6
+    }
+  ]
+}

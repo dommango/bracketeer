@@ -43,7 +43,7 @@ describe("expectedRemainingPoints", () => {
 
   it("honours a scoring-config override", () => {
     const ev = expectedRemainingPoints({ 104: "BRA" }, model, {}, {
-      groupExact: 3, groupPartial: 1, thirdAdvancer: 3, r32: 1, r16: 2, qf: 3, sf: 4, final: 10, award: 1,
+      groupExact: 3, groupPartial: 1, thirdAdvancer: 3, r32: 1, r16: 2, qf: 3, sf: 4, final: 10, award: 1, knockoutPlacementAgnostic: 0,
     });
     expect(ev).toBeCloseTo(0.05 * 10, 6);
   });

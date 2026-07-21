@@ -65,6 +65,37 @@ describe("projectedLivePoints", () => {
     );
     expect(out.get("e1")).toBe(10);
   });
+
+  describe("placement-agnostic (flag on)", () => {
+    const ON = { knockoutPlacementAgnostic: 1 };
+
+    it("projects a live leader the entry seeded in a different slot", () => {
+      // BRA leads match 73 (R32); entry picked BRA to win match 74 (also R32).
+      // Slot-based projects nothing; placement-agnostic pays the R32 point.
+      const leaders = [{ matchNo: 73, leadingCode: "BRA" }];
+      const picks = new Map([["e1", { 74: "BRA" }]]);
+      expect(projectedLivePoints(leaders, picks).get("e1") ?? 0).toBe(0);
+      expect(projectedLivePoints(leaders, picks, ON).get("e1")).toBe(1);
+    });
+
+    it("does not double-pay a round already banked via a decided result", () => {
+      // BRA already won R32 (official match 74) — that point is in the actual
+      // total. BRA now leads another live R32 (73); projecting it would double it.
+      const leaders = [{ matchNo: 73, leadingCode: "BRA" }];
+      const picks = new Map([["e1", { 74: "BRA" }]]);
+      const official = { 74: "BRA" };
+      expect(projectedLivePoints(leaders, picks, ON, official).get("e1")).toBe(0);
+    });
+
+    it("counts a leading team once per round even across two live matches", () => {
+      const leaders = [
+        { matchNo: 73, leadingCode: "BRA" },
+        { matchNo: 74, leadingCode: "BRA" },
+      ];
+      const picks = new Map([["e1", { 75: "BRA" }]]);
+      expect(projectedLivePoints(leaders, picks, ON).get("e1")).toBe(1);
+    });
+  });
 });
 
 describe("liveLeaders — decided matches", () => {

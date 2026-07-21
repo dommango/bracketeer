@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- referenceScorePicks below is a verbatim copy of untyped JS from the original tool and must not be altered */
 import { describe, it, expect } from "vitest";
 import { GROUPS } from "./data";
-import { scorePicks } from "./score";
+import { scorePicks, DEFAULT_SCORING, type ScoringConfig } from "./score";
 import { parseCsv, csvRowsToSubmission, submissionToCsv } from "./csv";
 import { emptyPicks, type Picks, type Results } from "./types";
 
@@ -183,6 +183,68 @@ describe("scorePicks — deterministic hand-computed cases", () => {
     };
     const { breakdown } = scorePicks(picks, baseResults());
     expect(breakdown.awards).toBe(2); // player + young; boot/goal blank on one side
+  });
+});
+
+describe("scorePicks — placement-agnostic knockout credit (flag on)", () => {
+  const ON: ScoringConfig = { ...DEFAULT_SCORING, knockoutPlacementAgnostic: 1 };
+
+  // Reality: a team that wins its R32, R16 and QF match, but out of a different
+  // slot than the entry seeded it into (the stranded-run case the flag rescues).
+  const results = (): Results => ({
+    ...emptyPicks(),
+    // ESP wins matches 73 (R32), 89 (R16), 97 (QF); bronze 103 excluded.
+    knockout: { 73: "ESP", 89: "ESP", 97: "ESP", 101: "ARG", 104: "ESP", 103: "GER" },
+  });
+
+  it("credits a knockout run stranded in the wrong slot", () => {
+    // Entry seeded ESP to win in DIFFERENT slots (74/90/98) than reality (73/89/97).
+    const picks: Picks = { ...emptyPicks(), knockout: { 74: "ESP", 90: "ESP", 98: "ESP" } };
+    const slot = scorePicks(picks, results(), DEFAULT_SCORING).breakdown;
+    const placement = scorePicks(picks, results(), ON).breakdown;
+    // Slot-based: nothing lines up, zero knockout credit.
+    expect(slot.r32 + slot.r16 + slot.qf).toBe(0);
+    // Placement-agnostic: ESP won a match in each of R32/R16/QF → 1 + 2 + 3.
+    expect(placement.r32).toBe(1);
+    expect(placement.r16).toBe(2);
+    expect(placement.qf).toBe(3);
+  });
+
+  it("leaves the unique final slot (104) unchanged", () => {
+    const win: Picks = { ...emptyPicks(), knockout: { 104: "ESP" } };
+    const miss: Picks = { ...emptyPicks(), knockout: { 104: "ARG" } };
+    expect(scorePicks(win, results(), ON).breakdown.final).toBe(5);
+    expect(scorePicks(win, results(), DEFAULT_SCORING).breakdown.final).toBe(5);
+    expect(scorePicks(miss, results(), ON).breakdown.final).toBe(0);
+  });
+
+  it("never scores the bronze final (103), even with the flag on", () => {
+    // GER won bronze (103); picking it anywhere in the knockout earns nothing.
+    const picks: Picks = { ...emptyPicks(), knockout: { 103: "GER", 88: "GER" } };
+    const b = scorePicks(picks, results(), ON).breakdown;
+    expect(b.r32 + b.r16 + b.qf + b.sf + b.final).toBe(0);
+  });
+
+  it("counts a team at most once per round", () => {
+    // Entry picked ESP to win two R32 matches; ESP won one → credit once, not twice.
+    const picks: Picks = { ...emptyPicks(), knockout: { 74: "ESP", 75: "ESP" } };
+    expect(scorePicks(picks, results(), ON).breakdown.r32).toBe(1);
+  });
+
+  it("is a strict superset of slot credit across 2000 randomized inputs", () => {
+    const rnd = mulberry32(0x5150);
+    for (let n = 0; n < 2000; n++) {
+      const picks = randomPickset(rnd);
+      const res = randomPickset(rnd) as Results;
+      const slot = scorePicks(picks, res, DEFAULT_SCORING);
+      const placement = scorePicks(picks, res, ON);
+      // Group/thirds/awards untouched; only knockout can grow, never shrink.
+      const ko = (b: typeof slot.breakdown) => b.r32 + b.r16 + b.qf + b.sf + b.final;
+      expect(ko(placement.breakdown)).toBeGreaterThanOrEqual(ko(slot.breakdown));
+      expect(placement.breakdown.group).toBe(slot.breakdown.group);
+      expect(placement.breakdown.thirds).toBe(slot.breakdown.thirds);
+      expect(placement.breakdown.awards).toBe(slot.breakdown.awards);
+    }
   });
 });
 
