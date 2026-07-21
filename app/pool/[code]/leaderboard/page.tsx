@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPoolByCode, getPoolView, getPoolProjection } from "@/lib/pool/queries";
 import { getSessionUser } from "@/lib/pool/access";
+import { cutoverAppliesTo, cutoverByEntry, isCutoverActive } from "@/lib/pool/cutover";
 import { Leaderboard } from "../Leaderboard";
 import { ProjectedFinish } from "../ProjectedFinish";
 import { BracketsTabNav } from "../BracketsTabNav";
+import { ScoringChangeBanner } from "../ScoringChangeBanner";
 
 // Standings change at request time as results land.
 export const dynamic = "force-dynamic";
@@ -23,11 +25,23 @@ export default async function LeaderboardPage({
     getPoolView(code),
     getPoolProjection(pool.id),
   ]);
-  const leaderboard = poolView?.leaderboard ?? [];
+  const baseRows = poolView?.leaderboard ?? [];
+
+  // Attach each entry's cutover move so the leaderboard can show the per-row
+  // "moved at the scoring change" chip — only on the pool the audit record
+  // describes, and only while the cutover window is open.
+  const showCutover = cutoverAppliesTo(pool.id) && isCutoverActive();
+  const leaderboard = showCutover
+    ? baseRows.map((r) => {
+        const move = cutoverByEntry.get(r.entryId);
+        return move ? { ...r, cutover: move } : r;
+      })
+    : baseRows;
 
   return (
     <section className="space-y-4">
       <BracketsTabNav code={code} />
+      {showCutover ? <ScoringChangeBanner code={code} /> : null}
       <div className="flex items-center justify-between px-1">
         <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-ink-3">
           Leaderboard
@@ -35,14 +49,22 @@ export default async function LeaderboardPage({
             {leaderboard.length} {leaderboard.length === 1 ? "entry" : "entries"}
           </span>
         </h2>
-        {leaderboard.length >= 2 ? (
+        <div className="flex items-center gap-3">
           <Link
-            href={`/pool/${code}/compare`}
+            href={`/pool/${code}/scoring`}
             className="text-xs font-semibold text-pitch hover:underline"
           >
-            Compare brackets →
+            Scoring
           </Link>
-        ) : null}
+          {leaderboard.length >= 2 ? (
+            <Link
+              href={`/pool/${code}/compare`}
+              className="text-xs font-semibold text-pitch hover:underline"
+            >
+              Compare brackets →
+            </Link>
+          ) : null}
+        </div>
       </div>
       <div className="mt-2.5">
         <Leaderboard

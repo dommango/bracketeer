@@ -22,7 +22,7 @@ import { bracketScoreEntries } from "@/lib/games/bracket-score";
 import type { ScorableGameEntry, ScoringContext } from "@/lib/games/types";
 import { asResults, asScoringConfig, recomputePool, recomputeStandalone } from "@/lib/pool/scoring";
 import { notifyPool } from "@/lib/realtime/notify";
-import { DEFAULT_SCORING, type ScoringConfig } from "@/lib/scoring/score";
+import { type ScoringConfig } from "@/lib/scoring/score";
 import type { Results } from "@/lib/scoring/types";
 
 const POOL_NAME = "HessFest 2026";

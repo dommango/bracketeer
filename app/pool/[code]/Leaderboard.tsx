@@ -32,6 +32,23 @@ function medal(rank: number): string {
   return rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
 }
 
+// A compact "moved at the placement-credit cutover" chip: how many points the
+// entry gained and how many places it climbed/slipped. Neutral tint so it reads
+// as informational, not a live score. See lib/pool/cutover.ts.
+function CutoverChip({ move }: { move: { rankDelta: number; pointsDelta: number } }) {
+  if (move.pointsDelta === 0 && move.rankDelta === 0) return null;
+  const rank =
+    move.rankDelta > 0 ? `▲${move.rankDelta}` : move.rankDelta < 0 ? `▼${-move.rankDelta}` : "±0";
+  return (
+    <span
+      className="rounded-full border border-gold/50 bg-gold-tint px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-2"
+      title="Change when the pool adopted placement-agnostic knockout scoring"
+    >
+      Rule change {rank} · +{move.pointsDelta}
+    </span>
+  );
+}
+
 function initials(label: string): string {
   const words = label.trim().split(/\s+/).filter(Boolean);
   if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
@@ -135,7 +152,7 @@ export function Leaderboard({
               </span>
             </div>
             {compact ? null : (
-              <div className="mt-2 flex flex-wrap gap-1.5 pl-[76px]">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[76px]">
                 {CATEGORY_LABELS.filter(([k]) => (b[k] ?? 0) > 0).map(([k, label]) => (
                   <span
                     key={k}
@@ -144,6 +161,7 @@ export function Leaderboard({
                     {label} {b[k]}
                   </span>
                 ))}
+                {row.cutover ? <CutoverChip move={row.cutover} /> : null}
               </div>
             )}
           </>
