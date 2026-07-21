@@ -3,6 +3,7 @@ import { CountUp } from "./CountUp";
 import { Countdown } from "./Countdown";
 import { Leaderboard } from "./Leaderboard";
 import { ScoreCards } from "./ScoreCards";
+import { ScoringChangeBanner } from "./ScoringChangeBanner";
 import { GroupStandings } from "./Bracket";
 import { GroupOverlay } from "./GroupOverlay";
 import type { HomeView, HomeLeader, HomeStats, Standing } from "@/lib/pool/home";
@@ -346,6 +347,7 @@ export function Home({
   knockoutOpen,
   knockoutOpensAt,
   knockoutLocksAt,
+  showScoringChange = false,
 }: {
   view: HomeView;
   // Already truncated to the top rows (+ your row when you're below it).
@@ -373,9 +375,14 @@ export function Home({
   knockoutOpen?: boolean;
   knockoutOpensAt?: string;
   knockoutLocksAt?: string | null;
+  // Show the placement-credit scoring-change banner (pool-scoped + time-boxed;
+  // decided by the page so it matches the leaderboard tab exactly).
+  showScoringChange?: boolean;
 }) {
   return (
     <div className="space-y-4">
+      {showScoringChange ? <ScoringChangeBanner code={code} /> : null}
+
       {format === "KNOCKOUT" && knockoutOpensAt ? (
         <KnockoutNotice
           open={knockoutOpen ?? false}
