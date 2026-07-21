@@ -186,6 +186,23 @@ describe("parity — KNOCKOUT shares the exact bracket scoring", () => {
       expect(ko).toEqual(full);
     }
   });
+
+  it("still shares scoring when placement-agnostic credit is enabled", async () => {
+    const rnd = mulberry32(0xf1a6);
+    const onCtx = (answer: Results): ScoringContext => ({
+      tournamentId: "t1",
+      answer,
+      cfg: { ...DEFAULT_SCORING, knockoutPlacementAgnostic: 1 },
+      now: new Date(0),
+    });
+    for (let n = 0; n < 50; n++) {
+      const answer = randomPickset(rnd) as Results;
+      const entry = bracketEntry(`p${n}`, randomPickset(rnd));
+      const full = await gameFor("FULL_BRACKET").scoreEntries(NO_TX, [entry], onCtx(answer));
+      const ko = await gameFor("KNOCKOUT").scoreEntries(NO_TX, [entry], onCtx(answer));
+      expect(ko).toEqual(full);
+    }
+  });
 });
 
 describe("parity — MATCH_DAY_3_PICKEM group-only is byte-identical to legacy MD3", () => {
